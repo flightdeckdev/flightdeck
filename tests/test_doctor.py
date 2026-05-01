@@ -7,6 +7,8 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from flightdeck.cli.main import cli
+from flightdeck.models import PolicyResult, PromotionRecord
+from flightdeck.storage import Storage
 
 from tests.test_spine import write_events, write_policy, write_pricing, write_release
 
@@ -105,6 +107,45 @@ def test_doctor_fails_on_audit_seq_gap(tmp_path: Path, monkeypatch) -> None:
     res = CliRunner().invoke(cli, ["doctor"])
     assert res.exit_code != 0
     assert "audit_seq" in res.output.lower()
+
+
+def test_insert_promotion_record_uses_immediate_transaction(tmp_path: Path) -> None:
+    storage = Storage(str(tmp_path / "flightdeck.db"))
+    storage.migrate()
+    with storage.connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO releases
+              (release_id, agent_id, version, environment, checksum, artifact_json, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            ("rel_1", "agent_support", "1", "local", "sha256:abc", "{}", "2026-05-01T00:00:00+00:00"),
+        )
+
+    record = PromotionRecord(
+        action_id="act_1",
+        action="promote",
+        actor="tester",
+        release_id="rel_1",
+        agent_id="agent_support",
+        environment="local",
+        reason="test",
+        policy_result=PolicyResult(passed=True),
+        created_at=datetime.now(tz=timezone.utc),
+    )
+
+    competing_conn = storage.connect()
+    try:
+        competing_conn.execute("BEGIN IMMEDIATE;")
+        try:
+            storage.insert_promotion_record(record)
+        except sqlite3.OperationalError as exc:
+            assert "database is locked" in str(exc)
+        else:
+            raise AssertionError("insert_promotion_record did not request an immediate write lock")
+    finally:
+        competing_conn.rollback()
+        competing_conn.close()
 
 
 def test_doctor_fails_when_promoted_release_missing(tmp_path: Path, monkeypatch) -> None:
