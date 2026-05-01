@@ -6,7 +6,18 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ## Unreleased
 
-Nothing yet.
+### Added
+
+- **`uv.lock`** and **[uv](https://docs.astral.sh/uv/)**-based workflow: **`uv sync --extra dev`** / **`uv sync --frozen --extra dev`** for reproducible installs; **`uv run …`** for commands (see **`DEVELOPMENT.md`**).
+- **CI:** **`astral-sh/setup-uv`** with **`uv sync --frozen --extra dev`** and **`uv run python -m …`** (avoids **`uv run pytest`** path quirks with **`from tests.…`** imports).
+- **`.github/workflows/release-pypi.yml`:** on push of **`vMAJOR.MINOR.PATCH`**, verify tag matches **`pyproject.toml`** and **`src/flightdeck/__init__.py`**, run **ruff** / **pytest** / schema drift, **`uv build`**, publish to **PyPI** via **OIDC** trusted publishing (**publish attestations**), and create a **GitHub Release** with **`dist/*`** assets (**`softprops/action-gh-release`**).
+- **`tests/test_version_consistency.py`:** assert **`pyproject.toml`** **`version`** matches **`flightdeck.__version__`** (same invariant as the release workflow).
+
+### Changed
+
+- **`pyproject.toml` `[project] name`:** **`flightdeck-ai`** to match the **PyPI** trusted-publisher project; install with **`pip install flightdeck-ai`** / **`uv add flightdeck-ai`** (CLI remains **`flightdeck`**, imports **`flightdeck.*`**).
+- **Contributor docs** (**`README.md`**, **`DEVELOPMENT.md`**, **`CONTRIBUTING.md`**, **`AGENTS.md`**, **`CLAUDE.md`**, **`.cursorrules`**): prefer **uv**; keep **pip** / **`python -m venv`** as fallback.
+- **Python:** **`requires-python >=3.14,<3.15`**, **`.python-version`**, PyPI classifiers, **Ruff** `target-version`, **`uv.lock`**, and **CI** matrices now target **CPython 3.14** only (replacing broader **3.11–3.14** testing).
 
 ## 1.0.1 - 2026-05-01
 
@@ -19,7 +30,7 @@ Nothing yet.
 - **Slim distribution:** this repository omits the full in-tree **`docs/`** tree, org mirror scripts, and **`verify-repo-standards`** wrappers. Narrative docs and maintainer runbooks live on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)**; in-repo links now point there where applicable.
 - **`pyproject.toml`:** OpenTelemetry packages are **optional** only (**`telemetry`** / **`all`** extras); the default install matches the **1.0.0** dependency story (core does not import OpenTelemetry).
 - **`.pre-commit-config.yaml`:** **ruff** replaces **black** / **isort**; **`ruff-pre-commit`** pinned to **v0.15.12** to match **`dev`** (**`ruff==0.15.12`**).
-- **CI:** Python **3.13** and **3.14** added to the Ubuntu and Windows matrices.
+- **CI:** Python **3.13** and **3.14** added to the Ubuntu and Windows matrices (superseded by **3.14**-only policy; see **Unreleased**).
 - **`pyproject.toml`:** default **`pytest --basetemp=.tmp/pytest`** so local runs avoid Windows **`PermissionError`** on **`%TEMP%\pytest-of-*`**.
 - **`pre-commit-hooks`:** bumped to **v5.0.0**.
 

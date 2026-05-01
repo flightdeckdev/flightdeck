@@ -3,12 +3,12 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "flightdeck"
+name = "flightdeck-ai"
 version = "1.0.1"
 description = "AI Release Governance for production agents."
 readme = "README.md"
 license = "Apache-2.0"
-requires-python = ">=3.11"
+requires-python = ">=3.14,<3.15"
 authors = [{ name = "FlightDeck" }]
 keywords = ["ai", "agents", "control-plane", "finops", "deployment", "policy", "operations"]
 classifiers = [
@@ -16,9 +16,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Topic :: System :: Monitoring",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
@@ -65,8 +62,12 @@ flightdeck = "flightdeck.cli.main:cli"
 [tool.hatch.build.targets.wheel]
 packages = ["src/flightdeck"]
 
+[tool.uv]
+# Contributor installs: `uv sync --extra dev` (see DEVELOPMENT.md). After changing
+# dependencies or optional extras, run `uv lock` and commit `uv.lock`.
+
 [tool.ruff]
-target-version = "py311"
+target-version = "py314"
 line-length = 100
 
 [tool.pytest.ini_options]

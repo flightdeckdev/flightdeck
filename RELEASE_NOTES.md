@@ -6,7 +6,16 @@ Narrative docs (including the CLI reference) are maintained on **[github.com/fli
 
 ## v1.0.1 — distribution and developer tooling
 
-Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): canonical **`main`** URLs for narrative docs in slim clones, optional OpenTelemetry in extras only, CI coverage for **Python 3.13–3.14**, repo-local **pytest** basetemp on Windows, **ruff** pinned consistently with **pre-commit**, **`.gitattributes`** LF for the golden bundle fixture, and removal of a test that depended on unpublished export scripts. **Public CLI / schema / HTTP contracts** are unchanged from **v1.0.0**.
+Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): canonical **`main`** URLs for narrative docs in slim clones, optional OpenTelemetry in extras only, CI on **CPython 3.14** (Ubuntu and Windows), repo-local **pytest** basetemp on Windows, **ruff** pinned consistently with **pre-commit**, **`.gitattributes`** LF for the golden bundle fixture, and removal of a test that depended on unpublished export scripts. **Public CLI / schema / HTTP contracts** are unchanged from **v1.0.0**.
+
+## PyPI and GitHub releases
+
+- **Not automatic on merge:** publishing runs when a **SemVer tag** matching **`vMAJOR.MINOR.PATCH`** is pushed (see **`.github/workflows/release-pypi.yml`**).
+- **PyPI project:** **`flightdeck-ai`** (matches **`[project] name`** in **`pyproject.toml`**). **Trusted publishing** (OIDC) — no **`PYPI_API_TOKEN`** in repo secrets; register workflow **`release-pypi.yml`** on the project. If PyPI shows **Environment name: (Any)**, you do not need to match a specific string there; the workflow still uses GitHub **Environment** **`pypi`** for optional approval gates.
+- **Checks before upload:** same bar as CI (**ruff**, **pytest**, schema drift) plus a **tag ↔ `pyproject.toml` version** match.
+- **GitHub:** the workflow creates a **Release** for the tag with **generated notes** and attaches **`dist/*`**.
+
+Details: **`DEVELOPMENT.md`** (PyPI release section).
 
 ## v1.0.0 — stable public contracts
 
@@ -19,7 +28,7 @@ Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): canonical **`main`** URLs 
 
 The product remains **local-first**; hosted control plane, OTel mapping, and related items stay on **`ROADMAP.md`**.
 
-Optional OTEL libraries (not used by core today): **`pip install 'flightdeck[telemetry]'`**.
+Optional OTEL libraries (not used by core today): **`pip install 'flightdeck-ai[telemetry]'`**.
 
 ## Python SDK
 

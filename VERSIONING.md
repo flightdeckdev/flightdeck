@@ -32,3 +32,7 @@ are still the mechanism for evolving the on-disk schema safely.
 ## Stable contracts (v1.0.0)
 
 The **v1.0.0** freeze is summarized in **[RELEASE_NOTES.md](RELEASE_NOTES.md)** and **[docs/spec-v1-forward.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/spec-v1-forward.md)**; milestone status lives in **[docs/v1-next-steps.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/v1-next-steps.md)**.
+
+## PyPI packages
+
+The **PyPI** distribution is **`flightdeck-ai`** (same **SemVer** as **`pyproject.toml`**). The CLI command remains **`flightdeck`**; Python imports remain **`flightdeck.*`**. Publishing is **tag-driven** (push **`v*.*.*`**) via **`.github/workflows/release-pypi.yml`** — see **`DEVELOPMENT.md`** and **`RELEASE_NOTES.md`** (PyPI / GitHub releases).

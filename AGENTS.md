@@ -61,17 +61,27 @@ Do a short review pass for:
 
 ## Verification
 
-Run before finalizing changes:
+Recommended (**[uv](https://docs.astral.sh/uv/)** — see **`DEVELOPMENT.md`**):
 
 ```bash
-python -m ruff check src tests
-python -m pytest
-python scripts/quickstart_smoke.py
+uv sync --frozen --extra dev
+uv run python -m ruff check src tests
+uv run python -m pytest
+uv run python scripts/quickstart_smoke.py
 ```
+
+After editing Pydantic models, regenerate schemas and ensure a clean diff:
+
+```bash
+uv run python scripts/generate_schemas.py
+git diff --exit-code schemas/
+```
+
+Fallback (activated **venv** or global tools): the same steps with **`python -m …`** / **`python scripts/…`** as in **`DEVELOPMENT.md`**.
 
 On **Windows**, use `py -3` in place of `python` if that is how your environment is set up. If pytest temp dirs fail with permissions, see **`DEVELOPMENT.md`** / **`tests/conftest.py`**.
 
-**CI bar** (same commands locally before a PR): **`ruff check`**, **`pytest`**, **`scripts/generate_schemas.py`** + no **`schemas/`** diff, **`scripts/quickstart_smoke.py`**, **`flightdeck --help`**.
+**CI bar** (mirrors **`.github/workflows/ci.yml`** on **CPython 3.14**): **`uv sync --frozen --extra dev`**, **`uv run python -m ruff check src tests`**, **`uv run python -m pytest`**, **`uv run python scripts/generate_schemas.py`** + no **`schemas/`** diff, **`uv run python scripts/quickstart_smoke.py`**, **`uv run flightdeck --help`**.
 
 Use a repo-local temp directory if the OS temp directory is restricted.
 

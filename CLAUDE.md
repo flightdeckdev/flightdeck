@@ -20,14 +20,19 @@ Canonical repository (full **`docs/`** tree and org workflows): **[github.com/fl
 
 ## Verify before you finish
 
+With **uv** (recommended):
+
 ```bash
-python -m ruff check src tests
-python -m pytest
-python scripts/quickstart_smoke.py
+uv sync --frozen --extra dev
+uv run python -m ruff check src tests
+uv run python -m pytest
+uv run python scripts/quickstart_smoke.py
 ```
 
-**Windows:** if `python` is not on `PATH`, use `py -3` for the same commands.
+With **pip** + venv: use **`python -m …`** equivalents in **`DEVELOPMENT.md`**.
+
+**Windows:** if `python` is not on `PATH`, use `py -3` for the same commands (or install **uv** and use **`uv run`**).
 
 ## Repo shape
 
-Python package under `src/flightdeck/`. Tests in `tests/`. Examples in `examples/quickstart/`. JSON Schemas under `schemas/` (regenerate with `python scripts/generate_schemas.py` when models change).
+Python package under `src/flightdeck/`. Tests in `tests/`. Examples in `examples/quickstart/`. JSON Schemas under `schemas/` (regenerate with **`uv run python scripts/generate_schemas.py`** when models change). After **`pyproject.toml`** dependency edits, run **`uv lock`** and commit **`uv.lock`**.

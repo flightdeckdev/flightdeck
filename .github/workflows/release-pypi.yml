@@ -1,0 +1,89 @@
+# Publish sdist + wheel to PyPI when a SemVer tag is pushed (e.g. v1.0.2).
+# Configure "trusted publishing" on PyPI for this workflow + repository + optional GitHub environment.
+# https://docs.pypi.org/trusted-publishers/
+
+name: Release (PyPI)
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  publish:
+    name: Build, verify, publish
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/flightdeck-ai/
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version-file: .python-version
+
+      - name: Sync locked dev environment
+        run: uv sync --frozen --extra dev
+
+      - name: Verify tag matches declared package versions
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Unexpected tag format: $TAG (expected vMAJOR.MINOR.PATCH)"
+            exit 1
+          fi
+          uv run python <<'PY'
+          import os
+          import pathlib
+          import re
+          import tomllib
+
+          tag = os.environ["TAG"]
+          expected = tag.removeprefix("v")
+          data = tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))
+          pyproject = data["project"]["version"]
+          init = pathlib.Path("src/flightdeck/__init__.py").read_text(encoding="utf-8")
+          m = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', init)
+          if not m:
+              raise SystemExit("Could not parse __version__ from src/flightdeck/__init__.py")
+          module = m.group(1)
+          if pyproject != expected:
+              raise SystemExit(f"Tag {tag} expects {expected} but pyproject.toml has {pyproject}")
+          if module != expected:
+              raise SystemExit(f"Tag {tag} expects {expected} but __init__.py has {module}")
+          PY
+
+      - name: Lint
+        run: uv run python -m ruff check src tests
+
+      - name: Test
+        run: uv run python -m pytest
+
+      - name: JSON Schemas drift check
+        run: |
+          uv run python scripts/generate_schemas.py
+          git diff --exit-code schemas/
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          attestations: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

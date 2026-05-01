@@ -39,7 +39,7 @@ Not implemented yet:
 - hosted control plane
 - automated traffic routing
 - tool-cost pricing
-- OpenTelemetry import/export mapping (optional **`pip install 'flightdeck[telemetry]'`** pulls deps for future work)
+- OpenTelemetry import/export mapping (optional **`uv sync --extra telemetry`** or **`pip install 'flightdeck-ai[telemetry]'`** for future work)
 
 Shipped locally:
 
@@ -48,6 +48,15 @@ Shipped locally:
 - `flightdeck release rollback` (policy-gated, audited)
 
 ## Quickstart
+
+Install **[uv](https://docs.astral.sh/uv/getting-started/installation/)**, then from the repo root:
+
+```bash
+uv sync --extra dev
+uv run flightdeck --help
+```
+
+Or with **pip** and a venv:
 
 ```bash
 python -m venv .venv
@@ -58,8 +67,10 @@ flightdeck --help
 Run the cross-platform quickstart smoke (same as CI):
 
 ```bash
-python scripts/quickstart_smoke.py
+uv run python scripts/quickstart_smoke.py
 ```
+
+(or **`python scripts/quickstart_smoke.py`** inside an activated venv)
 
 Or use the bash wrapper (Git Bash / WSL on Windows):
 
@@ -90,7 +101,7 @@ flightdeck release history --agent agent_support --env local
 ```
 
 The static event files in `examples/quickstart` use placeholder release IDs so the repo can ship stable examples.
-Substitute them before ingestion, or run **`python scripts/quickstart_smoke.py`** (any OS) or **`./scripts/smoke.sh`** from Git Bash/WSL on Windows.
+Substitute them before ingestion, or run **`uv run python scripts/quickstart_smoke.py`** / **`python scripts/quickstart_smoke.py`** (venv) or **`./scripts/smoke.sh`** from Git Bash/WSL on Windows.
 
 ## Documentation
 
@@ -117,11 +128,12 @@ This tree stays small; narrative docs live on **[github.com/flightdeckdev/flight
 ## Development
 
 ```bash
-python -m ruff check src tests
-python -m pytest
+uv sync --frozen --extra dev
+uv run python -m ruff check src tests
+uv run python -m pytest
 ```
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for setup, verification, and troubleshooting.
+See [DEVELOPMENT.md](DEVELOPMENT.md) for **uv** and **pip** setup, verification, troubleshooting, and **PyPI releases** (tag-driven; not on merge to `main`).
 
 ## License
 

@@ -8,6 +8,14 @@ Human and AI contributors: follow **[AGENTS.md](AGENTS.md)** (full rules). For a
 
 ## Local Setup
 
+Recommended (**[uv](https://docs.astral.sh/uv/)** — see **`DEVELOPMENT.md`**):
+
+```bash
+uv sync --extra dev
+```
+
+Fallback (**pip**):
+
 ```bash
 python -m venv .venv
 python -m pip install -e ".[dev]"
@@ -15,13 +23,23 @@ python -m pip install -e ".[dev]"
 
 ## Verify
 
+With **uv** (matches CI):
+
+```bash
+uv run python -m ruff check src tests
+uv run python -m pytest
+uv run python scripts/quickstart_smoke.py
+```
+
+With an activated **venv**:
+
 ```bash
 python -m ruff check src tests
 python -m pytest
 python scripts/quickstart_smoke.py
 ```
 
-Use the same commands as **CI** (see **`AGENTS.md`**) before opening a PR.
+If you change **`pyproject.toml`** dependencies, run **`uv lock`** and commit **`uv.lock`**. Use the same checks as **CI** (see **`AGENTS.md`**) before opening a PR.
 
 ## Private files and pushing to GitHub
 

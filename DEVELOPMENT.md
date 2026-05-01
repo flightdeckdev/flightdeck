@@ -2,17 +2,46 @@
 
 ## Requirements
 
-- Python **3.11+** (CI runs **3.11** through **3.14** on Ubuntu and Windows)
+- **CPython 3.14.x** only (`requires-python` in **`pyproject.toml`**; **`.python-version`** pins **3.14** for **uv**). CI runs **3.14** on Ubuntu and Windows.
 - Git
+- **[uv](https://docs.astral.sh/uv/)** (recommended): single tool for venvs, installs, and **`uv run`** ([installation](https://docs.astral.sh/uv/getting-started/installation/)). On Windows you can use `py -3 -m pip install uv` if you do not use the standalone installer.
 
-## Setup
+**Note:** search hits like **`flightdeck-1.0.1.dist-info`** under **`.venv/`** are normal install metadata (**distribution name + version**), not references to another repository.
+
+## Setup (uv — recommended)
+
+From the repository root:
+
+```bash
+uv sync --extra dev
+```
+
+This creates **`.venv/`** (gitignored), installs **`flightdeck`** editable plus **pytest** and **ruff**, and pins versions from **`uv.lock`**.
+
+Optional extras (telemetry, SDK helpers): e.g. **`uv sync --extra dev --extra telemetry`**.
+
+## Setup (pip — fallback)
 
 ```bash
 python -m venv .venv
+# Windows: .venv\Scripts\activate
+# Unix:    source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
 
 ## Verify
+
+With **uv**:
+
+```bash
+uv run python -m ruff check src tests
+uv run python -m pytest
+uv run flightdeck --help
+uv run flightdeck doctor
+uv run python scripts/quickstart_smoke.py
+```
+
+With an **activated venv** (pip or after `uv sync`):
 
 ```bash
 python -m ruff check src tests
@@ -24,7 +53,22 @@ python scripts/quickstart_smoke.py
 
 Full command flags and exit codes: [docs/cli.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/cli.md). Cross-platform quickstart parity: **`scripts/quickstart_smoke.py`** (also run in CI).
 
+**Lockfile:** when you change **`pyproject.toml`** dependencies or extras, run **`uv lock`** and commit **`uv.lock`** so CI stays **`--frozen`**-reproducible.
+
 Before pushing to an **org** remote, follow the maintainer checklist in [docs/github-organization.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/github-organization.md) and [docs/research-workflow.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/research-workflow.md) ([git remotes](https://github.com/flightdeckdev/flightdeck/blob/main/docs/git-remotes.md): `origin` = personal research, `org` = flightdeckdev).
+
+## PyPI release (maintainers)
+
+Merging to **`main` does not publish packages** — PyPI uploads are **tag-driven** (workflow **`.github/workflows/release-pypi.yml`**). The **PyPI project** is **`flightdeck-ai`** (`pip install flightdeck-ai`); the **`flightdeck`** CLI and **`import flightdeck`** layout are unchanged.
+
+1. **PyPI:** add a **trusted publisher** for **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** — workflow **`release-pypi.yml`**. If PyPI offers **Environment name: (Any)**, you can still use a GitHub **Environment** named **`pypi`** for approval gates; otherwise match whatever you register on PyPI ([trusted publishers](https://docs.pypi.org/trusted-publishers/)).
+2. **GitHub:** Settings → **Environments** → create **`pypi`** (optional: required reviewers / wait timer before OIDC publish).
+3. Bump **`version`** in **`pyproject.toml`** and **`src/flightdeck/__init__.py`**, update **`CHANGELOG.md`**, merge to **`main`**.
+4. **`git tag vX.Y.Z`** (must match **`pyproject.toml`** exactly, e.g. **`v1.0.2`**) then **`git push origin vX.Y.Z`**.
+
+The workflow runs **ruff**, **pytest**, schema drift, **`uv build`**, publishes **sdist + wheel** to **PyPI** via **OIDC** (no long-lived API token in repo secrets), enables **publish attestations**, and creates a **GitHub Release** with generated notes and **`dist/*`** assets.
+
+If **PyPI** rejects **attestations** for your project, set **`attestations: false`** on **`pypa/gh-action-pypi-publish`** in **`.github/workflows/release-pypi.yml`** until the registry side is sorted.
 
 ## Local Demo
 
@@ -74,7 +118,7 @@ dirs at the repo-local `.tmp/` directory:
 $env:TEMP = (Resolve-Path .tmp).Path
 $env:TMP = $env:TEMP
 $env:TMPDIR = $env:TEMP
-.\.venv\Scripts\python.exe -m pytest
+uv run python -m pytest
 ```
 
 By default, `tests/conftest.py` also redirects `TEMP`/`TMP` into `.tmp/` during pytest on Windows. Set
@@ -86,3 +130,5 @@ virtual environment's Python executable directly:
 ```bash
 .venv/bin/python -m pytest
 ```
+
+Use **`uv run python -m pytest`** from the repo root so imports like **`from tests.test_spine import …`** resolve the same way as in CI.
