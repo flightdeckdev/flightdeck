@@ -1,4 +1,5 @@
 {
+  "description": "Promotion-gate policy for a release diff.\n\n**Constraint fields** (``max_*``) \u2014 when ``None`` the constraint is\ndisabled.  When set, the candidate rollup must not exceed the limit for the\npolicy to pass.\n\n**Sample threshold fields** (``min_*``) \u2014 control the confidence label\nassigned by ``diff_releases``:\n\n- ``None`` (default) \u2014 defer to ``WorkspaceConfig.diff`` defaults\n  (typically ``min_candidate_runs=500``, ``min_baseline_runs=500``,\n  ``min_low_runs=50``).\n- ``0`` \u2014 unconditionally accept any sample size for that threshold,\n  including an empty event list.  All three set to ``0`` means any diff\n  window, even an empty one, can reach HIGH confidence.\n\nThe ``None`` / ``0`` distinction is intentional: ``None`` means \"inherit\nfrom config\", not \"zero runs required\".  ``diff_releases`` uses\n``is not None`` checks to respect an explicit ``0`` override.",
   "properties": {
     "max_cost_per_run_usd": {
       "anyOf": [

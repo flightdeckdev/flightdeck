@@ -165,6 +165,27 @@ class RunEvent(BaseModel):
 
 
 class Policy(BaseModel):
+    """Promotion-gate policy for a release diff.
+
+    **Constraint fields** (``max_*``) — when ``None`` the constraint is
+    disabled.  When set, the candidate rollup must not exceed the limit for the
+    policy to pass.
+
+    **Sample threshold fields** (``min_*``) — control the confidence label
+    assigned by ``diff_releases``:
+
+    - ``None`` (default) — defer to ``WorkspaceConfig.diff`` defaults
+      (typically ``min_candidate_runs=500``, ``min_baseline_runs=500``,
+      ``min_low_runs=50``).
+    - ``0`` — unconditionally accept any sample size for that threshold,
+      including an empty event list.  All three set to ``0`` means any diff
+      window, even an empty one, can reach HIGH confidence.
+
+    The ``None`` / ``0`` distinction is intentional: ``None`` means "inherit
+    from config", not "zero runs required".  ``diff_releases`` uses
+    ``is not None`` checks to respect an explicit ``0`` override.
+    """
+
     policy_id: str = "default"
     max_cost_per_run_usd: float | None = Field(default=None, ge=0)
     max_latency_ms: int | None = Field(default=None, ge=0)
