@@ -121,7 +121,7 @@ $env:TMPDIR = $env:TEMP
 uv run python -m pytest
 ```
 
-By default, `tests/conftest.py` also redirects `TEMP`/`TMP` into `.tmp/` during pytest on Windows. Set
+By default, `tests/conftest.py` creates **`.tmp/`** at import (for **`--basetemp=.tmp/pytest`**) and redirects `TEMP`/`TMP` into that folder during pytest on Windows. Set
 `FLIGHTDECK_USE_SYSTEM_TEMP=1` if you want to force pytest to use your normal OS temp directory instead.
 
 If your shell does not activate virtual environments in the same way as the examples, use the

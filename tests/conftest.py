@@ -4,6 +4,11 @@ import os
 import sys
 from pathlib import Path
 
+# pyproject.toml sets --basetemp=.tmp/pytest; pytest does not create the parent `.tmp/`.
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_REPO_TMP = _REPO_ROOT / ".tmp"
+_REPO_TMP.mkdir(parents=True, exist_ok=True)
+
 
 def pytest_configure() -> None:
     """
@@ -17,9 +22,6 @@ def pytest_configure() -> None:
     if sys.platform != "win32":
         return
 
-    tmp_dir = (Path.cwd() / ".tmp").resolve()
-    tmp_dir.mkdir(parents=True, exist_ok=True)
-
-    os.environ.setdefault("TEMP", str(tmp_dir))
-    os.environ.setdefault("TMP", str(tmp_dir))
-    os.environ.setdefault("TMPDIR", str(tmp_dir))
+    os.environ.setdefault("TEMP", str(_REPO_TMP.resolve()))
+    os.environ.setdefault("TMP", str(_REPO_TMP.resolve()))
+    os.environ.setdefault("TMPDIR", str(_REPO_TMP.resolve()))
