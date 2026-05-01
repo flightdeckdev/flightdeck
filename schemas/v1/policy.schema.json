@@ -1,0 +1,95 @@
+{
+  "properties": {
+    "max_cost_per_run_usd": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Max Cost Per Run Usd"
+    },
+    "max_error_rate": {
+      "anyOf": [
+        {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Max Error Rate"
+    },
+    "max_latency_ms": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Max Latency Ms"
+    },
+    "min_baseline_runs": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Min Baseline Runs"
+    },
+    "min_candidate_runs": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Min Candidate Runs"
+    },
+    "min_low_runs": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Min Low Runs"
+    },
+    "policy_id": {
+      "default": "default",
+      "title": "Policy Id",
+      "type": "string"
+    },
+    "require_high_diff_confidence": {
+      "default": true,
+      "title": "Require High Diff Confidence",
+      "type": "boolean"
+    }
+  },
+  "title": "Policy",
+  "type": "object"
+}

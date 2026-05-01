@@ -1,0 +1,249 @@
+{
+  "$defs": {
+    "RunEventMetrics": {
+      "properties": {
+        "error_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Type"
+        },
+        "latency_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Latency Ms"
+        },
+        "success": {
+          "default": true,
+          "title": "Success",
+          "type": "boolean"
+        }
+      },
+      "title": "RunEventMetrics",
+      "type": "object"
+    },
+    "RunEventModelUsage": {
+      "properties": {
+        "cached_input_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Cached Input Tokens",
+          "type": "integer"
+        },
+        "input_tokens": {
+          "minimum": 0,
+          "title": "Input Tokens",
+          "type": "integer"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "output_tokens": {
+          "minimum": 0,
+          "title": "Output Tokens",
+          "type": "integer"
+        },
+        "provider": {
+          "title": "Provider",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider",
+        "model",
+        "input_tokens",
+        "output_tokens"
+      ],
+      "title": "RunEventModelUsage",
+      "type": "object"
+    },
+    "RunEventRequest": {
+      "properties": {
+        "session_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        }
+      },
+      "title": "RunEventRequest",
+      "type": "object"
+    },
+    "RunEventToolUsage": {
+      "properties": {
+        "cost_units": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Cost Units",
+          "type": "number"
+        },
+        "invocations": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Invocations",
+          "type": "integer"
+        },
+        "tool_name": {
+          "title": "Tool Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool_name"
+      ],
+      "title": "RunEventToolUsage",
+      "type": "object"
+    },
+    "RunEventUsage": {
+      "properties": {
+        "model": {
+          "$ref": "#/$defs/RunEventModelUsage"
+        },
+        "tools": {
+          "items": {
+            "$ref": "#/$defs/RunEventToolUsage"
+          },
+          "title": "Tools",
+          "type": "array"
+        }
+      },
+      "required": [
+        "model"
+      ],
+      "title": "RunEventUsage",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "agent_id": {
+      "title": "Agent Id",
+      "type": "string"
+    },
+    "api_version": {
+      "const": "v1",
+      "default": "v1",
+      "title": "Api Version",
+      "type": "string"
+    },
+    "environment": {
+      "title": "Environment",
+      "type": "string"
+    },
+    "labels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Labels",
+      "type": "object"
+    },
+    "metrics": {
+      "$ref": "#/$defs/RunEventMetrics"
+    },
+    "release_id": {
+      "title": "Release Id",
+      "type": "string"
+    },
+    "request": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RunEventRequest"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "task_id": {
+      "title": "Task Id",
+      "type": "string"
+    },
+    "tenant_id": {
+      "title": "Tenant Id",
+      "type": "string"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "type": {
+      "default": "run_end",
+      "enum": [
+        "run_start",
+        "run_end"
+      ],
+      "title": "Type",
+      "type": "string"
+    },
+    "usage": {
+      "$ref": "#/$defs/RunEventUsage"
+    },
+    "workspace_id": {
+      "default": "ws_local",
+      "title": "Workspace Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "timestamp",
+    "agent_id",
+    "release_id",
+    "run_id",
+    "tenant_id",
+    "task_id",
+    "environment",
+    "usage"
+  ],
+  "title": "RunEvent",
+  "type": "object"
+}
