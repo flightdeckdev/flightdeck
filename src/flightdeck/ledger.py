@@ -183,9 +183,11 @@ def diff_releases(
     candidate_rollup = compute_rollup(candidate_events, candidate_pricing_table)
 
     # Confidence (policy can override thresholds; otherwise take config defaults)
-    min_candidate_runs = policy.min_candidate_runs or cfg.diff.min_candidate_runs
-    min_baseline_runs = policy.min_baseline_runs or cfg.diff.min_baseline_runs
-    min_low_runs = policy.min_low_runs or cfg.diff.min_low_runs
+    min_candidate_runs = (
+        policy.min_candidate_runs if policy.min_candidate_runs is not None else cfg.diff.min_candidate_runs
+    )
+    min_baseline_runs = policy.min_baseline_runs if policy.min_baseline_runs is not None else cfg.diff.min_baseline_runs
+    min_low_runs = policy.min_low_runs if policy.min_low_runs is not None else cfg.diff.min_low_runs
 
     label = confidence_label(
         baseline_rollup.runs,
