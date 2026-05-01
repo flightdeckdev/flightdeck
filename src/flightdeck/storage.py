@@ -5,16 +5,12 @@ import json
 import sqlite3
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
 from uuid import uuid4
 
-from flightdeck.models import Policy, PolicyResult, PricingTable, PromotionRecord, ReleaseRecord, RunEvent
-
-
-def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+from flightdeck.models import Policy, PolicyResult, PricingTable, PromotionRecord, ReleaseRecord, RunEvent, utc_now
 
 
 def ensure_parent_dir(db_path: str) -> None:
@@ -506,7 +502,7 @@ class Storage:
         )
 
     def insert_promotion_record(self, record: PromotionRecord) -> None:
-        with self.connect() as conn:
+        with self.transaction() as conn:
             self._insert_release_action_conn(conn, record)
 
     def commit_promotion(self, record: PromotionRecord, *, new_promoted_release_id: str) -> None:

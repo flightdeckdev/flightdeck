@@ -16,8 +16,17 @@ from flightdeck.bundle import bundle_checksum
 from flightdeck.config import DEFAULT_CONFIG_FILENAME, load_config, write_default_config
 from flightdeck.doctor import run_doctor
 from flightdeck.ledger import diff_releases, parse_window
-from flightdeck.models import Policy, PolicyResult, PricingTable, PromotionRecord, ReleaseArtifact, ReleaseRecord, RunEvent
-from flightdeck.storage import Storage, utc_now
+from flightdeck.models import (
+    Policy,
+    PolicyResult,
+    PricingTable,
+    PromotionRecord,
+    ReleaseArtifact,
+    ReleaseRecord,
+    RunEvent,
+    utc_now,
+)
+from flightdeck.storage import Storage
 
 
 def read_release_artifact(path: Path) -> ReleaseArtifact:
