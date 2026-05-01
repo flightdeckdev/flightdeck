@@ -23,6 +23,41 @@ LATEST_SCHEMA_MIGRATION_VERSION = 3
 
 @dataclass(frozen=True)
 class Storage:
+    """Local SQLite-backed release ledger.
+
+    All state lives in a single SQLite database at ``db_path``.  Callers must
+    invoke ``migrate()`` before any read or write operation so schema
+    migrations are applied idempotently.
+
+    **Connection helpers:**
+
+    - ``connect()`` — returns a raw connection with WAL/busy-timeout pragmas
+      applied.  Use for read-only queries or operations that do not require
+      atomicity across multiple statements.
+    - ``transaction()`` — context manager that begins a ``BEGIN IMMEDIATE``
+      transaction, commits on success, rolls back on any exception, and closes
+      the connection.  Use for all writes to ensure an exclusive write lock is
+      held for the duration of the operation.
+
+    **Promotion / audit contract:**
+
+    Two paths write promotion records to ``release_actions``:
+
+    - ``insert_promotion_record(record)`` — policy-**fail** path: writes the
+      blocked record so every decision (pass or fail) appears in the audit
+      trail.  Uses ``transaction()`` to hold an exclusive lock and ensure
+      monotonic ``audit_seq`` assignment.
+    - ``commit_promotion(record, new_promoted_release_id=…)`` — policy-**pass**
+      path: atomically writes the audit record *and* updates the
+      ``promoted_releases`` pointer in a single ``BEGIN IMMEDIATE`` transaction.
+      Both steps succeed or both are rolled back.
+
+    ``audit_seq`` is a monotonically increasing integer assigned on insert via
+    ``_next_audit_seq``.  ``flightdeck doctor`` (``check_release_actions_audit_seq``)
+    verifies the sequence is contiguous from ``1..max`` as a tamper/partial-write
+    hint.
+    """
+
     db_path: str
 
     @staticmethod
@@ -42,6 +77,16 @@ class Storage:
 
     @contextmanager
     def transaction(self) -> Any:
+        """Context manager for exclusive write transactions.
+
+        Issues ``BEGIN IMMEDIATE`` so that the write lock is acquired upfront,
+        preventing other writers from interleaving.  Commits on clean exit;
+        rolls back and re-raises on any exception.  The connection is closed in
+        both cases.
+
+        Use for all write paths (inserts, updates) to guarantee ``audit_seq``
+        monotonicity and prevent partial-write races under concurrent access.
+        """
         conn = self.connect()
         try:
             conn.execute("BEGIN IMMEDIATE;")
@@ -502,6 +547,17 @@ class Storage:
         )
 
     def insert_promotion_record(self, record: PromotionRecord) -> None:
+        """Write a policy-fail audit record without updating the promoted pointer.
+
+        Called by the CLI when policy evaluation blocks a promotion or rollback.
+        The record is written under an exclusive ``BEGIN IMMEDIATE`` transaction
+        so that ``audit_seq`` remains monotonic even when concurrent callers race
+        to the same database.
+
+        For policy-pass decisions use ``commit_promotion``, which atomically
+        writes the audit record *and* updates ``promoted_releases`` in one
+        transaction.
+        """
         with self.transaction() as conn:
             self._insert_release_action_conn(conn, record)
 

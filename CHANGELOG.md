@@ -16,6 +16,7 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 ### Fixed
 
 - **`diff_releases` zero policy sample thresholds:** `Policy.min_candidate_runs`, `Policy.min_baseline_runs`, and `Policy.min_low_runs` set to **`0`** now correctly override workspace config defaults to `0` instead of being silently ignored. Previously, `or`-based fallback treated `0` as falsy and fell back to the config value (typically `500` / `50`). Fixed by using explicit `is not None` checks. A policy can now unconditionally accept any sample size by setting thresholds to `0` — for example, to allow diffs over empty event windows without a confidence downgrade.
+- **`Storage.insert_promotion_record` transaction isolation:** the policy-fail path that writes a blocked promotion record now uses `transaction()` (SQLite `BEGIN IMMEDIATE`) instead of a bare `connect()` (autocommit). Previously, a blocked promotion could write its audit record without holding an exclusive write lock, allowing a racing writer to interleave and produce a non-contiguous `audit_seq`. The `commit_promotion` path (policy-pass) was already correct. Also consolidates `utc_now` from `models` as the single source of truth (removed duplicate in `storage.py`).
 
 ### Changed
 
