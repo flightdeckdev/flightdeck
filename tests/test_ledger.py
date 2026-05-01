@@ -89,3 +89,27 @@ def test_diff_releases_rejects_mixed_agents_within_side() -> None:
             candidate_pricing_table=table,
             window="7d",
         )
+
+
+def test_diff_releases_respects_zero_policy_sample_thresholds() -> None:
+    cfg = WorkspaceConfig()
+    policy = Policy(
+        min_baseline_runs=0,
+        min_candidate_runs=0,
+        min_low_runs=0,
+        require_high_diff_confidence=True,
+    )
+    table = _pricing_table()
+
+    result = diff_releases(
+        cfg=cfg,
+        policy=policy,
+        baseline_events=[],
+        candidate_events=[],
+        baseline_pricing_table=table,
+        candidate_pricing_table=table,
+        window="7d",
+    )
+
+    assert result.confidence == "HIGH"
+    assert result.policy.passed
