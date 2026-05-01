@@ -1,0 +1,396 @@
+{
+  "$defs": {
+    "ReleaseMetadata": {
+      "properties": {
+        "created_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Created At"
+        },
+        "created_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Created By"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "ReleaseMetadata",
+      "type": "object"
+    },
+    "ReleasePricingReference": {
+      "properties": {
+        "pricing_version": {
+          "title": "Pricing Version",
+          "type": "string"
+        },
+        "provider": {
+          "title": "Provider",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider",
+        "pricing_version"
+      ],
+      "title": "ReleasePricingReference",
+      "type": "object"
+    },
+    "ReleaseSpec": {
+      "properties": {
+        "agent": {
+          "$ref": "#/$defs/ReleaseSpecAgent"
+        },
+        "pricing_reference": {
+          "$ref": "#/$defs/ReleasePricingReference"
+        },
+        "prompts": {
+          "$ref": "#/$defs/ReleaseSpecPrompts"
+        },
+        "routing": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReleaseSpecRouting"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "runtime": {
+          "$ref": "#/$defs/ReleaseSpecRuntime"
+        },
+        "safety": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReleaseSpecSafety"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "tags": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "object"
+        },
+        "tools": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReleaseSpecTools"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "agent",
+        "runtime",
+        "prompts",
+        "pricing_reference"
+      ],
+      "title": "ReleaseSpec",
+      "type": "object"
+    },
+    "ReleaseSpecAgent": {
+      "properties": {
+        "agent_id": {
+          "title": "Agent Id",
+          "type": "string"
+        },
+        "entrypoint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entrypoint"
+        }
+      },
+      "required": [
+        "agent_id"
+      ],
+      "title": "ReleaseSpecAgent",
+      "type": "object"
+    },
+    "ReleaseSpecPrompts": {
+      "properties": {
+        "system_ref": {
+          "title": "System Ref",
+          "type": "string"
+        },
+        "template_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Template Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "system_ref"
+      ],
+      "title": "ReleaseSpecPrompts",
+      "type": "object"
+    },
+    "ReleaseSpecRouting": {
+      "properties": {
+        "fallback": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReleaseSpecRoutingFallback"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "strategy": {
+          "default": "single_model",
+          "enum": [
+            "single_model",
+            "fallback_model"
+          ],
+          "title": "Strategy",
+          "type": "string"
+        }
+      },
+      "title": "ReleaseSpecRouting",
+      "type": "object"
+    },
+    "ReleaseSpecRoutingFallback": {
+      "properties": {
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "on_error": {
+          "default": true,
+          "title": "On Error",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "model"
+      ],
+      "title": "ReleaseSpecRoutingFallback",
+      "type": "object"
+    },
+    "ReleaseSpecRuntime": {
+      "properties": {
+        "max_output_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Output Tokens"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "provider": {
+          "title": "Provider",
+          "type": "string"
+        },
+        "temperature": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temperature"
+        }
+      },
+      "required": [
+        "provider",
+        "model"
+      ],
+      "title": "ReleaseSpecRuntime",
+      "type": "object"
+    },
+    "ReleaseSpecSafety": {
+      "properties": {
+        "retry_policy": {
+          "$ref": "#/$defs/ReleaseSpecSafetyRetryPolicy"
+        },
+        "timeouts_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReleaseSpecSafetyTimeouts"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "ReleaseSpecSafety",
+      "type": "object"
+    },
+    "ReleaseSpecSafetyRetryPolicy": {
+      "properties": {
+        "backoff_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Backoff Ms"
+        },
+        "max_retries": {
+          "default": 0,
+          "title": "Max Retries",
+          "type": "integer"
+        }
+      },
+      "title": "ReleaseSpecSafetyRetryPolicy",
+      "type": "object"
+    },
+    "ReleaseSpecSafetyTimeouts": {
+      "properties": {
+        "model_call": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Call"
+        },
+        "tool_call": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tool Call"
+        }
+      },
+      "title": "ReleaseSpecSafetyTimeouts",
+      "type": "object"
+    },
+    "ReleaseSpecTools": {
+      "properties": {
+        "manifest_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Manifest Ref"
+        },
+        "tool_names": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tool Names",
+          "type": "array"
+        }
+      },
+      "title": "ReleaseSpecTools",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "api_version": {
+      "const": "v1",
+      "default": "v1",
+      "title": "Api Version",
+      "type": "string"
+    },
+    "kind": {
+      "const": "Release",
+      "default": "Release",
+      "title": "Kind",
+      "type": "string"
+    },
+    "metadata": {
+      "$ref": "#/$defs/ReleaseMetadata"
+    },
+    "spec": {
+      "$ref": "#/$defs/ReleaseSpec"
+    }
+  },
+  "required": [
+    "metadata",
+    "spec"
+  ],
+  "title": "ReleaseArtifact",
+  "type": "object"
+}

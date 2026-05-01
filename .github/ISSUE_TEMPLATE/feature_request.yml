@@ -1,0 +1,34 @@
+name: Feature request
+description: Propose a focused FlightDeck capability.
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What release safety problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should FlightDeck do?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - release artifact
+        - run event
+        - safety ledger
+        - pricing
+        - policy
+        - CLI
+        - docs
+        - other
+    validations:
+      required: true

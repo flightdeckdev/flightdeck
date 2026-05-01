@@ -1,0 +1,66 @@
+{
+  "$defs": {
+    "PricingEntry": {
+      "properties": {
+        "cached_input_usd_per_1k_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cached Input Usd Per 1K Tokens"
+        },
+        "input_usd_per_1k_tokens": {
+          "minimum": 0,
+          "title": "Input Usd Per 1K Tokens",
+          "type": "number"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "output_usd_per_1k_tokens": {
+          "minimum": 0,
+          "title": "Output Usd Per 1K Tokens",
+          "type": "number"
+        }
+      },
+      "required": [
+        "model",
+        "input_usd_per_1k_tokens",
+        "output_usd_per_1k_tokens"
+      ],
+      "title": "PricingEntry",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "entries": {
+      "items": {
+        "$ref": "#/$defs/PricingEntry"
+      },
+      "title": "Entries",
+      "type": "array"
+    },
+    "pricing_version": {
+      "title": "Pricing Version",
+      "type": "string"
+    },
+    "provider": {
+      "title": "Provider",
+      "type": "string"
+    }
+  },
+  "required": [
+    "provider",
+    "pricing_version",
+    "entries"
+  ],
+  "title": "PricingTable",
+  "type": "object"
+}

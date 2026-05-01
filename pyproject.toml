@@ -1,0 +1,77 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "flightdeck-ai"
+version = "1.0.1"
+description = "AI Release Governance for production agents."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.14,<3.15"
+authors = [{ name = "FlightDeck" }]
+keywords = ["ai", "agents", "control-plane", "finops", "deployment", "policy", "operations"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Topic :: System :: Monitoring",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "pydantic>=2.0",
+    "click>=8.0",
+    "fastapi>=0.100.0",
+    "uvicorn[standard]>=0.20.0",
+    "sqlalchemy>=2.0",
+    "aiosqlite>=0.19.0",
+    "httpx>=0.24.0",
+    "pyyaml>=6.0",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+openai = ["openai>=1.0"]
+anthropic = ["anthropic>=0.20"]
+telemetry = [
+    "opentelemetry-api>=1.20.0",
+    "opentelemetry-sdk>=1.20.0",
+    "opentelemetry-exporter-otlp>=1.20.0",
+]
+all = [
+    "openai>=1.0",
+    "anthropic>=0.20",
+    "opentelemetry-api>=1.20.0",
+    "opentelemetry-sdk>=1.20.0",
+    "opentelemetry-exporter-otlp>=1.20.0",
+]
+dev = [
+    "pytest>=7.0",
+    "ruff==0.15.12",
+]
+
+[project.urls]
+Homepage = "https://github.com/flightdeckdev/flightdeck"
+Repository = "https://github.com/flightdeckdev/flightdeck"
+Issues = "https://github.com/flightdeckdev/flightdeck/issues"
+Changelog = "https://github.com/flightdeckdev/flightdeck/blob/main/CHANGELOG.md"
+
+[project.scripts]
+flightdeck = "flightdeck.cli.main:cli"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/flightdeck"]
+
+[tool.uv]
+# Contributor installs: `uv sync --extra dev` (see DEVELOPMENT.md). After changing
+# dependencies or optional extras, run `uv lock` and commit `uv.lock`.
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Keep pytest basetemp under the repo (gitignored `.tmp/`) so Windows runs do not rely
+# on `%TEMP%\pytest-of-*`, which can raise PermissionError when scandir is denied.
+addopts = "--basetemp=.tmp/pytest"

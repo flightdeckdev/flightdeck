@@ -1,0 +1,2 @@
+# Golden bundle checksum is sensitive to line endings on checkout (see CHANGELOG 0.7.0).
+tests/fixtures/golden_bundle/** text eol=lf

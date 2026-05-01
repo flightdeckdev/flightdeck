@@ -1,0 +1,16 @@
+api_version: v1
+kind: Release
+metadata:
+  name: t
+  version: '1'
+spec:
+  agent:
+    agent_id: a
+  runtime:
+    provider: openai
+    model: m
+  prompts:
+    system_ref: prompts/s.md
+  pricing_reference:
+    provider: openai
+    pricing_version: p

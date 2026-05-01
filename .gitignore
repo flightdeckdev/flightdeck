@@ -1,0 +1,31 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+pytest-cache-files-*/
+.ruff_cache/
+.tmp/
+.venv/
+build/
+dist/
+*.egg-info/
+.coverage
+htmlcov/
+.DS_Store
+Thumbs.db
+
+# Local FlightDeck workspace (SQLite ledger + local config); never commit.
+.flightdeck/
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.p12
+*.pfx
+secrets/
+private/
+
+# Common credential filenames (adjust if you add fixtures with similar names).
+*credentials*.json
+*service-account*.json
+google-credentials.json
