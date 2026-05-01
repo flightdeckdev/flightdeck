@@ -1,0 +1,6 @@
+provider: openai
+pricing_version: candidate-pricing
+entries:
+  - model: gpt-4.1-mini
+    input_usd_per_1k_tokens: 3.0
+    output_usd_per_1k_tokens: 4.0

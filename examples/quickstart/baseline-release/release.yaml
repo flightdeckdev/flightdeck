@@ -1,0 +1,22 @@
+api_version: v1
+kind: Release
+metadata:
+  name: support-agent
+  version: baseline
+  description: Baseline support agent release.
+spec:
+  agent:
+    agent_id: agent_support
+  runtime:
+    provider: openai
+    model: gpt-4.1-mini
+    temperature: 0.2
+    max_output_tokens: 800
+  prompts:
+    system_ref: prompts/system.md
+  pricing_reference:
+    provider: openai
+    pricing_version: baseline-pricing
+  tags:
+    env: local
+    example: quickstart

@@ -1,0 +1,6 @@
+provider: openai
+pricing_version: baseline-pricing
+entries:
+  - model: gpt-4.1-mini
+    input_usd_per_1k_tokens: 1.0
+    output_usd_per_1k_tokens: 2.0
