@@ -44,6 +44,20 @@ Optional OTEL libraries (not used by core today): **`pip install 'flightdeck-ai[
 
 Schema evolves via **numbered migrations**. Existing **`flightdeck.yaml`** / **`.flightdeck/`** trees pick up new migrations on next CLI or **`serve`** startup when **`Storage.migrate()`** runs. If you maintain long-lived local databases, skim **[CHANGELOG.md](CHANGELOG.md)** before upgrading across **minor** versions.
 
+## Promotion audit write-lock guarantee
+
+`Storage.insert_promotion_record()` and `Storage.commit_promotion()` both use `BEGIN IMMEDIATE` transactions (via `Storage.transaction()`). This ensures:
+
+- The `audit_seq` counter read-then-write inside `_insert_release_action_conn` is serialized — no two concurrent writers can claim the same sequence number.
+- `commit_promotion` atomically writes both the audit record and the `promoted_releases` pointer in one `BEGIN IMMEDIATE` transaction.
+- `flightdeck doctor` can rely on `audit_seq` being contiguous (`1..max`) as a tamper/partial-write indicator, because every successful insert holds the exclusive write lock for the full sequence-number assignment.
+
+If you call `Storage.insert_promotion_record` or `Storage.commit_promotion` while another connection holds a write lock, you will see `sqlite3.OperationalError: database is locked` (busy timeout: 5 s via `PRAGMA busy_timeout=5000`). Callers should treat this as a transient error and retry.
+
+### `utc_now` location
+
+The `utc_now()` helper (`datetime.now(timezone.utc)`) is defined in **`flightdeck.models`**. Import it from there; **`flightdeck.storage`** no longer re-exports it.
+
 ## Semantic versioning (from v1.0.0)
 
 **Patch** — bug fixes and internal refactors that preserve CLI/schema/HTTP contracts.

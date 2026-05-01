@@ -12,6 +12,9 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 - **CI:** **`astral-sh/setup-uv`** with **`uv sync --frozen --extra dev`** and **`uv run python -m …`** (avoids **`uv run pytest`** path quirks with **`from tests.…`** imports).
 - **`.github/workflows/release-pypi.yml`:** on push of **`vMAJOR.MINOR.PATCH`**, verify tag matches **`pyproject.toml`** and **`src/flightdeck/__init__.py`**, run **ruff** / **pytest** / schema drift, **`uv build`**, publish to **PyPI** via **OIDC** trusted publishing (**publish attestations**), and create a **GitHub Release** with **`dist/*`** assets (**`softprops/action-gh-release`**).
 - **`tests/test_version_consistency.py`:** assert **`pyproject.toml`** **`version`** matches **`flightdeck.__version__`** (same invariant as the release workflow).
+- **`Storage.insert_promotion_record` now uses `BEGIN IMMEDIATE` transaction:** the promotion audit-record insert now calls `self.transaction()` (which issues `BEGIN IMMEDIATE`) instead of `self.connect()`. This serializes write access and prevents concurrent writers from racing on `audit_seq` assignment. `commit_promotion` already used `transaction()`; this change closes the analogous gap for standalone promotion record inserts.
+- **`utc_now` moved to `flightdeck.models`:** the UTC timestamp helper is now defined in `flightdeck.models` and imported from there by both `flightdeck.storage` and `flightdeck.cli.main`. Previously it lived in `flightdeck.storage`.
+- **Test for promotion write-lock (`test_insert_promotion_record_uses_immediate_transaction`):** verifies that `insert_promotion_record` holds a SQLite write lock (i.e., a competing `BEGIN IMMEDIATE` sees `database is locked`) to guard the append-only `audit_seq` ledger invariant.
 
 ### Changed
 
