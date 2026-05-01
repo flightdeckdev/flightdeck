@@ -41,6 +41,19 @@ def confidence_label(
     min_candidate_runs: int,
     min_low_runs: int,
 ) -> Literal["HIGH", "MEDIUM", "LOW"]:
+    """Return a three-tier confidence label for a diff comparison.
+
+    Thresholds come from the resolved policy (which can set them to 0 to
+    unconditionally accept any sample size):
+
+    - HIGH  — both sides meet their minimum run counts.
+    - LOW   — either side falls below the floor (``min_low_runs``).
+    - MEDIUM — in between: at least one side misses its target but neither
+               is below the floor.
+
+    A threshold of 0 is valid and means "no minimum required"; for example,
+    setting all three to 0 lets an empty-window diff still return HIGH.
+    """
     if baseline_runs >= min_baseline_runs and candidate_runs >= min_candidate_runs:
         return "HIGH"
     if baseline_runs < min_low_runs or candidate_runs < min_low_runs:
@@ -128,6 +141,20 @@ def evaluate_policy(
     diff_confidence: Literal["HIGH", "MEDIUM", "LOW"],
     diff_confidence_reason: str | None,
 ) -> PolicyResult:
+    """Evaluate promotion-gate policy against a computed diff.
+
+    Each active constraint appends a human-readable failure reason; an empty
+    reasons list means the policy passed.
+
+    Constraints checked (only when the corresponding policy field is not None):
+
+    - ``max_cost_per_run_usd`` — candidate average cost must not exceed limit.
+    - ``max_latency_ms`` — candidate average latency must not exceed limit
+      (skipped when candidate has no latency data).
+    - ``max_error_rate`` — candidate error rate must not exceed limit.
+    - ``require_high_diff_confidence`` — when ``True``, the diff must reach
+      HIGH confidence (based on sample thresholds) before promotion is allowed.
+    """
     reasons: list[str] = []
 
     # Cost
@@ -167,6 +194,45 @@ def diff_releases(
     candidate_pricing_table: PricingTable,
     window: str,
 ) -> DiffResult:
+    """Compute a trusted diff between a baseline and candidate release.
+
+    Each side is costed independently against its own pricing table, then
+    rolled up into a :class:`Rollup` (cost, latency, error rate).  Confidence
+    is determined by sample size relative to the resolved thresholds, and
+    policy constraints are evaluated on top.
+
+    **Threshold resolution** — policy fields use ``is not None`` to distinguish
+    "not set" from "explicitly zero":
+
+    - If ``Policy.min_candidate_runs`` (/ ``min_baseline_runs`` / ``min_low_runs``)
+      is ``None``, the workspace config default is used (typically 500 / 500 / 50).
+    - If the policy sets a threshold to ``0``, that override is respected and
+      the config default is *not* used — any sample size satisfies the threshold.
+
+    **Agent-id invariant** — when both sides are non-empty, every run event on
+    each side must share the same ``agent_id``, and baseline and candidate must
+    use the same ``agent_id``.  Cross-agent diffs are rejected with
+    ``ValueError``.
+
+    Args:
+        cfg: Workspace configuration supplying diff defaults.
+        policy: Active promotion policy (thresholds and constraints).
+        baseline_events: Run events for the baseline release.
+        candidate_events: Run events for the candidate release.
+        baseline_pricing_table: Pricing used to cost baseline events.
+        candidate_pricing_table: Pricing used to cost candidate events.
+        window: Human-readable label for the time window (e.g. ``"7d"``);
+            stored on the result for display only — filtering is the caller's
+            responsibility.
+
+    Returns:
+        A :class:`DiffResult` containing rollups, deltas, confidence label,
+        and the policy evaluation outcome.
+
+    Raises:
+        ValueError: If events span multiple agent IDs on one side, or if
+            baseline and candidate use different agent IDs.
+    """
     if baseline_events and candidate_events:
         b_agents = {e.agent_id for e in baseline_events}
         c_agents = {e.agent_id for e in candidate_events}

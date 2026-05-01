@@ -13,6 +13,10 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 - **`.github/workflows/release-pypi.yml`:** on push of **`vMAJOR.MINOR.PATCH`**, verify tag matches **`pyproject.toml`** and **`src/flightdeck/__init__.py`**, run **ruff** / **pytest** / schema drift, **`uv build`**, publish to **PyPI** via **OIDC** trusted publishing (**publish attestations**), and create a **GitHub Release** with **`dist/*`** assets (**`softprops/action-gh-release`**).
 - **`tests/test_version_consistency.py`:** assert **`pyproject.toml`** **`version`** matches **`flightdeck.__version__`** (same invariant as the release workflow).
 
+### Fixed
+
+- **`diff_releases` zero policy sample thresholds:** `Policy.min_candidate_runs`, `Policy.min_baseline_runs`, and `Policy.min_low_runs` set to **`0`** now correctly override workspace config defaults to `0` instead of being silently ignored. Previously, `or`-based fallback treated `0` as falsy and fell back to the config value (typically `500` / `50`). Fixed by using explicit `is not None` checks. A policy can now unconditionally accept any sample size by setting thresholds to `0` — for example, to allow diffs over empty event windows without a confidence downgrade.
+
 ### Changed
 
 - **`tests/conftest.py`:** create repo **`.tmp/`** at import time so **`pytest --basetemp=.tmp/pytest`** works on fresh checkouts and **Linux** CI (parent dir is no longer Windows-only).
