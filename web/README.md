@@ -50,23 +50,18 @@ npm run test:e2e
 
 Run **`npm`** commands from this **`web/`** directory (repo root is one level up: **`cd web`**).
 
-## PR split (subagent-friendly)
+## App architecture
 
-**Already landed:** Vite + React + TS **`web/`**, committed **`static/`**, FastAPI **`/assets`** mount, CI **`npm run build`** + **`git diff --exit-code`** on **`static/`**, Playwright smoke, LF normalization via **`.gitattributes`** (stable **`git diff`** on Windows).
+The React app uses **HashRouter** (`#/` paths) so it works without server-side routing from FastAPI's static file mount.
 
-**Suggested follow-ups:**
+| Route | Component | Purpose |
+|-------|-----------|---------|
+| `#/` | `OverviewPage` | Releases table, promoted pointers, recent audit actions |
+| `#/diff` | `DiffPage` | Run-diff form; calls `POST /v1/diff` |
+| `#/actions` | `ActionsPage` | Promote / rollback form; calls `POST /v1/promote` or `POST /v1/rollback` |
 
-1. **PR B — UI behavior**  
-   Timeline UX (tables, loading states, `/v1/actions` query filters), mutation UX (inline errors, disable buttons while pending). Touch **`web/src/`** only, then **`npm run build`** and commit **`static/`**.
+**Shell and context:** `AppShell` wraps all pages in a `TimelineRefreshProvider`. When a promote/rollback mutation succeeds in `ActionsPage`, it calls `notifyTimelineMutated()`. `OverviewPage` watches the `generation` counter and re-fetches automatically — no page reload needed.
 
-   *Subagent prompt:* “Improve **`web/src/App.tsx`** (and small new components under **`web/src/`**) for timeline and promote/rollback UX only; rebuild **`static/`**; do not change Python HTTP contracts.”
+**`src/api.ts`:** `fetchJson<T>` handles auth (`VITE_FLIGHTDECK_LOCAL_API_TOKEN` → `Authorization: Bearer …`), error extraction, and the common `throw on non-ok` pattern. `loadTimeline()` fans out to `GET /v1/releases`, `GET /v1/promoted`, and `GET /v1/actions` in parallel and merges the results into a single `TimelinePayload`.
 
-2. **PR C — Optional**  
-   React Router, richer diff visualization, shared design tokens. (**Playwright** smoke is under **`e2e/`**; see **Playwright E2E** above.)
-
-**Parallel subagents for PR B** (non-overlapping files if you split components first):
-
-- **Agent 1 — Read path:** `TimelinePanel` (or equivalent) + styles for releases/promoted/actions.
-- **Agent 2 — Write path:** `DiffPanel` + `MutationPanel` + token-aware **`fetch`** helpers.
-
-Rebase one branch onto the other, run **`npm run build` once**, fix any conflicts in **`static/`**, then push.
+Full reference (pages, context, API helpers, CSS tokens): **[`docs/web-ui.md`](../docs/web-ui.md)**.
