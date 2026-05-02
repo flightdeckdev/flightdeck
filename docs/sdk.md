@@ -172,6 +172,12 @@ All methods call `response.raise_for_status()` before returning, so HTTP 4xx/5xx
 responses raise `httpx.HTTPStatusError`. Transient network failures raise
 `httpx.RequestError` and are retried up to `max_retries` times with exponential backoff.
 
+**Policy-blocked promote/rollback (HTTP 409)**
+
+When the active policy blocks a `post_promote` or `post_rollback` call, the server returns
+HTTP 409. The SDK raises `httpx.HTTPStatusError`; the full outcome — including which
+policy constraints failed — is in `e.response.json()["detail"]`.
+
 ```python
 import httpx
 
@@ -183,8 +189,17 @@ try:
         reason="tested in staging",
     )
 except httpx.HTTPStatusError as e:
-    print(e.response.status_code, e.response.json())
+    if e.response.status_code == 409:
+        detail = e.response.json()["detail"]
+        # detail["message"]  -> "Promotion blocked by policy."
+        # detail["outcome"]["policy"]["reasons"] -> list of failed constraints
+        print("Blocked:", detail["outcome"]["policy"]["reasons"])
+    else:
+        raise
 ```
+
+The action is still recorded in the audit ledger even when blocked; `GET /v1/actions`
+will show it with `policy_passed: false`.
 
 ## Custom `httpx.Client`
 
