@@ -185,6 +185,52 @@ Ingest `RunEvent` records (runtime evidence for diff and policy evaluation).
 
 Full field reference: [`schemas/v1/run_event.schema.json`](../schemas/v1/run_event.schema.json).
 
+### `RunEvent` field reference
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `api_version` | `"v1"` | no (defaults to `"v1"`) | Must be `"v1"` or omitted. Any other value returns HTTP 400. |
+| `type` | `"run_start"` \| `"run_end"` | no (defaults to `"run_end"`) | Event type. Only `"run_end"` events carry cost/latency data; `"run_start"` is accepted but contributes no usage. |
+| `timestamp` | ISO-8601 string | **yes** | Event timestamp. Used for time-window filtering in diff queries. |
+| `workspace_id` | string | no (defaults to `"ws_local"`) | Workspace identifier for multi-workspace setups. |
+| `agent_id` | string | **yes** | Stable agent identifier (must match the `spec.agent.agent_id` in the registered release). |
+| `release_id` | string | **yes** | The `release_id` returned by `flightdeck release register`. Links the event to a release record. |
+| `run_id` | string | **yes** | Unique run identifier per workspace. Duplicate `run_id` values are silently skipped. |
+| `tenant_id` | string | **yes** | Tenant identifier. Used as a filter dimension in diff queries (`--tenant`). |
+| `task_id` | string | **yes** | Task type identifier. Used as a filter dimension in diff queries (`--task`). |
+| `environment` | string | **yes** | Deployment environment (e.g. `"production"`, `"staging"`). Must match the environment used in promote/rollback. |
+| `metrics` | object | no | Run-level performance metrics (see below). |
+| `usage` | object | **yes** | Model token usage (see below). |
+| `labels` | object | no | Arbitrary string key-value pairs for tagging. Not used in diff/policy computations. |
+| `request` | object | no | Tracing identifiers (`session_id`, `trace_id`, `span_id`). Not used in diff/policy computations. |
+
+**`metrics` fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `success` | boolean | `true` | Whether the run succeeded. `false` events contribute to the error rate in diff computations. |
+| `latency_ms` | integer ≥ 0 | `null` | End-to-end run latency in milliseconds. Omit if not measured; `null` events are excluded from latency averages. |
+| `error_type` | string | `null` | Optional error class (e.g. `"timeout"`, `"rate_limit"`). Informational only. |
+
+**`usage` fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `usage.model.provider` | string | **yes** | LLM provider (e.g. `"openai"`). Must match the model's pricing table provider. |
+| `usage.model.model` | string | **yes** | Model name (e.g. `"gpt-4o"`). Must have an entry in the release's pricing table. |
+| `usage.model.input_tokens` | integer ≥ 0 | **yes** | Prompt tokens consumed. |
+| `usage.model.output_tokens` | integer ≥ 0 | **yes** | Completion tokens generated. |
+| `usage.model.cached_input_tokens` | integer ≥ 0 | no (default `0`) | Cached prompt tokens (used for cached rate pricing when a `cached_input_usd_per_1k_tokens` rate is set). |
+| `usage.tools` | array | no | Per-tool usage entries (see below). Currently recorded but not factored into cost computations. |
+
+**`usage.tools[]` entry fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `tool_name` | string | **yes** | Tool identifier. |
+| `invocations` | integer ≥ 0 | `0` | Number of times the tool was called. |
+| `cost_units` | float ≥ 0 | `0.0` | Tool-specific cost units (vendor-defined; not yet used in cost computations). |
+
 ---
 
 ## `POST /v1/diff`
