@@ -38,7 +38,7 @@ uv run python -m ruff check src tests
 uv run python -m pytest
 uv run flightdeck --help
 uv run flightdeck doctor
-uv run python scripts/quickstart_smoke.py
+uv run flightdeck-quickstart-verify
 ```
 
 With an **activated venv** (pip or after `uv sync`):
@@ -48,14 +48,32 @@ python -m ruff check src tests
 python -m pytest
 flightdeck --help
 flightdeck doctor
-python scripts/quickstart_smoke.py
+flightdeck-quickstart-verify
 ```
 
-Full command flags and exit codes: [docs/cli.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/cli.md). Cross-platform quickstart parity: **`scripts/quickstart_smoke.py`** (also run in CI).
+Full command flags and exit codes: [README.md](https://github.com/flightdeckdev/flightdeck/blob/main/README.md). Cross-platform quickstart parity: **`flightdeck-quickstart-verify`** / **`python -m flightdeck.quickstart_smoke`** (also run in CI).
 
 **Lockfile:** when you change **`pyproject.toml`** dependencies or extras, run **`uv lock`** and commit **`uv.lock`** so CI stays **`--frozen`**-reproducible.
 
-Before pushing to an **org** remote, follow the maintainer checklist in [docs/github-organization.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/github-organization.md) and [docs/research-workflow.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/research-workflow.md) ([git remotes](https://github.com/flightdeckdev/flightdeck/blob/main/docs/git-remotes.md): `origin` = personal research, `org` = flightdeckdev).
+## Web UI (React + Vite)
+
+The browser UI under **`flightdeck serve`** `/` is built from **`web/`** into **`src/flightdeck/server/static/`** (committed artifacts). After changing UI source, rebuild and commit the static output so CI passes:
+
+```bash
+cd web
+npm ci
+npm run build
+cd ..
+git status src/flightdeck/server/static/
+```
+
+**Playwright:** from **`web/`**, **`npx playwright install chromium`** once, then **`npm run test:e2e`** (matches CI after the **`static/`** diff gate; see **`web/README.md`**).
+
+**`npm run dev`:** proxies **`/v1`** to **`flightdeck serve`** on **`127.0.0.1:8765`** by default; copy **`web/.env.example`** to **`web/.env.local`** to set **`VITE_FLIGHTDECK_LOCAL_API_TOKEN`** when testing mutations against a token-protected server.
+
+See **`web/README.md`** for PR-split guidance when iterating with agents.
+
+Before pushing to an **org** remote, follow the maintainer checklist in **`CONTRIBUTING.md`** (`origin` = personal research, `org` = flightdeckdev).
 
 ## PyPI release (maintainers)
 

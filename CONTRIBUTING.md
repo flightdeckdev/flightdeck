@@ -28,7 +28,7 @@ With **uv** (matches CI):
 ```bash
 uv run python -m ruff check src tests
 uv run python -m pytest
-uv run python scripts/quickstart_smoke.py
+uv run flightdeck-quickstart-verify
 ```
 
 With an activated **venv**:
@@ -36,7 +36,7 @@ With an activated **venv**:
 ```bash
 python -m ruff check src tests
 python -m pytest
-python scripts/quickstart_smoke.py
+flightdeck-quickstart-verify
 ```
 
 If you change **`pyproject.toml`** dependencies, run **`uv lock`** and commit **`uv.lock`**. Use the same checks as **CI** (see **`AGENTS.md`**) before opening a PR.
@@ -45,14 +45,16 @@ If you change **`pyproject.toml`** dependencies, run **`uv lock`** and commit **
 
 Do not commit credentials, customer data, internal strategy docs, or local ledger data. The repo ignores **`.flightdeck/`**, **`.env*`**, optional **`private/`** / **`secrets/`**, and common key/credential patterns—see **`.gitignore`** and **[SECURITY.md](SECURITY.md)**.
 
-If this clone is your **research repo** (personal `origin`), treat **[docs/research-workflow.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/research-workflow.md)** and **[docs/git-remotes.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/git-remotes.md)** as the source of truth for what may go to org remotes vs what stays local.
+If this clone is your **research repo** (personal `origin`), use this file as the source of truth for what may go to org remotes vs what stays local.
 
-Before the **first push** to an org remote (or any push that should represent “org standards”), follow **[docs/github-organization.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/github-organization.md)**. The **[flightdeckdev](https://github.com/flightdeckdev)** org is for planned repos when you are ready; prefer **one solid default repo** until a real split is needed.
+Before the **first push** to an org remote (or any push that should represent “org standards”), follow the pre-push checklist in this file. The **[flightdeckdev](https://github.com/flightdeckdev)** org is for planned repos when you are ready; prefer **one solid default repo** until a real split is needed.
 
 ## Pull Requests
 
 Keep PRs small and focused. Include tests for behavior changes and docs for user-facing CLI,
 schema, or workflow changes.
+
+Use the **[pull request template](.github/PULL_REQUEST_TEMPLATE.md)** checklist (same bar as **`.github/workflows/ci.yml`**). **Request review** from **[CODEOWNERS](.github/CODEOWNERS)** (`@flightdeckdev/maintainers` on the org repo); on a fork, add reviewers manually so the change gets eyes before merge.
 
 ## Commit Style
 

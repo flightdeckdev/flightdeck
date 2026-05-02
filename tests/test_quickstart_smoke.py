@@ -7,9 +7,8 @@ from pathlib import Path
 
 def test_quickstart_smoke_script_exits_zero() -> None:
     root = Path(__file__).resolve().parents[1]
-    script = root / "scripts" / "quickstart_smoke.py"
     proc = subprocess.run(
-        [sys.executable, str(script)],
+        [sys.executable, "-m", "flightdeck.quickstart_smoke"],
         cwd=root,
         capture_output=True,
         text=True,

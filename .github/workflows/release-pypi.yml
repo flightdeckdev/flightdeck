@@ -23,6 +23,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
         with:
@@ -31,6 +38,20 @@ jobs:
 
       - name: Sync locked dev environment
         run: uv sync --frozen --extra dev
+
+      - name: Build web UI
+        run: |
+          cd web
+          npm ci
+          npm run build
+          cd ..
+          git diff --exit-code src/flightdeck/server/static/
+
+      - name: Playwright E2E (served UI)
+        run: |
+          cd web
+          npx playwright install chromium
+          npm run test:e2e
 
       - name: Verify tag matches declared package versions
         shell: bash
@@ -73,6 +94,9 @@ jobs:
         run: |
           uv run python scripts/generate_schemas.py
           git diff --exit-code schemas/
+
+      - name: Quickstart smoke
+        run: uv run flightdeck-quickstart-verify
 
       - name: Build distributions
         run: uv build

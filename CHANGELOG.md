@@ -2,16 +2,17 @@
 
 All notable changes to FlightDeck will be documented in this file.
 
-This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**, documented CLI behavior (**[docs/cli.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/cli.md)** on the canonical **`main`** branch), committed **`schemas/v1/`**, and **`POST /v1/events`** payloads with **`api_version` `v1`** are treated as stable public contracts unless a release notes a semver-major bump.
+This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**, documented CLI behavior (**[README.md](https://github.com/flightdeckdev/flightdeck/blob/main/README.md)** on the canonical **`main`** branch), committed **`schemas/v1/`**, and **`POST /v1/events`** payloads with **`api_version` `v1`** are treated as stable public contracts unless a release notes a semver-major bump.
 
 ## Unreleased
 
 ### Added
 
-- **`uv.lock`** and **[uv](https://docs.astral.sh/uv/)**-based workflow: **`uv sync --extra dev`** / **`uv sync --frozen --extra dev`** for reproducible installs; **`uv run …`** for commands (see **`DEVELOPMENT.md`**).
-- **CI:** **`astral-sh/setup-uv`** with **`uv sync --frozen --extra dev`** and **`uv run python -m …`** (avoids **`uv run pytest`** path quirks with **`from tests.…`** imports).
-- **`.github/workflows/release-pypi.yml`:** on push of **`vMAJOR.MINOR.PATCH`**, verify tag matches **`pyproject.toml`** and **`src/flightdeck/__init__.py`**, run **ruff** / **pytest** / schema drift, **`uv build`**, publish to **PyPI** via **OIDC** trusted publishing (**publish attestations**), and create a **GitHub Release** with **`dist/*`** assets (**`softprops/action-gh-release`**).
-- **`tests/test_version_consistency.py`:** assert **`pyproject.toml`** **`version`** matches **`flightdeck.__version__`** (same invariant as the release workflow).
+- **Quickstart:** **`flightdeck-quickstart-verify`**, **`flightdeck.quickstart_smoke`**, **`scripts/quickstart_smoke.py`**; **CI** and **PyPI release** run **`uv run flightdeck-quickstart-verify`** (release: after schema drift check).
+- **HTTP SDK:** **`FlightdeckClient`** / **`AsyncFlightdeckClient`** — optional **`api_token`**, **`health`**, **`list_releases`** / **`list_promoted`** / **`list_actions`**, **`post_diff`** / **`post_promote`** / **`post_rollback`**, plus ingest batching and retries.
+- **Web + E2E:** React/Vite **`web/`**, committed **`src/flightdeck/server/static/`**, FastAPI **`/assets`**; Vite dev proxy **`/v1`** / **`/health`**, optional **`VITE_FLIGHTDECK_LOCAL_API_TOKEN`**; **`.gitattributes`** LF on **`static/`**; **`web/e2e/`**, **`web/playwright.config.ts`**, **`web/scripts/e2e-server.mjs`**, **`@playwright/test`**; **CI** / **PyPI release**: **`npm ci`**, **`npm run build`**, **`git diff --exit-code static/`**, **`npx playwright install chromium`**, **`npm run test:e2e`**.
+- **Tests:** CLI contracts (**`release verify`**, **`diff`**, **`history`**, **`rollback`**); invalid JSON fixtures (**`PricingTable`**, **`RunEvent`**, **`ReleaseArtifact`**).
+- **Tooling:** **`uv.lock`** / **`uv sync --frozen --extra dev`** / **`astral-sh/setup-uv`**; **`.github/workflows/release-pypi.yml`** (tag ↔ **`pyproject.toml`** / **`__init__.py`**, ruff, pytest, schemas, **`uv build`**, OIDC **PyPI**, GitHub Release); **`tests/test_version_consistency.py`**.
 
 ### Fixed
 

@@ -1,0 +1,4 @@
+{
+  "policy_id": "bad-policy",
+  "max_error_rate": 1.5
+}

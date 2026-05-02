@@ -1,0 +1,17 @@
+.env.local
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# Ephemeral agent/IDE chunk files (never commit; delete if they reappear)
+.plchunk*.txt
+.pkt*.txt
+.lock-part-*.txt
+.slice*
+.c[0-9][0-9]
+.k[0-9][0-9]
+.s[0-9][0-9]
+.t[0-9]*
+.tiny
+/_lock_*.json

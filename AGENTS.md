@@ -4,11 +4,11 @@
 
 This tree is usually a **personal-account research repo** (`origin` → your GitHub user): local experimentation, WIP, and broad refactors are acceptable.
 
-**Organization repos** — canonical product: **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** under [flightdeckdev](https://github.com/flightdeckdev). Only **relevant**, standards-meeting changes (tests, ruff, no secrets, changelog/version when releasing) should be pushed or PR’d there—typically via a second remote **`org`** (workflow: [git remotes](https://github.com/flightdeckdev/flightdeck/blob/main/docs/git-remotes.md)).
+**Organization repos** — canonical product: **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** under [flightdeckdev](https://github.com/flightdeckdev). Only **relevant**, standards-meeting changes (tests, ruff, no secrets, changelog/version when releasing) should be pushed or PR’d there—typically via a second remote **`org`** (workflow notes live in **`CONTRIBUTING.md`** in this clone).
 
 When implementing features, prefer **small, PR-shaped slices** that could ship to an org repo without extra cleanup. Do not conflate “saved in research” with “ready for org push.”
 
-Extended maintainer docs (research workflow, org checklist, canonical publish) live on **`main`** in that repository (for example [research workflow](https://github.com/flightdeckdev/flightdeck/blob/main/docs/research-workflow.md), [GitHub organization](https://github.com/flightdeckdev/flightdeck/blob/main/docs/github-organization.md)). This clone may omit those paths to stay small. Claude Code / short entrypoint: **`CLAUDE.md`**.
+Extended maintainer docs (research workflow, org checklist, canonical publish) live on **`main`** in that repository. This clone stays compact and keeps practical contributor guidance in **`CONTRIBUTING.md`**. Claude Code / short entrypoint: **`CLAUDE.md`**.
 
 ## Mission
 
@@ -36,10 +36,10 @@ Do not add:
 
 Treat these as **stable API** unless a change explicitly marks an experimental path:
 
-- **CLI:** synopsis, flags, exit codes — canonical reference: **[docs/cli.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/cli.md)** (normative for scripting).
-- **On-disk / wire:** `release.yaml`, run events, pricing imports, policy shape — **`schemas/`** (generated; drift caught in CI), **[docs/spec.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/spec.md)** (0.x snapshot of what the code does today).
-- **v1 / GA direction** (migrations, checksums, trust boundaries, defaults): **[docs/spec-v1-forward.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/spec-v1-forward.md)**. Prefer updating the forward spec for new v1 contracts; avoid expanding **`docs/spec.md`** as the rolling GA target.
-- **Backlog and review status:** **[docs/v1-next-steps.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/v1-next-steps.md)**.
+- **CLI:** synopsis, flags, exit codes — `flightdeck --help` plus command help output (normative for scripting in this slim clone).
+- **On-disk / wire:** `release.yaml`, run events, pricing imports, policy shape — **`schemas/`** (generated; drift caught in CI) plus compatibility notes in **`RELEASE_NOTES.md`**.
+- **v1 / GA direction** (migrations, checksums, trust boundaries, defaults): **`RELEASE_NOTES.md`** and shipped CLI/schema behavior.
+- **Backlog and milestone status:** **`ROADMAP.md`**.
 
 ## Engineering rules
 
@@ -67,7 +67,7 @@ Recommended (**[uv](https://docs.astral.sh/uv/)** — see **`DEVELOPMENT.md`**):
 uv sync --frozen --extra dev
 uv run python -m ruff check src tests
 uv run python -m pytest
-uv run python scripts/quickstart_smoke.py
+uv run flightdeck-quickstart-verify
 ```
 
 After editing Pydantic models, regenerate schemas and ensure a clean diff:
@@ -81,7 +81,7 @@ Fallback (activated **venv** or global tools): the same steps with **`python -m 
 
 On **Windows**, use `py -3` in place of `python` if that is how your environment is set up. If pytest temp dirs fail with permissions, see **`DEVELOPMENT.md`** / **`tests/conftest.py`**.
 
-**CI bar** (mirrors **`.github/workflows/ci.yml`** on **CPython 3.14**): **`uv sync --frozen --extra dev`**, **`uv run python -m ruff check src tests`**, **`uv run python -m pytest`**, **`uv run python scripts/generate_schemas.py`** + no **`schemas/`** diff, **`uv run python scripts/quickstart_smoke.py`**, **`uv run flightdeck --help`**.
+**CI bar** (mirrors **`.github/workflows/ci.yml`** on **CPython 3.14**): see the workflow for the exact sequence; includes **`uv sync --frozen --extra dev`**, **`web/`** **`npm ci`** + **`npm run build`** + **`git diff --exit-code`** on **`static/`**, Playwright **`npm run test:e2e`**, **ruff**, **pytest**, schema drift check, **`flightdeck-quickstart-verify`**, **`flightdeck --help`**.
 
 Use a repo-local temp directory if the OS temp directory is restricted.
 

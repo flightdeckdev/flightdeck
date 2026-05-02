@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from flightdeck.models import Policy, PricingTable, ReleaseArtifact, RunEvent
 
@@ -29,6 +29,22 @@ _FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "json"
 def test_minimal_json_fixture_validates(filename: str, model: type[BaseModel]) -> None:
     data = _read_json(_FIXTURE_DIR / filename)
     model.model_validate(data)
+
+
+@pytest.mark.parametrize(
+    ("filename", "model"),
+    [
+        ("run_event_invalid_missing_release_id_v1.json", RunEvent),
+        ("run_event_invalid_api_version_v0.json", RunEvent),
+        ("policy_invalid_error_rate_gt_1_v1.json", Policy),
+        ("pricing_table_invalid_negative_price_v1.json", PricingTable),
+        ("release_artifact_invalid_wrong_kind_v1.json", ReleaseArtifact),
+    ],
+)
+def test_invalid_json_fixture_rejected(filename: str, model: type[BaseModel]) -> None:
+    data = _read_json(_FIXTURE_DIR / filename)
+    with pytest.raises(ValidationError):
+        model.model_validate(data)
 
 
 def test_committed_json_schemas_match_models() -> None:
