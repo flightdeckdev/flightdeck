@@ -1,0 +1,103 @@
+{
+  "$defs": {
+    "PricingCatalogMapping": {
+      "properties": {
+        "catalog_slot_id": {
+          "title": "Catalog Slot Id",
+          "type": "string"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "pricing_version": {
+          "title": "Pricing Version",
+          "type": "string"
+        },
+        "provider": {
+          "title": "Provider",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider",
+        "pricing_version",
+        "model",
+        "catalog_slot_id"
+      ],
+      "title": "PricingCatalogMapping",
+      "type": "object"
+    },
+    "PricingCatalogTariff": {
+      "description": "Comparable USD rates for one catalog slot (same units as :class:`PricingEntry`).",
+      "properties": {
+        "cached_input_usd_per_1k_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cached Input Usd Per 1K Tokens"
+        },
+        "input_usd_per_1k_tokens": {
+          "minimum": 0,
+          "title": "Input Usd Per 1K Tokens",
+          "type": "number"
+        },
+        "output_usd_per_1k_tokens": {
+          "minimum": 0,
+          "title": "Output Usd Per 1K Tokens",
+          "type": "number"
+        }
+      },
+      "required": [
+        "input_usd_per_1k_tokens",
+        "output_usd_per_1k_tokens"
+      ],
+      "title": "PricingCatalogTariff",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "api_version": {
+      "const": "v1",
+      "default": "v1",
+      "title": "Api Version",
+      "type": "string"
+    },
+    "catalog_version": {
+      "title": "Catalog Version",
+      "type": "string"
+    },
+    "kind": {
+      "const": "PricingCatalog",
+      "default": "PricingCatalog",
+      "title": "Kind",
+      "type": "string"
+    },
+    "mappings": {
+      "items": {
+        "$ref": "#/$defs/PricingCatalogMapping"
+      },
+      "title": "Mappings",
+      "type": "array"
+    },
+    "tariffs": {
+      "additionalProperties": {
+        "$ref": "#/$defs/PricingCatalogTariff"
+      },
+      "title": "Tariffs",
+      "type": "object"
+    }
+  },
+  "required": [
+    "catalog_version"
+  ],
+  "title": "PricingCatalog",
+  "type": "object"
+}

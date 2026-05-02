@@ -1,0 +1,19 @@
+# Sample PricingCatalog — maps imported pricing tables + model IDs to comparable slots.
+# Reference: flightdeck.catalog.PricingCatalog (JSON Schema: schemas/v1/pricing_catalog.schema.json).
+api_version: v1
+kind: PricingCatalog
+catalog_version: "sample-1"
+mappings:
+  - provider: openai
+    pricing_version: openai-2026-04-30
+    model: gpt-4o-mini
+    catalog_slot_id: reasoning_tier_1
+  - provider: anthropic
+    pricing_version: anthropic-2026-04-30
+    model: claude-3-5-sonnet-20241022
+    catalog_slot_id: reasoning_tier_1
+tariffs:
+  reasoning_tier_1:
+    input_usd_per_1k_tokens: 0.25
+    output_usd_per_1k_tokens: 0.75
+    cached_input_usd_per_1k_tokens: 0.1

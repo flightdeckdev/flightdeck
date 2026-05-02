@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "flightdeck.name" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "flightdeck.name" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "flightdeck.name" . }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "flightdeck.name" . }}
+    spec:
+      containers:
+        - name: flightdeck
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["serve", "--host", "0.0.0.0", "--port", "{{ .Values.service.port }}"]
+          workingDir: {{ .Values.workspaceMountPath | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: workspace
+              mountPath: {{ .Values.workspaceMountPath | quote }}
+      volumes:
+        - name: workspace
+          emptyDir: {}
