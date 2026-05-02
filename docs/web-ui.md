@@ -18,9 +18,9 @@ The app uses **HashRouter** (`react-router-dom`) so all navigation stays within 
 
 | Hash path | Component | HTTP calls | Notes |
 |-----------|-----------|-----------|-------|
-| `#/` | `OverviewPage` | `GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions`, `GET /v1/metrics` (parallel where applicable) | Ledger metrics (read-only); short per-counter hints; skeleton while loading; links to Diff/Runs |
+| `#/` | `OverviewPage` | `GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions`, `GET /v1/metrics` (parallel where applicable) | Ledger metrics (read-only); short per-counter hints; skeleton on first load; **auto-refresh** every 30s when the tab is visible + on timeline **`generation`** bump; links to Diff/Runs |
 | `#/diff` | `DiffPage` | `POST /v1/diff` | Sections: policy gate (incl. `evaluated_at`), evidence window, pricing/catalog/hints (incl. provider/version skew callout when sides differ), per-1k prices when present, cost/quality rollups; raw JSON panel |
-| `#/runs` | `RunsPage` | `GET /v1/releases` (for datalist), `GET /v1/runs`, `GET /v1/runs/export` | Forensics: filters, table (trace/status, trace band rows or **Group by trace_id**), **View** drawer, empty/offset/truncation hints, NDJSON download |
+| `#/runs` | `RunsPage` | `GET /v1/releases` (for datalist), `GET /v1/runs`, `GET /v1/runs/export` | Forensics: filters, table (trace/status, trace band rows or **Group by trace_id**), **View** drawer (focus trap, session/span ids), typed **run-query error** card with **Retry**, empty/offset/truncation hints, NDJSON download |
 | `#/actions` | `ActionsPage` | `GET /v1/workspace`, `GET /v1/promotion-requests` (when `promotion_requires_approval`), `POST /v1/promote` **or** `POST /v1/promote/request` + `POST /v1/promote/confirm`, `POST /v1/rollback` | Workspace skeleton then strip; approval path: numbered steps, pending **Refresh list** / **Use for confirm**; **Rollback** danger-styled; see **ActionsPage** below |
 | `#/*` (any other) | — | Redirects to `#/` | |
 
@@ -37,23 +37,28 @@ promote/rollback capability should be unavailable regardless of network placemen
 
 ```
 App (HashRouter)
-└── AppShell (layout: header + nav)
+└── AppShell (layout: left sidebar + main column)
     └── TimelineRefreshProvider (context)
-        ├── SecurityStatusBar (below header, above main content)
-        ├── OverviewPage  (route: #/)
-        ├── DiffPage      (route: #/diff)
-        ├── RunsPage      (route: #/runs)
-        └── ActionsPage   (route: #/actions; redirects → #/ when UI_READ_ONLY)
+        └── div.fd-shell
+            ├── aside.fd-sidebar (brand + primary nav)
+            └── div.fd-shell__content
+                ├── SecurityStatusBar
+                └── main#main-content → OverviewPage | DiffPage | RunsPage | ActionsPage
 ```
 
 ---
 
 ## `AppShell` (`web/src/components/AppShell.tsx`)
 
-Renders the top header with brand name and primary nav links, then an `<Outlet>` for the
-active page. Wraps the entire subtree in `TimelineRefreshProvider` so any descendant can
-access the refresh context. Mounts `SecurityStatusBar` between the header and the main
-content area.
+Renders a fixed-width **left sidebar** (`aside.fd-sidebar`) with brand and vertical primary
+nav (Langfuse-style rail), then a **`fd-shell__content`** column with `SecurityStatusBar` and
+`<main>` wrapping an `<Outlet>` for the active page. On narrow viewports the sidebar stacks
+above the content with a horizontal nav row. Wraps the subtree in `TimelineRefreshProvider`
+so any descendant can access the refresh context.
+
+A **Skip to main content** link (class `fd-skip-link`) appears first in the shell; it uses
+`preventDefault` + `focus()` on `#main-content` so **HashRouter** hash URLs (`#/…`) are not
+replaced by a fragment-only `href`.
 
 Nav links use `NavLink` from `react-router-dom` with an `fd-nav__link--active` class applied
 when the route is active. The **Promote** nav link is suppressed when `UI_READ_ONLY` is
@@ -105,7 +110,8 @@ Build-time configuration helpers read from `import.meta.env`:
 
 ## `SecurityStatusBar` (`web/src/components/SecurityStatusBar.tsx`)
 
-Mounted by `AppShell` between the header and the main content area. Fetches `GET /health`
+Mounted by `AppShell` at the top of the main content column (below the sidebar on wide
+layouts). Fetches `GET /health`
 on mount to read `mutation_auth` (`"bearer"` or `"loopback"`), then renders an info or
 warning strip:
 
@@ -141,9 +147,10 @@ Read-only dashboard. Renders a **Ledger metrics** card from `fetchMetrics()` plu
 Long IDs are abbreviated with `shortId(id, keepStart, keepEnd)` and shown in full on hover
 via the HTML `title` attribute.
 
-**Refresh:** a manual **Refresh** button in the page header calls `loadTimeline()` directly.
-The `generation` counter from `TimelineRefreshContext` also triggers automatic refreshes
-after mutations from `ActionsPage`.
+**Refresh:** while the document tab is visible, the page **auto-polls** metrics and the
+timeline on an interval and uses **silent** fetches after the first load. The `generation`
+counter from `TimelineRefreshContext` triggers an immediate refresh after mutations from
+`ActionsPage`.
 
 ---
 
@@ -357,8 +364,9 @@ All tokens are CSS custom properties on `:root`:
 
 | Token | Purpose |
 |-------|---------|
-| `--fd-bg` | Page background |
-| `--fd-surface` | Card / header background |
+| `--fd-bg` | Main column page background |
+| `--fd-surface` | Card / sidebar rail background |
+| `--fd-sidebar-width` | Width of the left navigation rail (wide layouts) |
 | `--fd-surface-2` | Secondary surface (hover, code blocks) |
 | `--fd-border` | Standard border |
 | `--fd-border-strong` | Input and button borders |
@@ -378,9 +386,10 @@ All tokens are CSS custom properties on `:root`:
 
 | Class | Description |
 |-------|-------------|
-| `fd-shell` | Full-height flex container for header + main |
-| `fd-header` | Sticky top bar |
-| `fd-nav__link` | Navigation link; `--active` modifier for current route |
+| `fd-shell` | Full-height row: sidebar + main column |
+| `fd-sidebar` | Left rail: brand block + `fd-sidebar__nav` primary links |
+| `fd-shell__content` | Flex column: security strip + `fd-main` |
+| `fd-nav__link` | Sidebar nav link; `--active` modifier (accent left border) |
 | `fd-main` | Page content area with max-width and padding |
 | `fd-page-head` | Flex row with title/subtitle and optional action button |
 | `fd-card` | White surface card with border and shadow |
@@ -393,7 +402,7 @@ All tokens are CSS custom properties on `:root`:
 | `fd-field` | Label + input pair; `--full` modifier spans both grid columns |
 | `fd-input` | Styled text input |
 | `fd-alert` | Inline alert box; `--error`, `--info`, `--warn` modifiers |
-| `fd-security-strip` | Full-width strip below the header; wraps `SecurityStatusBar` output |
+| `fd-security-strip` | Strip at top of main column; wraps `SecurityStatusBar` output |
 | `fd-security-strip__msg` | Message paragraph inside the security strip (zero margin) |
 | `fd-json-panel` | Collapsible JSON viewer container |
 | `fd-metric-grid` | Grid of metric cards for diff output |

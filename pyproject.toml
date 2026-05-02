@@ -49,6 +49,9 @@ dev = [
     "pytest>=7.0",
     "ruff==0.15.12",
 ]
+postgres = [
+    "psycopg[binary]>=3.2",
+]
 
 [project.urls]
 Homepage = "https://github.com/flightdeckdev/flightdeck"

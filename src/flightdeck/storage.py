@@ -10,6 +10,17 @@ from pathlib import Path
 from typing import Any, Iterable
 from uuid import uuid4
 
+from flightdeck.db_connect import (
+    DbConn,
+    configure_sqlite,
+    detect_backend,
+    is_unique_violation,
+    json_request_field_predicate,
+    open_postgres,
+    open_postgres_transaction,
+    open_sqlite,
+    require_psycopg,
+)
 from flightdeck.models import (
     Policy,
     PolicyResult,
@@ -18,6 +29,7 @@ from flightdeck.models import (
     PromotionRequestRecord,
     ReleaseRecord,
     RunEvent,
+    WorkspaceConfig,
     utc_now,
 )
 
@@ -26,41 +38,70 @@ def ensure_parent_dir(db_path: str) -> None:
     Path(db_path).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
 
 
+def storage_from_config(cfg: WorkspaceConfig) -> Storage:
+    """Open storage from workspace YAML (SQLite ``db_path`` or optional ``database_url``)."""
+    url = (cfg.database_url or "").strip()
+    if url:
+        if not url.startswith(("postgresql://", "postgres://")):
+            msg = (
+                "database_url must start with postgresql:// or postgres:// when set; "
+                "otherwise omit database_url and use db_path for SQLite."
+            )
+            raise ValueError(msg)
+        require_psycopg()
+        return Storage(dsn=url)
+    return Storage(dsn=cfg.db_path)
+
+
 # Highest migration version applied by `Storage.migrate()` — keep in sync with migration blocks below.
 LATEST_SCHEMA_MIGRATION_VERSION = 4
 
 
 @dataclass(frozen=True)
 class Storage:
-    db_path: str
+    """Ledger access. ``dsn`` is a SQLite file path or a ``postgresql://`` URL."""
 
-    @staticmethod
-    def _configure_connection(conn: sqlite3.Connection) -> None:
-        # Improve concurrency + reduce "database is locked" surprises on Windows.
-        conn.execute("PRAGMA foreign_keys=ON;")
-        conn.execute("PRAGMA journal_mode=WAL;")
-        conn.execute("PRAGMA synchronous=NORMAL;")
-        conn.execute("PRAGMA busy_timeout=5000;")
+    dsn: str
 
-    def connect(self) -> sqlite3.Connection:
-        ensure_parent_dir(self.db_path)
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        self._configure_connection(conn)
-        return conn
+    @property
+    def db_path(self) -> str:
+        """Backward-compatible: SQLite path, or the PostgreSQL DSN when using ``database_url``."""
+        return self.dsn
+
+    @property
+    def dialect(self) -> str:
+        return detect_backend(self.dsn)
+
+    @contextmanager
+    def connect(self) -> Any:
+        if self.dialect == "sqlite":
+            ensure_parent_dir(self.dsn)
+            with open_sqlite(self.dsn) as conn:
+                yield conn
+        else:
+            with open_postgres(self.dsn) as conn:
+                yield conn
 
     @contextmanager
     def transaction(self) -> Any:
-        conn = self.connect()
-        try:
-            conn.execute("BEGIN IMMEDIATE;")
-            yield conn
-            conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            conn.close()
+        if self.dialect == "sqlite":
+            ensure_parent_dir(self.dsn)
+            conn = sqlite3.connect(self.dsn)
+            conn.row_factory = sqlite3.Row
+            configure_sqlite(conn)
+            try:
+                conn.execute("BEGIN IMMEDIATE")
+                try:
+                    yield DbConn("sqlite", conn, None)
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
+                    raise
+            finally:
+                conn.close()
+        else:
+            with open_postgres_transaction(self.dsn) as conn:
+                yield conn
 
     def migrate(self) -> None:
         with self.connect() as conn:
@@ -187,7 +228,7 @@ class Storage:
 
             # v3: monotonic audit_seq on release_actions (append-only promotion/rollback ledger).
             if 3 not in applied:
-                cols = {r["name"] for r in conn.execute("PRAGMA table_info(release_actions)").fetchall()}
+                cols = conn.table_columns("release_actions")
                 if "audit_seq" not in cols:
                     conn.execute("ALTER TABLE release_actions ADD COLUMN audit_seq INTEGER")
                 pending = conn.execute(
@@ -198,8 +239,10 @@ class Storage:
                     """
                 ).fetchall()
                 if pending:
-                    base_row = conn.execute("SELECT COALESCE(MAX(audit_seq), 0) FROM release_actions").fetchone()
-                    n = int(base_row[0]) if base_row is not None else 0
+                    base_row = conn.execute(
+                        "SELECT COALESCE(MAX(audit_seq), 0) AS n FROM release_actions"
+                    ).fetchone()
+                    n = int(base_row["n"]) if base_row is not None else 0
                     for pr in pending:
                         n += 1
                         conn.execute(
@@ -242,6 +285,9 @@ class Storage:
         Creates parent directories. Overwrites ``dest`` if it already exists.
         ``dest`` must not be the same path as :attr:`db_path`.
         """
+        if self.dialect != "sqlite":
+            msg = "backup_to is only supported for SQLite workspaces (db_path); use pg_dump for PostgreSQL"
+            raise ValueError(msg)
         dest_path = dest.expanduser().resolve()
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         source_path = Path(self.db_path).expanduser().resolve()
@@ -250,7 +296,11 @@ class Storage:
             raise ValueError(msg)
         ensure_parent_dir(self.db_path)
         self.migrate()
-        with self.connect() as src:
+        with self.connect() as src_wrap:
+            src = src_wrap.raw_sqlite
+            if src is None:
+                msg = "internal error: SQLite backup requires raw_sqlite connection"
+                raise RuntimeError(msg)
             dst = sqlite3.connect(str(dest_path))
             try:
                 src.backup(dst)
@@ -279,7 +329,7 @@ class Storage:
         """
         self.migrate()
         with self.connect() as conn:
-            cols = {r["name"] for r in conn.execute("PRAGMA table_info(release_actions)").fetchall()}
+            cols = conn.table_columns("release_actions")
             if "audit_seq" not in cols:
                 return False, "release_actions has no audit_seq column (migrations incomplete?)"
             rows = conn.execute("SELECT audit_seq FROM release_actions ORDER BY audit_seq").fetchall()
@@ -640,7 +690,7 @@ class Storage:
             return str(row["release_id"])
 
     @staticmethod
-    def _set_promoted_release_conn(conn: sqlite3.Connection, agent_id: str, environment: str, release_id: str) -> None:
+    def _set_promoted_release_conn(conn: DbConn, agent_id: str, environment: str, release_id: str) -> None:
         conn.execute(
             """
             INSERT INTO promoted_releases (agent_id, environment, release_id, promoted_at)
@@ -788,9 +838,12 @@ class Storage:
                         row,
                     )
                     inserted += 1
-                except sqlite3.IntegrityError:
-                    # idempotent ingestion
-                    pass
+                except Exception as exc:
+                    if is_unique_violation(self.dialect, exc):
+                        # idempotent ingestion
+                        pass
+                    else:
+                        raise
             return inserted
 
     def query_runs(
@@ -818,13 +871,13 @@ class Storage:
             clauses.append("environment = ?")
             params.append(environment)
         if trace_id:
-            clauses.append("json_extract(event_json, '$.request.trace_id') = ?")
+            clauses.append(json_request_field_predicate("event_json", "trace_id", self.dialect))
             params.append(trace_id)
         if session_id:
-            clauses.append("json_extract(event_json, '$.request.session_id') = ?")
+            clauses.append(json_request_field_predicate("event_json", "session_id", self.dialect))
             params.append(session_id)
         if span_id:
-            clauses.append("json_extract(event_json, '$.request.span_id') = ?")
+            clauses.append(json_request_field_predicate("event_json", "span_id", self.dialect))
             params.append(span_id)
 
         where = " AND ".join(clauses)

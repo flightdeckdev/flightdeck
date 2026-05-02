@@ -142,7 +142,9 @@ look for this file in the current working directory.
 ```yaml
 api_version: v1
 kind: WorkspaceConfig
-db_path: .flightdeck/flightdeck.db   # SQLite database path
+db_path: .flightdeck/flightdeck.db   # SQLite database path (default when database_url unset)
+# Optional: ledger on PostgreSQL (requires psycopg; install flightdeck-ai[postgres])
+# database_url: postgresql://user:pass@localhost:5432/flightdeck
 default_environment: local            # default environment for register/diff/promote
 diff:
   min_candidate_runs: 500   # HIGH confidence threshold (candidate side)
@@ -154,8 +156,11 @@ diff:
 # promotion_requires_approval: false
 ```
 
-All fields have defaults; an empty `flightdeck.yaml` is valid. `db_path` accepts any
-relative or absolute path — the parent directory is created automatically on first use.
+All fields have defaults; an empty `flightdeck.yaml` is valid. **`db_path`** accepts any
+relative or absolute SQLite path — the parent directory is created automatically on first use.
+When **`database_url`** is a `postgresql://` (or `postgres://`) DSN, the ledger uses that
+database instead and **`db_path`** is ignored for storage (keep **`flightdeck doctor --backup`**
+on SQLite, or use **`pg_dump`** for Postgres).
 
 **`pricing_catalog_path`** — optional path to a [`PricingCatalog`](../schemas/v1/pricing_catalog.schema.json) YAML
 (relative to the workspace cwd or absolute). When set, diffs include additive `pricing.catalog` / `pricing.hints`.

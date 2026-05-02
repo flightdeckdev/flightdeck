@@ -10,14 +10,14 @@ from fastapi.staticfiles import StaticFiles
 
 from flightdeck.config import load_config
 from flightdeck.server.routes import include_routes
-from flightdeck.storage import Storage
+from flightdeck.storage import storage_from_config
 
 
 def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         cfg = load_config()
-        storage = Storage(cfg.db_path)
+        storage = storage_from_config(cfg)
         storage.migrate()
         app.state.cfg = cfg
         app.state.storage = storage

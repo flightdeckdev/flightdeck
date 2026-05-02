@@ -3,6 +3,16 @@ import { expect, test } from "@playwright/test";
 test.describe("approval-required workspace (FD_E2E_FORCE_APPROVAL=1)", () => {
   test.skip(!process.env.FD_E2E_FORCE_APPROVAL, "set FD_E2E_FORCE_APPROVAL=1 (see CI workflow)");
 
+  test.beforeAll(async ({ request }) => {
+    const res = await request.get("/v1/workspace");
+    expect(res.ok()).toBeTruthy();
+    const j = await res.json();
+    test.skip(
+      j.promotion_requires_approval !== true,
+      "server is not the approval workspace (run this file alone: npx playwright test e2e/actions-approval.spec.ts)",
+    );
+  });
+
   test("actions page shows request/confirm flow", async ({ page }) => {
     await page.goto("/#/actions");
     await expect(page.getByText("human approval required")).toBeVisible();

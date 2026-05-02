@@ -27,6 +27,49 @@ function getTraceId(ev: Record<string, unknown>): string {
   return typeof t === "string" ? t : "";
 }
 
+function getSessionId(ev: Record<string, unknown>): string {
+  const req = getRequest(ev);
+  const v = req?.session_id;
+  return typeof v === "string" ? v : "";
+}
+
+function getSpanId(ev: Record<string, unknown>): string {
+  const req = getRequest(ev);
+  const v = req?.span_id;
+  return typeof v === "string" ? v : "";
+}
+
+type RunsQueryErrorKind = "network" | "client" | "server" | "unknown";
+
+function classifyRunsFetchError(e: unknown): { kind: RunsQueryErrorKind; title: string; detail: string } {
+  const detail = e instanceof Error ? e.message : String(e);
+  const lower = detail.toLowerCase();
+  if (
+    e instanceof TypeError ||
+    lower.includes("failed to fetch") ||
+    lower.includes("networkerror") ||
+    lower.includes("load failed") ||
+    lower.includes("network request failed")
+  ) {
+    return {
+      kind: "network",
+      title: "Could not reach the server",
+      detail: detail || "Check your connection, VPN, and that FlightDeck is running.",
+    };
+  }
+  const httpMatch = detail.match(/HTTP\s+(\d{3})\b/i);
+  if (httpMatch) {
+    const code = Number.parseInt(httpMatch[1], 10);
+    if (code >= 500) {
+      return { kind: "server", title: `Server error (${code})`, detail };
+    }
+    if (code >= 400) {
+      return { kind: "client", title: `Request rejected (${code})`, detail };
+    }
+  }
+  return { kind: "unknown", title: "Run query failed", detail };
+}
+
 function getLatencyMs(ev: Record<string, unknown>): number | null {
   const m = getMetrics(ev);
   const n = m?.latency_ms;
@@ -59,6 +102,8 @@ function buildTraceGroups(events: unknown[]): { key: string; rows: Record<string
 export function RunsPage() {
   const drawerTitleId = useId();
   const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const drawerPanelRef = useRef<HTMLDivElement>(null);
+  const drawerReturnFocusRef = useRef<HTMLElement | null>(null);
 
   const [releases, setReleases] = useState<ReleaseRow[]>([]);
   const [releaseId, setReleaseId] = useState("");
@@ -74,6 +119,11 @@ export function RunsPage() {
 
   const [result, setResult] = useState<RunsListPayload | null>(null);
   const [rawErr, setRawErr] = useState<string | null>(null);
+  const [runsQueryError, setRunsQueryError] = useState<{
+    kind: RunsQueryErrorKind;
+    title: string;
+    detail: string;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
   const [detailEvent, setDetailEvent] = useState<Record<string, unknown> | null>(null);
@@ -87,14 +137,25 @@ export function RunsPage() {
       });
   }, []);
 
+  const closeDrawer = useCallback(() => {
+    setDetailEvent(null);
+    window.setTimeout(() => {
+      drawerReturnFocusRef.current?.focus();
+      drawerReturnFocusRef.current = null;
+    }, 0);
+  }, []);
+
   useEffect(() => {
     if (!detailEvent) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setDetailEvent(null);
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeDrawer();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [detailEvent]);
+  }, [detailEvent, closeDrawer]);
 
   useEffect(() => {
     if (!detailEvent) return;
@@ -102,8 +163,44 @@ export function RunsPage() {
     return () => window.clearTimeout(t);
   }, [detailEvent]);
 
+  useEffect(() => {
+    if (!detailEvent) return;
+    const drawer = drawerPanelRef.current;
+    if (!drawer) return;
+
+    const selector =
+      'a[href]:not([tabindex="-1"]), button:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"]), input:not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), [tabindex]:not([tabindex="-1"])';
+
+    const focusables = (): HTMLElement[] =>
+      Array.from(drawer.querySelectorAll<HTMLElement>(selector)).filter(
+        (el) => !el.hasAttribute("disabled") && el.tabIndex !== -1,
+      );
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const nodes = focusables();
+      if (nodes.length === 0) return;
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey) {
+        if (active === first || !drawer.contains(active)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => document.removeEventListener("keydown", onKeyDown, true);
+  }, [detailEvent]);
+
   const runQuery = useCallback(async () => {
     setRawErr(null);
+    setRunsQueryError(null);
     setResult(null);
     const rid = releaseId.trim();
     if (!rid) {
@@ -135,8 +232,9 @@ export function RunsPage() {
         limit: lim,
       });
       setResult(data);
+      setRunsQueryError(null);
     } catch (e) {
-      setRawErr(String(e));
+      setRunsQueryError(classifyRunsFetchError(e));
     } finally {
       setBusy(false);
     }
@@ -204,8 +302,6 @@ export function RunsPage() {
     windowVal,
   ]);
 
-  const closeDrawer = useCallback(() => setDetailEvent(null), []);
-
   const renderEventRow = useCallback(
     (rec: Record<string, unknown>, idx: number, keyPrefix: string) => {
       const runId = typeof rec.run_id === "string" ? rec.run_id : "";
@@ -235,7 +331,10 @@ export function RunsPage() {
               type="button"
               className="fd-btn fd-btn--ghost fd-btn--sm"
               aria-haspopup="dialog"
-              onClick={() => setDetailEvent(rec)}
+              onClick={(e) => {
+                drawerReturnFocusRef.current = e.currentTarget;
+                setDetailEvent(rec);
+              }}
             >
               View
             </button>
@@ -351,6 +450,43 @@ export function RunsPage() {
         </div>
         {rawErr ? <p className="fd-alert fd-alert--error">{rawErr}</p> : null}
       </section>
+
+      {runsQueryError && !result ? (
+        <section className="fd-card" aria-label="Run query error" aria-live="polite">
+          <div className="fd-card__head">
+            <h3 className="fd-card__subtitle">Could not load runs</h3>
+          </div>
+          <div className="fd-empty-state" role="alert">
+            <p className="fd-empty-state__title">{runsQueryError.title}</p>
+            <p className="fd-empty-state__body">
+              {runsQueryError.kind === "network" ? (
+                <>
+                  This usually means the UI lost contact with the FlightDeck server (offline, wrong host, or CORS).
+                  Confirm <code className="fd-mono fd-mono--sm">flightdeck serve</code> is up and you are on the same
+                  origin the UI expects.
+                </>
+              ) : runsQueryError.kind === "client" ? (
+                <>
+                  The server refused this query (validation, auth, or missing data). Adjust filters or release ID, or
+                  check API credentials if your deployment requires them.
+                </>
+              ) : runsQueryError.kind === "server" ? (
+                <>The server reported an internal error. Retry in a moment; if it persists, check server logs.</>
+              ) : (
+                <>Something went wrong while loading run events. Details appear below.</>
+              )}
+            </p>
+            <p className="fd-muted fd-mono fd-mono--sm" style={{ wordBreak: "break-word", marginTop: "0.5rem" }}>
+              {runsQueryError.detail}
+            </p>
+            <div className="fd-actions" style={{ marginTop: "1rem" }}>
+              <button type="button" className="fd-btn fd-btn--primary" disabled={busy} onClick={() => void runQuery()}>
+                {busy ? "Retrying…" : "Retry"}
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {result ? (
         <section className="fd-card" aria-label="Run events results" aria-busy={busy}>
@@ -470,7 +606,7 @@ export function RunsPage() {
 
           <JsonPanel title="Raw JSON (page)" value={JSON.stringify(result, null, 2)} defaultOpen={false} />
         </section>
-      ) : (
+      ) : runsQueryError ? null : (
         <section className="fd-card fd-card--hint" aria-label="Getting started">
           <p className="fd-empty" style={{ margin: 0 }}>
             Choose a <strong>Release ID</strong> (datalist is filled from registered releases when the server is
@@ -481,7 +617,7 @@ export function RunsPage() {
       )}
 
       {detailEvent ? (
-        <div className="fd-drawer-root" role="presentation">
+        <div ref={drawerPanelRef} className="fd-drawer-root" role="presentation">
           <button
             type="button"
             className="fd-drawer-backdrop"
@@ -508,8 +644,8 @@ export function RunsPage() {
                 const ts = typeof detailEvent.timestamp === "string" ? detailEvent.timestamp : "";
                 const agent = typeof detailEvent.agent_id === "string" ? detailEvent.agent_id : "";
                 const tid = getTraceId(detailEvent);
-                const sess = getRequest(detailEvent)?.session_id;
-                const span = getRequest(detailEvent)?.span_id;
+                const sid = getSessionId(detailEvent);
+                const spid = getSpanId(detailEvent);
                 const lat = getLatencyMs(detailEvent);
                 const ok = getSuccess(detailEvent);
                 const err = getMetrics(detailEvent)?.error_type;
@@ -533,11 +669,11 @@ export function RunsPage() {
                     </div>
                     <div>
                       <dt>session_id</dt>
-                      <dd className="fd-mono fd-mono--sm">{typeof sess === "string" ? sess : "—"}</dd>
+                      <dd className="fd-mono fd-mono--sm">{sid || "—"}</dd>
                     </div>
                     <div>
                       <dt>span_id</dt>
-                      <dd className="fd-mono fd-mono--sm">{typeof span === "string" ? span : "—"}</dd>
+                      <dd className="fd-mono fd-mono--sm">{spid || "—"}</dd>
                     </div>
                     <div>
                       <dt>metrics</dt>

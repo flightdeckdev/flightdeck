@@ -12,6 +12,8 @@ This folder holds **copy-pasteable** references for wiring FlightDeck into a rea
 6. **Run the server** in a container or compose stack — see [deploy/](deploy/README.md). The bundled UI calls **`GET /v1/workspace`** to choose direct promote vs request/confirm.
 7. **Triage runs** with **`flightdeck runs list`** / **`runs export`** or **`GET /v1/runs`**, and **observe** aggregate ledger size with **`GET /v1/metrics`** (JSON counters; read-only, same access tier as other `GET /v1/*` routes). With **`flightdeck serve`**, **`/#/runs`** adds optional **Group by trace_id** (collapsible sections) on top of the same API slice.
 
+**UI polish / operator flow:** See [docs/web-ui.md](../docs/web-ui.md) for routing and surfaces. In the bundled app, prefer **Diff** for policy and pricing conclusions, **Runs** for trace-scoped triage, and **Actions** for promote and rollback so operators rarely need raw JSON first.
+
 ## Readiness checklist (quick pass)
 
 Use this as a **discoverability** pass for the **[ROADMAP.md](../ROADMAP.md)** success and readiness signals (not a product guarantee):

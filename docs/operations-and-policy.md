@@ -39,8 +39,10 @@ maps these to `click.ClickException`; the HTTP layer maps them to HTTP 400.
 `server/app.py` registers a FastAPI **lifespan** handler that runs at startup:
 
 ```python
+from flightdeck.storage import storage_from_config
+
 cfg = load_config()           # reads flightdeck.yaml from cwd
-storage = Storage(cfg.db_path)
+storage = storage_from_config(cfg)
 storage.migrate()
 app.state.cfg = cfg
 app.state.storage = storage

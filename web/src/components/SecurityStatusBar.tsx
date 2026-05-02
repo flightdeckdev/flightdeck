@@ -87,6 +87,18 @@ export function SecurityStatusBar() {
     ? "This UI build sends a client token (VITE_FLIGHTDECK_LOCAL_API_TOKEN is set)."
     : "This UI build does not send a client token (VITE_FLIGHTDECK_LOCAL_API_TOKEN unset).";
 
+  if (auth === "bearer" && hasClient) {
+    return (
+      <div className="fd-security-strip" role="status">
+        <p className="fd-muted fd-security-strip__msg">
+          Bearer mutations: <code className="fd-mono fd-mono--sm">VITE_FLIGHTDECK_LOCAL_API_TOKEN</code> is set —
+          confirm it matches the server&apos;s{" "}
+          <code className="fd-mono fd-mono--sm">FLIGHTDECK_LOCAL_API_TOKEN</code>.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="fd-security-strip" role="status">
       {mismatch ? (

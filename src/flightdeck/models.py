@@ -17,6 +17,9 @@ class WorkspaceConfig(BaseModel):
     kind: Literal["WorkspaceConfig"] = "WorkspaceConfig"
 
     db_path: str = ".flightdeck/flightdeck.db"
+    # When set (``postgresql://`` or ``postgres://``), the ledger uses PostgreSQL instead of
+    # the SQLite file at ``db_path``. Requires optional dependency ``psycopg`` (``--extra postgres``).
+    database_url: str | None = None
     default_environment: str = "local"
 
     diff: DiffConfig = Field(default_factory=DiffConfig)

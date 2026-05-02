@@ -53,10 +53,11 @@ These map to **What is next** items **1**, **2**, and **5**; ship notes stay in 
 4. **Overview and trust** — Metrics **context** (what a counter means), light cross-links to Diff/Runs—not a metrics dashboard product.
 5. **Shell and quality bar** — **Loading** states, consistent spacing and type rhythm, keyboard **focus** and labels, layouts that tolerate narrow viewports where cheap.
 6. **Security ergonomics (UI)** — Token/env/mutation visibility, read-only build behavior, cautious affordances for destructive actions.
+7. **Visual system** — Shared typography scale, spacing rhythm, **focus-visible** affordances, and narrow-layout breakpoints so the operator surfaces stay legible without a separate design system product.
 
 **Explicit UI deferrals**
 
-Out of scope for the near-term web app: theme marketplaces; embedded arbitrary log viewers; full observability or fleet consoles in the browser; multi-workspace UI (follows conditional **Fleet / cross-workspace** in **What is next**).
+Out of scope for the near-term web app: custom themes or theme marketplaces; embedded arbitrary log viewers; full observability or fleet consoles in the browser; multi-workspace UI (follows conditional **Fleet / cross-workspace** in **What is next**).
 
 ---
 
