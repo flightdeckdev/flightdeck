@@ -8,7 +8,7 @@ This tree is usually a **personal-account research repo** (`origin` → your Git
 
 When implementing features, prefer **small, PR-shaped slices** that could ship to an org repo without extra cleanup. Do not conflate “saved in research” with “ready for org push.”
 
-Extended maintainer docs (research workflow, org checklist, canonical publish) live on **`main`** in that repository. This clone stays compact and keeps practical contributor guidance in **`CONTRIBUTING.md`**. Claude Code / short entrypoint: **`CLAUDE.md`**.
+Extended maintainer docs (research workflow, org checklist, canonical publish) live on **`main`** in that repository. This clone stays compact and keeps practical contributor guidance in **`CONTRIBUTING.md`**. Claude Code / short entrypoint: **`CLAUDE.md`**. Cursor IDE: project rules under **`.cursor/rules/`** (for example **`flightdeck-ci-artifacts.mdc`** for web static + schema gates).
 
 ## Mission
 
@@ -56,6 +56,7 @@ Treat these as **stable API** unless a change explicitly marks an experimental p
 Do a short review pass for:
 
 - **Contract drift** (CLI, JSON/YAML, SQLite columns consumers rely on).
+- **Shipped web bundle** (**`web/`** → committed **`src/flightdeck/server/static/`**) and **schema drift** (**`schemas/`**, regenerate via Verification below) when your change touches UI or Pydantic wire shapes.
 - **Trust boundaries** (diff, pricing, policy, promotion, serve host binding).
 - **Cross-platform ergonomics** (Windows paths, line endings on fixtures, temp dirs).
 
@@ -68,6 +69,7 @@ uv sync --frozen --extra dev
 uv run python -m ruff check src tests
 uv run python -m pytest
 uv run flightdeck-quickstart-verify
+uv run flightdeck --help
 ```
 
 After editing Pydantic models, regenerate schemas and ensure a clean diff:
@@ -76,6 +78,18 @@ After editing Pydantic models, regenerate schemas and ensure a clean diff:
 uv run python scripts/generate_schemas.py
 git diff --exit-code schemas/
 ```
+
+After editing the **browser UI** under **`web/`** (for example **`web/src/`**), rebuild the committed static tree that **`flightdeck serve`** ships, then confirm CI’s static gate is clean (same check as **`.github/workflows/ci.yml`**):
+
+```bash
+cd web
+npm ci
+npm run build
+cd ..
+git diff --exit-code src/flightdeck/server/static/
+```
+
+Commit every change under **`src/flightdeck/server/static/`** (including new hashed **`assets/*.js`** and **`index.html`** script tags). **`npm run build`** already runs LF normalization via **`web/scripts/normalize-static-lf.mjs`**. For UI behavior, run **`npm run test:e2e`** from **`web/`** (Playwright runs in CI right after the static diff).
 
 Fallback (activated **venv** or global tools): the same steps with **`python -m …`** / **`python scripts/…`** as in **`DEVELOPMENT.md`**.
 

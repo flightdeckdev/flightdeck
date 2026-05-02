@@ -6,13 +6,13 @@
 
 ## Validation
 
-Run the same checks as **CI** (see **`.github/workflows/ci.yml`**) before opening / updating the PR:
+Run the same checks as **CI** (see **`.github/workflows/ci.yml`**) before opening / updating the PR. Cursor loads **`.cursor/rules/flightdeck-ci-artifacts.mdc`** as a short reminder for **`static/`** + **`schemas/`** gates.
 
 - [ ] `uv sync --frozen --extra dev`
 - [ ] `uv run python -m ruff check src tests`
 - [ ] `uv run python -m pytest`
 - [ ] `uv run python scripts/generate_schemas.py` then `git diff --exit-code schemas/` (if models/schemas touched)
-- [ ] `cd web && npm ci && npm run build && cd .. && git diff --exit-code src/flightdeck/server/static/` (if **`web/src/`** or deps changed)
+- [ ] `cd web && npm ci && npm run build && cd .. && git diff --exit-code src/flightdeck/server/static/` (if **`web/`** sources, Vite config, or **`web/`** deps / lockfile change the production bundle)
 - [ ] `cd web && npx playwright install chromium && npm run test:e2e` (if **`web/`** changed)
 - [ ] `uv run flightdeck-quickstart-verify`
 - [ ] `uv run flightdeck --help`

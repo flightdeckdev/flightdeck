@@ -8,9 +8,11 @@ Source for the local UI served by **`flightdeck serve`** at **`/`**. Production 
 cd web
 npm ci
 npm run build
+cd ..
+git diff --exit-code src/flightdeck/server/static/
 ```
 
-After any change under **`web/src/`**, run **`npm run build`** again and commit the updated **`src/flightdeck/server/static/`** tree. The build runs **`scripts/normalize-static-lf.mjs`** after Vite so emitted HTML/JS/CSS use **LF** on Windows (avoids CRLF-only noise against **`.gitattributes`**). **CI** rebuilds and runs **`git diff --exit-code`** on that path so committed assets cannot drift.
+After any change under **`web/src/`** (or **`vite.config.ts`**, **`package.json`**, lockfile, etc.) that affects the production bundle, run **`npm run build`** again, ensure the **`git diff --exit-code`** above is clean from the repo root, and commit the updated **`src/flightdeck/server/static/`** tree. The build runs **`scripts/normalize-static-lf.mjs`** after Vite so emitted HTML/JS/CSS use **LF** on Windows (avoids CRLF-only noise against **`.gitattributes`**). **CI** rebuilds and runs the same **`git diff --exit-code`** on that path so committed assets cannot drift.
 
 ## Local development (`npm run dev`)
 
