@@ -423,13 +423,31 @@ JSONL (one event per line):
 {"api_version":"v1","type":"run_end","timestamp":"2026-05-01T12:01:00Z","agent_id":"agent_support","release_id":"rel_abc123",...}
 ```
 
-JSON array:
+JSON array (top-level `[…]`):
 ```json
 [
   {"api_version":"v1","type":"run_end","timestamp":"2026-05-01T12:00:00Z",...},
   {"api_version":"v1","type":"run_end","timestamp":"2026-05-01T12:01:00Z",...}
 ]
 ```
+
+The file extension is **not** used to distinguish formats; the parser auto-detects based
+on content. A file starting with `[` is parsed as a JSON array; all other files are parsed
+line-by-line as JSONL.
+
+**Edge cases:**
+
+| Input | Behavior |
+|-------|----------|
+| Empty file (0 bytes or only whitespace) | Exits 0, prints `Inserted 0 events` |
+| JSONL with blank lines | Blank lines are skipped; valid lines are inserted |
+| File with a malformed JSON line | Exits non-zero with a parse error; any lines already processed before the bad line are committed (partial insert) |
+| JSON array that is empty (`[]`) | Exits 0, prints `Inserted 0 events` |
+| Duplicate `run_id` across runs | Duplicate events are silently skipped; idempotent re-ingestion is safe |
+
+**Partial ingest on JSONL failure:** because JSONL events are inserted one at a time, a
+malformed line after valid lines leaves the valid events already committed. Re-running
+ingest after fixing the file is safe because duplicates are ignored.
 
 See [http-api.md § POST /v1/events](http-api.md) for the full `RunEvent` field reference.
 

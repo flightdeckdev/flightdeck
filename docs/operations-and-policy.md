@@ -106,6 +106,54 @@ cost = (input_tokens / 1000) * input_usd_per_1k
 
 Runs are averaged across all events in the window to produce `cost_per_run_usd`.
 
+### Cross-provider and cross-model diffs
+
+`compute_diff` supports comparing releases that use different pricing providers, pricing
+versions, or model names. Each side is costed independently against its own pricing table,
+so the cost delta reflects the combined effect of token usage changes *and* any
+pricing/model assumption changes.
+
+When the baseline and candidate differ on any of provider, pricing version, or model name,
+`pricing_or_model_changed` is set to `true` in the `DiffOutcome`. This flag propagates to:
+
+- **CLI output** — an explicit note is printed:
+  ```
+  NOTE: cost delta includes pricing/model assumption changes (pricing reference and/or model differ).
+  ```
+- **HTTP response** — the `pricing` object in `POST /v1/diff` includes
+  `"pricing_or_model_changed": true`, plus the individual `baseline_provider`,
+  `baseline_version`, `baseline_model`, `candidate_provider`, `candidate_version`, and
+  `candidate_model` fields.
+- **Web UI** — `DiffPage` renders an `fd-alert--warn` banner when this flag is `true` (see
+  [web-ui.md](web-ui.md#diffpage-websrcpagesdiffpagetsx)).
+
+The `DiffOutcome` pricing fields are:
+
+| Field | Description |
+|-------|-------------|
+| `baseline_pricing_provider` | Provider from the baseline release's `spec.pricing_reference.provider` |
+| `baseline_pricing_version` | Pricing version from the baseline release's `spec.pricing_reference.pricing_version` |
+| `baseline_model` | Model from the baseline release's `spec.runtime.model` |
+| `candidate_pricing_provider` | Provider from the candidate release |
+| `candidate_pricing_version` | Pricing version from the candidate release |
+| `candidate_model` | Model from the candidate release |
+| `pricing_or_model_changed` | `True` when any of the three fields differ between baseline and candidate |
+
+**Example — cross-provider diff:**
+```bash
+flightdeck release diff "$BASELINE" "$CANDIDATE" --window 7d
+# Baseline pricing: openai/openai-2026-04-30 (model=gpt-4.1-mini)
+# Candidate pricing: anthropic/anthropic-2026-04-30 (model=claude-3-sonnet)
+# NOTE: cost delta includes pricing/model assumption changes (pricing reference and/or model differ).
+```
+
+**Example — cross-model, same provider:**
+```bash
+# Both releases use provider=openai, pricing_version=openai-2026-04-30
+# Baseline model: gpt-4.1-mini, Candidate model: gpt-4.1
+# Output shows (model=gpt-4.1-mini) -> (model=gpt-4.1) with the same note.
+```
+
 ### Important constraint: cross-agent diffs
 
 `compute_diff` checks that both releases have the same `agent_id` in their artifact
@@ -250,13 +298,40 @@ JSON Schema: [`schemas/v1/policy.schema.json`](../schemas/v1/policy.schema.json)
 `ledger.evaluate_policy` checks constraints in order:
 
 1. **`max_cost_per_run_usd`** — candidate average cost must not exceed the limit.
-2. **`max_latency_ms`** — candidate average latency must not exceed the limit. Skipped
-   if the candidate window has no latency data.
+2. **`max_latency_ms`** — candidate average latency must not exceed the limit. **Skipped
+   entirely** when `candidate.latency_ms_avg is None` (i.e., no events in the window
+   include latency data). Setting `max_latency_ms` with no latency evidence does not
+   cause a policy failure.
 3. **`max_error_rate`** — candidate error rate must not exceed the limit.
-4. **`require_high_diff_confidence`** — when `True`, the diff must reach HIGH confidence.
+4. **`require_high_diff_confidence`** — when `True`, the diff must reach `HIGH`
+   confidence. A `MEDIUM` or `LOW` diff blocks promotion and adds a reason like
+   `"diff confidence is MEDIUM (candidate sample < 500 runs); promotion requires HIGH"`.
+
+**Multiple failures accumulate.** All enabled constraints are evaluated independently;
+every failed constraint appends its own reason string to `policy.reasons`. A promotion
+attempt can therefore produce multiple policy failure reasons in a single response:
+
+```
+Policy: FAIL
+- candidate cost_per_run_usd 0.006000 exceeds max 0.005000
+- candidate error_rate 0.5000 exceeds max 0.1000
+```
 
 Each failed constraint appends a human-readable reason to the result. An empty `reasons`
 list means the policy passed (`passed = True`).
+
+**Confidence and policy interaction:**
+
+| Confidence | `require_high_diff_confidence=true` | `require_high_diff_confidence=false` |
+|------------|-------------------------------------|--------------------------------------|
+| `HIGH` | Pass (confidence check) | Pass (confidence check) |
+| `MEDIUM` | **Fail** — reason includes "MEDIUM" and "promotion requires HIGH" | Pass (confidence check) |
+| `LOW` | **Fail** | Pass (confidence check) |
+
+Note: the first promotion for an agent/environment always succeeds unconditionally,
+regardless of confidence or policy constraints, because there is no baseline to diff
+against. The `policy.reasons` field for a first-promotion success contains a single
+informational message: `"first promotion: no promoted baseline for agent/environment"`.
 
 ### Confidence tiers
 

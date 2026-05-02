@@ -111,6 +111,13 @@ On submit, the raw diff response is parsed and rendered as:
 
 - **Summary card:** policy badge (PASS / FAIL), failure reasons list, sample counts and
   confidence label.
+- **Pricing/model change warning** — when the diff response has
+  `pricing.pricing_or_model_changed == true`, an `fd-alert--warn` banner appears showing
+  the baseline and candidate pricing reference and model side-by-side (e.g.
+  `openai/openai-2026-04-30 gpt-4.1-mini → anthropic/anthropic-2026-04-30 claude-3-sonnet`),
+  with the note that cost delta includes pricing and model assumption changes. This is
+  extracted by `pickPricing(data): PricingInfo | null` from the `pricing` block of the
+  diff response. Returns `null` (no banner) when the block is absent or malformed.
 - **Metric cards:** cost/run (USD), latency avg (ms), error rate — each showing baseline,
   candidate, and delta.
 - **Raw diff JSON** panel (collapsed by default via `JsonPanel`).
@@ -140,9 +147,35 @@ Both **Promote** and **Rollback** buttons are disabled while any request is in f
 `window.confirm` dialog appears before each mutation. An empty reason field aborts before
 any network call with an inline error.
 
-After a successful mutation:
-1. The API response JSON is shown in a `JsonPanel` (open by default).
-2. `notifyTimelineMutated()` is called, refreshing `OverviewPage` automatically.
+After a successful mutation, two things happen in parallel:
+1. `notifyTimelineMutated()` is called, refreshing `OverviewPage` automatically.
+2. The response is parsed and rendered as a **structured outcome card** (see below).
+
+**Structured outcome card**
+
+When the API returns a well-formed `ActionOutcomePayload`, a summary card is rendered
+showing:
+
+- **Policy badge** — `PASS` (green) or `FAIL` (red), sourced from `policy.passed`.
+- **Pointer status** — `Updated` (green) or `Unchanged` (neutral), from
+  `promoted_pointer_changed`.
+- **Agent and environment** — `agent=<id> · env=<environment>`.
+- **Action ID** — abbreviated with `shortId()`, full value in HTML `title`.
+- **Release ID** — abbreviated, full value in HTML `title`.
+- **Previous baseline** — abbreviated, or `"none (first promotion)"` when
+  `baseline_release_id` is `null`.
+- **Policy reasons list** — each failure reason from `policy.reasons[]`, rendered as `<li>`
+  elements. Not rendered when the list is empty (policy passed).
+
+A **Raw response JSON** panel (`JsonPanel`) is always appended below the card when a
+response is present. It opens by default only when the response did not match the
+`ActionOutcomePayload` shape (i.e., the structured card could not be rendered).
+
+**`pickOutcome(data): ActionOutcomePayload | null`**
+
+Helper that coerces the raw JSON response into an `ActionOutcomePayload`. Returns `null`
+if any required field is missing or has the wrong type, falling back to the raw JSON panel
+only. This prevents display breakage if the server contract changes.
 
 **Auth:** When `VITE_FLIGHTDECK_LOCAL_API_TOKEN` is set in the build environment (or
 `.env.local` during dev), `fetchJson` adds `Authorization: Bearer <token>` to every request.
@@ -177,6 +210,30 @@ type ActionRow = {
 };
 
 type TimelinePayload = { releases: ReleaseRow[]; promoted: PromotedRow[]; actions: ActionRow[]; };
+
+type PolicyResultPayload = {
+  passed: boolean;
+  reasons: string[];
+  evaluated_at?: string;
+};
+
+/**
+ * Response shape for `POST /v1/promote` and `POST /v1/rollback` (HTTP 200).
+ * Mirrors `_action_body()` in `src/flightdeck/server/routes/actions.py`.
+ *
+ * On policy block, the server returns HTTP 409 with `{ detail: { message, outcome } }`
+ * where `outcome` matches this shape.
+ */
+type ActionOutcomePayload = {
+  action_id: string;
+  action: "promote" | "rollback";
+  release_id: string;
+  agent_id: string;
+  environment: string;
+  baseline_release_id: string | null;
+  promoted_pointer_changed: boolean;
+  policy: PolicyResultPayload;
+};
 ```
 
 ### `fetchJson<T>(path, init?): Promise<T>`
