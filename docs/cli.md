@@ -62,21 +62,26 @@ Wrote flightdeck.yaml
 ```
 
 The generated file uses all defaults. Edit `diff.*` thresholds or `db_path` before using
-in a shared repo. See [release-artifact.md § Workspace config](release-artifact.md).
+in a shared repo. For **PostgreSQL**, set **`database_url`** to a `postgresql://…` (or
+`postgres://…`) DSN and install **`psycopg`** (`uv sync --extra postgres`); **`db_path`**
+is ignored when **`database_url`** is set. **`flightdeck doctor --backup`** remains
+SQLite-only. See [release-artifact.md § Workspace config](release-artifact.md).
 
 ---
 
 ## `flightdeck doctor`
 
-Run read-only health checks on the local SQLite ledger.
+Run read-only health checks on the workspace ledger (SQLite file or PostgreSQL when
+**`database_url`** is configured).
 
 ```bash
 flightdeck doctor [--backup PATH]
 ```
 
 Calls `Storage.migrate()` at start (idempotent). With **`--backup PATH`**, runs an SQLite
-online backup of the workspace database to **`PATH`** (parent directories are created;
-an existing file is overwritten), then runs the checks below.
+online backup of the workspace database to **`PATH`** when the workspace uses SQLite
+(**`--backup`** is rejected for PostgreSQL-ledgers; use **`pg_dump`** instead). Parent
+directories are created; an existing file is overwritten, then the checks below run.
 
 Without **`--backup`**, only the checks run. In both cases **`migrate()`** runs first.
 

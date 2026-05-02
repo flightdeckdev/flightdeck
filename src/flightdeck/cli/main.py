@@ -35,7 +35,7 @@ from flightdeck.operations import (
     request_promotion,
     rollback_release,
 )
-from flightdeck.storage import Storage
+from flightdeck.storage import storage_from_config
 
 
 def read_release_artifact(path: Path) -> ReleaseArtifact:
@@ -94,9 +94,12 @@ def init(path_: str) -> None:
 def doctor_cmd(backup_path: Path | None) -> None:
     """Run read-only health checks on the local ledger (migrations, promoted pointers)."""
     cfg = load_config()
-    storage = Storage(cfg.db_path)
+    storage = storage_from_config(cfg)
     if backup_path is not None:
-        storage.backup_to(backup_path)
+        try:
+            storage.backup_to(backup_path)
+        except ValueError as exc:
+            raise click.ClickException(str(exc)) from exc
         click.echo(f"Backed up database to {backup_path}")
     checks = run_doctor(storage)
     failed = False
@@ -149,7 +152,7 @@ def release() -> None:
 def release_register(path: Path, environment: str | None) -> None:
     """Register an immutable Release artifact (file or bundle directory)."""
     cfg = load_config()
-    storage = Storage(cfg.db_path)
+    storage = storage_from_config(cfg)
     storage.migrate()
 
     env = environment or cfg.default_environment
@@ -179,7 +182,7 @@ def release_register(path: Path, environment: str | None) -> None:
 def release_list() -> None:
     """List registered releases."""
     cfg = load_config()
-    storage = Storage(cfg.db_path)
+    storage = storage_from_config(cfg)
     storage.migrate()
     for r in storage.list_releases():
         click.echo(f"{r.release_id}\t{r.agent_id}\t{r.version}\t{r.environment}\t{r.created_at.isoformat()}")
@@ -190,7 +193,7 @@ def release_list() -> None:
 def release_show(release_id: str) -> None:
     """Show a registered release record as JSON."""
     cfg = load_config()
-    storage = Storage(cfg.db_path)
+    storage = storage_from_config(cfg)
     storage.migrate()
 
     record = storage.get_release(release_id)
@@ -212,7 +215,7 @@ def release_show(release_id: str) -> None:
 def release_verify(release_id: str, artifact_path: Path) -> None:
     """Verify on-disk artifact bytes match the checksum stored at registration (exit 2 on mismatch)."""
     cfg = load_config()
-    storage = Storage(cfg.db_path)
+    storage = storage_from_config(cfg)
     storage.migrate()
 
     record = storage.get_release(release_id)
@@ -252,7 +255,7 @@ def pricing() -> None:
 def pricing_import(path: Path, replace: bool, reason: str | None) -> None:
     """Import a pricing table YAML."""
     cfg = load_config()
-    storage = Storage(cfg.db_path)
+    storage = storage_from_config(cfg)
     storage.migrate()
 
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -272,7 +275,7 @@ def pricing_import(path: Path, replace: bool, reason: str | None) -> None:
 def pricing_show(provider: str, pricing_version: str) -> None:
     """Show a pricing table by provider/version."""
     cfg = load_config()
-    storage = Storage(cfg.db_path)
+    storage = storage_from_config(cfg)
     storage.migrate()
 
     table = storage.get_pricing_table(provider, pricing_version)
@@ -291,7 +294,7 @@ def policy() -> None:
 def policy_set(path: Path) -> None:
     """Set the active promotion policy from YAML."""
     cfg = load_config()
-    storage = Storage(cfg.db_path)
+    storage = storage_from_config(cfg)
     storage.migrate()
 
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -304,7 +307,7 @@ def policy_set(path: Path) -> None:
 def policy_show() -> None:
     """Show the active promotion policy."""
     cfg = load_config()
-    storage = Storage(cfg.db_path)
+    storage = storage_from_config(cfg)
     storage.migrate()
 
     p = storage.get_active_policy() or default_policy()
@@ -349,7 +352,7 @@ def runs_list(
 ) -> None:
     """List ingested run events for a release (newest first; truncated to --limit)."""
     cfg = load_config()
-    storage = Storage(cfg.db_path)
+    storage = storage_from_config(cfg)
     storage.migrate()
     try:
         payload = query_run_events_page(
@@ -413,7 +416,7 @@ def runs_export(
 ) -> None:
     """Export run events as JSONL (newest first), same filters as ``runs list`` (truncated to --limit, max 500)."""
     cfg = load_config()
-    storage = Storage(cfg.db_path)
+    storage = storage_from_config(cfg)
     storage.migrate()
     try:
         payload = query_run_events_page(
@@ -453,7 +456,7 @@ def runs_export(
 def runs_ingest(path: Path) -> None:
     """Ingest RunEvent JSONL (or JSON array) into local storage."""
     cfg = load_config()
-    storage = Storage(cfg.db_path)
+    storage = storage_from_config(cfg)
     storage.migrate()
 
     events = parse_events_file(path)
@@ -494,7 +497,7 @@ def release_diff(
 ) -> None:
     """Compare two releases over a time window and print a confidence-labeled safety diff."""
     cfg = load_config()
-    storage = Storage(cfg.db_path)
+    storage = storage_from_config(cfg)
     storage.migrate()
     try:
         result = compute_diff(
@@ -598,7 +601,7 @@ def release_diff(
 def release_promote(release_id: str, environment: str, window: str, reason: str) -> None:
     """Promote a release after evaluating active policy against the current baseline."""
     cfg = load_config()
-    storage = Storage(cfg.db_path)
+    storage = storage_from_config(cfg)
     storage.migrate()
     try:
         outcome = promote_release(
@@ -633,7 +636,7 @@ def release_promote(release_id: str, environment: str, window: str, reason: str)
 def release_promote_request(release_id: str, environment: str, window: str, reason: str) -> None:
     """Create a pending promotion request (requires promotion_requires_approval in flightdeck.yaml)."""
     cfg = load_config()
-    storage = Storage(cfg.db_path)
+    storage = storage_from_config(cfg)
     storage.migrate()
     try:
         record = request_promotion(
@@ -657,7 +660,7 @@ def release_promote_request(release_id: str, environment: str, window: str, reas
 def release_promote_confirm(request_id: str, approval_reason: str) -> None:
     """Confirm a pending promotion request and perform the promotion."""
     cfg = load_config()
-    storage = Storage(cfg.db_path)
+    storage = storage_from_config(cfg)
     storage.migrate()
     try:
         outcome = confirm_promotion_request(
@@ -691,7 +694,7 @@ def release_promote_confirm(request_id: str, approval_reason: str) -> None:
 def release_rollback(release_id: str, environment: str, window: str, reason: str) -> None:
     """Roll back to a prior release (audit record + promoted pointer update)."""
     cfg = load_config()
-    storage = Storage(cfg.db_path)
+    storage = storage_from_config(cfg)
     storage.migrate()
     try:
         outcome = rollback_release(
@@ -724,7 +727,7 @@ def release_rollback(release_id: str, environment: str, window: str, reason: str
 def release_history(agent_id: str | None, environment: str | None) -> None:
     """Show release promotion decision history."""
     cfg = load_config()
-    storage = Storage(cfg.db_path)
+    storage = storage_from_config(cfg)
     storage.migrate()
 
     records = storage.list_release_actions(agent_id=agent_id, environment=environment)

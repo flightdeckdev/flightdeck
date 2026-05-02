@@ -1,3 +1,4 @@
+import type { MouseEvent } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { TimelineRefreshProvider } from "../context/TimelineRefreshContext";
 import { SecurityStatusBar } from "./SecurityStatusBar";
@@ -6,16 +7,24 @@ import { UI_READ_ONLY } from "../uiConfig";
 const navCls = ({ isActive }: { isActive: boolean }) =>
   `fd-nav__link${isActive ? " fd-nav__link--active" : ""}`;
 
+function skipToMain(e: MouseEvent<HTMLAnchorElement>) {
+  e.preventDefault();
+  document.getElementById("main-content")?.focus({ preventScroll: false });
+}
+
 export function AppShell() {
   return (
     <TimelineRefreshProvider>
       <div className="fd-shell">
-        <header className="fd-header">
-          <div className="fd-header__brand">
-            <h1 className="fd-header__title">FlightDeck</h1>
-            <p className="fd-header__tagline">Diffs, evidence, policy gates</p>
+        <a href="#" className="fd-skip-link" onClick={skipToMain}>
+          Skip to main content
+        </a>
+        <aside className="fd-sidebar" aria-label="Application">
+          <div className="fd-sidebar__brand">
+            <h1 className="fd-sidebar__title">FlightDeck</h1>
+            <p className="fd-sidebar__tagline">Diffs, evidence, policy gates</p>
           </div>
-          <nav className="fd-nav" aria-label="Primary">
+          <nav className="fd-sidebar__nav" aria-label="Primary">
             <NavLink to="/" end className={navCls}>
               Overview
             </NavLink>
@@ -31,11 +40,13 @@ export function AppShell() {
               </NavLink>
             )}
           </nav>
-        </header>
-        <SecurityStatusBar />
-        <main className="fd-main">
-          <Outlet />
-        </main>
+        </aside>
+        <div className="fd-shell__content">
+          <SecurityStatusBar />
+          <main id="main-content" className="fd-main" tabIndex={-1}>
+            <Outlet />
+          </main>
+        </div>
       </div>
     </TimelineRefreshProvider>
   );

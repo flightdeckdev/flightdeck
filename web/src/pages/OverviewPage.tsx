@@ -6,6 +6,8 @@ import { useTimelineRefresh } from "../context/TimelineRefreshContext";
 import { Badge } from "../components/Badge";
 import { JsonPanel } from "../components/JsonPanel";
 
+const OVERVIEW_POLL_MS = 30_000;
+
 function shortId(id: string, keepStart = 10, keepEnd = 6) {
   if (id.length <= keepStart + keepEnd + 1) return id;
   return `${id.slice(0, keepStart)}…${id.slice(-keepEnd)}`;
@@ -42,8 +44,11 @@ export function OverviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const refresh = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent === true;
+    if (!silent) {
+      setLoading(true);
+    }
     setError(null);
     setMetricsError(null);
     try {
@@ -61,13 +66,23 @@ export function OverviewPage() {
         setMetrics(null);
       }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    void refresh();
+    void refresh({ silent: generation > 0 });
   }, [generation, refresh]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void refresh({ silent: true });
+    }, OVERVIEW_POLL_MS);
+    return () => window.clearInterval(id);
+  }, [refresh]);
 
   const raw =
     data === null
@@ -83,11 +98,12 @@ export function OverviewPage() {
       <div className="fd-page-head">
         <div>
           <h2 className="fd-page-title">Overview</h2>
-          <p className="fd-page-sub">Registered releases, promotion pointers, and recent ledger actions.</p>
+          <p className="fd-page-sub">
+            Registered releases, promotion pointers, and recent ledger actions. Refreshes automatically every{" "}
+            {OVERVIEW_POLL_MS / 1000}s while this tab is visible; also updates after promote or rollback from{" "}
+            <Link to="/actions">Actions</Link>.
+          </p>
         </div>
-        <button type="button" className="fd-btn fd-btn--primary" disabled={loading} onClick={() => void refresh()}>
-          Refresh
-        </button>
       </div>
 
       {error && !loading ? <p className="fd-alert fd-alert--error">{error}</p> : null}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ActionOutcomePayload, PromotionRequestListItem, WorkspacePublicPayload } from "../api";
-import { fetchJson, fetchPromotionRequests, fetchWorkspace } from "../api";
+import { fetchHealth, fetchJson, fetchPromotionRequests, fetchWorkspace } from "../api";
+import { clientMutationTokenConfigured } from "../uiConfig";
 import { Badge } from "../components/Badge";
 import { JsonPanel } from "../components/JsonPanel";
 import { useTimelineRefresh } from "../context/TimelineRefreshContext";
@@ -78,6 +79,9 @@ export function ActionsPage() {
   const [confirmReason, setConfirmReason] = useState("");
   const [requestRaw, setRequestRaw] = useState<string | null>(null);
 
+  const [mutationAuth, setMutationAuth] = useState<"bearer" | "loopback" | null>(null);
+  const [healthChecked, setHealthChecked] = useState(false);
+
   const refreshPending = useCallback(async () => {
     if (!workspace?.promotion_requires_approval) return;
     setPendingErr(null);
@@ -107,6 +111,26 @@ export function ActionsPage() {
         }
       } finally {
         if (!cancelled) setWorkspaceLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const h = await fetchHealth();
+        if (!cancelled) {
+          const m = h.mutation_auth;
+          setMutationAuth(m === "bearer" || m === "loopback" ? m : null);
+        }
+      } catch {
+        if (!cancelled) setMutationAuth(null);
+      } finally {
+        if (!cancelled) setHealthChecked(true);
       }
     })();
     return () => {
@@ -245,6 +269,9 @@ export function ActionsPage() {
 
   const approvalOn = workspace?.promotion_requires_approval === true;
   const canMutate = !workspaceLoading && workspace !== null;
+  const clientTokenOn = clientMutationTokenConfigured();
+  const showBearerTokenHint =
+    canMutate && healthChecked && mutationAuth === "bearer" && !clientTokenOn;
 
   return (
     <>
@@ -362,8 +389,13 @@ export function ActionsPage() {
           <p className="fd-muted fd-samples" aria-live="polite">
             Loading workspace mode…
           </p>
-        ) : null}
-        <div className="fd-actions">
+        ) : (
+          <p className="fd-muted fd-samples" aria-live="polite">
+            <code className="fd-mono fd-mono--sm">VITE_FLIGHTDECK_LOCAL_API_TOKEN</code>{" "}
+            {clientTokenOn ? "is configured for this UI build." : "is not set in this UI build."}
+          </p>
+        )}
+        <div className="fd-actions" style={{ alignItems: "center" }}>
           {approvalOn ? (
             <button
               type="button"
@@ -391,6 +423,12 @@ export function ActionsPage() {
           >
             {busy === "rollback" ? "Rolling back…" : "Rollback"}
           </button>
+          {showBearerTokenHint ? (
+            <span className="fd-muted fd-samples" style={{ flex: "1 1 12rem", minWidth: 0 }}>
+              Server uses Bearer for mutations — set{" "}
+              <code className="fd-mono fd-mono--sm">VITE_FLIGHTDECK_LOCAL_API_TOKEN</code> to match the server.
+            </span>
+          ) : null}
         </div>
       </section>
 

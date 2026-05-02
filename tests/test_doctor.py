@@ -134,7 +134,8 @@ def test_insert_promotion_record_uses_immediate_transaction(tmp_path: Path) -> N
         created_at=datetime.now(tz=timezone.utc),
     )
 
-    competing_conn = storage.connect()
+    competing_conn = sqlite3.connect(str(tmp_path / "flightdeck.db"))
+    competing_conn.execute("PRAGMA busy_timeout=5000")
     try:
         competing_conn.execute("BEGIN IMMEDIATE;")
         try:

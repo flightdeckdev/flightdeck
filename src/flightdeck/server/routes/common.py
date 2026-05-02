@@ -5,7 +5,7 @@ from fastapi import Request
 
 from flightdeck.config import load_config
 from flightdeck.models import WorkspaceConfig
-from flightdeck.storage import Storage
+from flightdeck.storage import Storage, storage_from_config
 
 
 def ensure_app_state(request: Request) -> tuple[WorkspaceConfig, Storage]:
@@ -15,7 +15,7 @@ def ensure_app_state(request: Request) -> tuple[WorkspaceConfig, Storage]:
         return cfg, storage
 
     cfg = load_config()
-    storage = Storage(cfg.db_path)
+    storage = storage_from_config(cfg)
     storage.migrate()
     request.app.state.cfg = cfg
     request.app.state.storage = storage

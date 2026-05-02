@@ -18,7 +18,10 @@ uv sync --extra dev
 
 This creates **`.venv/`** (gitignored), installs **`flightdeck`** editable plus **pytest** and **ruff**, and pins versions from **`uv.lock`**.
 
-Optional extras (telemetry, SDK helpers): e.g. **`uv sync --extra dev --extra telemetry`**.
+Optional extras (telemetry, SDK helpers, PostgreSQL driver): e.g.
+**`uv sync --extra dev --extra telemetry`** or **`uv sync --extra dev --extra postgres`**
+for **`database_url`** / optional **`tests/test_storage_postgres.py`** runs (**`FLIGHTDECK_TEST_POSTGRES_URL`**).
+Local driver test helper (Docker optional): **`scripts/run_postgres_tests.ps1`** (see script header).
 
 ### Package extras
 
