@@ -154,16 +154,61 @@ following differ between baseline and candidate:
 - `spec.pricing_reference.pricing_version` (e.g. `"openai-2026-04-30"` vs. a newer table)
 - `spec.runtime.model` (e.g. `"gpt-4.1-mini"` vs. `"gpt-4.1"`)
 
-When this flag is `True`, the CLI prints a note:
+`DiffOutcome` also carries the resolved per-1k token rates for each side directly:
+
+| Field | Description |
+|-------|-------------|
+| `baseline_input_usd_per_1k_tokens` | Input rate from the baseline pricing table entry (or `None` when not found) |
+| `baseline_output_usd_per_1k_tokens` | Output rate from the baseline pricing table entry (or `None`) |
+| `baseline_cached_input_usd_per_1k_tokens` | Cached-input rate for baseline (or `None` when not set in the table) |
+| `candidate_input_usd_per_1k_tokens` | Input rate from the candidate pricing table entry (or `None`) |
+| `candidate_output_usd_per_1k_tokens` | Output rate from the candidate pricing table entry (or `None`) |
+| `candidate_cached_input_usd_per_1k_tokens` | Cached-input rate for candidate (or `None`) |
+
+These fields are populated by `pricing_entry_for(table, model)` in `flightdeck.ledger` after
+`diff_releases` returns and before the `DiffOutcome` is constructed.
+
+**CLI output** — when `pricing_or_model_changed` is `True`, the CLI prints:
 
 ```
 NOTE: cost delta includes pricing/model assumption changes (pricing reference and/or model differ).
+Per-1k token prices: input 0.005000 -> 0.004500, output 0.015000 -> 0.013500
 ```
 
-The HTTP API's `/v1/diff` response includes `pricing.pricing_or_model_changed: true` in the
-`pricing` block, and the web UI's `DiffPage` shows an `fd-alert--warn` banner. This is an
-informational signal — the diff still computes and the policy still evaluates; cost deltas may
-reflect pricing assumption changes in addition to actual usage changes.
+The **Per-1k token prices** line is only printed when both input and output rates are present
+for both sides. If any rate is `None`, that line is omitted.
+
+**HTTP API** — `/v1/diff` includes a `pricing.prices` object alongside the existing
+`pricing_or_model_changed` flag:
+
+```json
+"pricing": {
+  "baseline_provider": "openai",
+  "baseline_version": "2024-02",
+  "baseline_model": "gpt-4o",
+  "candidate_provider": "openai",
+  "candidate_version": "2024-05",
+  "candidate_model": "gpt-4o",
+  "pricing_or_model_changed": true,
+  "prices": {
+    "baseline_input_usd_per_1k_tokens": 0.005,
+    "baseline_output_usd_per_1k_tokens": 0.015,
+    "baseline_cached_input_usd_per_1k_tokens": null,
+    "candidate_input_usd_per_1k_tokens": 0.0045,
+    "candidate_output_usd_per_1k_tokens": 0.0135,
+    "candidate_cached_input_usd_per_1k_tokens": null
+  }
+}
+```
+
+`pricing.prices` is always present in the response (not gated on `pricing_or_model_changed`).
+Fields are `null` when the rate is not set in the pricing table.
+
+**Web UI** — the `DiffPage` `fd-alert--warn` banner shows the per-1k input/output price deltas
+(baseline → candidate) when all four rates are present. See [web-ui.md § DiffPage](web-ui.md).
+
+This is an informational signal — the diff still computes and the policy still evaluates; cost
+deltas may reflect pricing assumption changes in addition to actual usage changes.
 
 Cross-provider diffs (e.g. OpenAI baseline vs. Anthropic candidate) are supported as long as
 separate pricing tables for each provider/version are imported. Each side is priced against its

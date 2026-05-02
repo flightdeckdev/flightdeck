@@ -91,6 +91,32 @@ See [SECURITY.md](../SECURITY.md) for the full access model.
 
 `GET /health` — returns `{"status": "ok", "mutation_auth": "loopback"|"bearer"}` when the server is up (`mutation_auth` describes promote/rollback auth; see **HTTP API**).
 
+### `GET /v1/metrics` (no SDK wrapper)
+
+The metrics endpoint has no dedicated SDK method. Call it directly via `httpx` or `requests`:
+
+```python
+import httpx
+
+resp = httpx.get("http://127.0.0.1:8765/v1/metrics")
+resp.raise_for_status()
+counters = resp.json()
+# {
+#   "counters": {
+#     "releases_total": 3,
+#     "pricing_tables_total": 1,
+#     "run_events_total": 120,
+#     "promoted_pointers_total": 1,
+#     "actions_total": 5,
+#     "actions_by_action": {"promote": 4, "rollback": 1}
+#   },
+#   "schema_version": 3,
+#   "generated_at": "2026-05-03T12:00:00+00:00"
+# }
+```
+
+`GET /v1/metrics` is read-only and requires no token. See [http-api.md § GET /v1/metrics](http-api.md#get-v1metrics) for the full response shape.
+
 ### `list_releases() -> dict`
 
 `GET /v1/releases` — returns `{"releases": [...]}`. Each entry includes `release_id`,
