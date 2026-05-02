@@ -156,7 +156,11 @@ On submit, the raw diff response is parsed and rendered as:
 - **Pricing change warning:** when the diff response includes a `pricing` block with
   `pricing_or_model_changed: true`, a `fd-alert--warn` banner is shown in the summary
   card. It names the baseline and candidate provider/version/model so the user knows the
-  cost delta includes pricing assumption changes, not just usage changes.
+  cost delta includes pricing assumption changes, not just usage changes. When the response
+  also includes a `pricing.prices` block with all four per-1k token rates present, the
+  banner additionally shows a **Per-1k token prices** line (baseline → candidate, input and
+  output separately) so the user can separate tariff moves from token volume changes in the
+  cost delta. Rates are rendered to six decimal places via `toFixed(6)`.
 - **Metric cards:** cost/run (USD), latency avg (ms), error rate — each showing baseline,
   candidate, and delta.
 - **Raw diff JSON** panel (collapsed by default via `JsonPanel`).
