@@ -1,0 +1,8 @@
+api_version: v1
+kind: WorkspaceConfig
+db_path: .flightdeck/flightdeck.db
+default_environment: local
+diff:
+  min_candidate_runs: 500
+  min_baseline_runs: 500
+  min_low_runs: 50
