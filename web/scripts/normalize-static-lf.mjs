@@ -1,6 +1,8 @@
 /**
- * Force LF line endings under src/flightdeck/server/static/ after Vite build.
- * Avoids CRLF-only diffs on Windows (CI uses git diff --exit-code on static/).
+ * Normalize built assets under src/flightdeck/server/static/ after Vite build.
+ * - CRLF -> LF (Windows vs CI)
+ * - index.html: collapse extra blank lines before </body> (Vite 7.3+ adds one;
+ *   CI uses git diff --exit-code on static/)
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -13,8 +15,11 @@ function normalizeFile(filePath) {
   const buf = fs.readFileSync(filePath);
   if (buf.includes(0)) return;
   const s = buf.toString("utf8");
-  const n = s.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  if (n !== s) fs.writeFileSync(filePath, n, "utf8");
+  let out = s.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  if (path.basename(filePath) === "index.html") {
+    out = out.replace(/(<div id="root"><\/div>)\n\n+(\s*<\/body>)/, "$1\n$2");
+  }
+  if (out !== s) fs.writeFileSync(filePath, out, "utf8");
 }
 
 function walk(dir) {
