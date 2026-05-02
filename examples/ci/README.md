@@ -37,7 +37,7 @@ uv run python examples/ci/ledger_gate.py
 Example (**PyPI** install):
 
 ```bash
-pip install "flightdeck-ai>=1.1.0"
+pip install "flightdeck-ai>=1.1.1"
 export WORKSPACE="$(mktemp -d)"
 export QUICKSTART_ROOT=/path/to/flightdeck/examples/quickstart
 python /path/to/flightdeck/examples/ci/ledger_gate.py
@@ -51,10 +51,22 @@ Copy a workflow from `github-actions/` into `.github/workflows/` in your reposit
 |------|----------|
 | [`policy-gate-monorepo.yml`](github-actions/policy-gate-monorepo.yml) | This repository (or a fork): `uv sync` + `uv run python examples/ci/ledger_gate.py`. |
 | [`policy-gate-pypi.yml`](github-actions/policy-gate-pypi.yml) | Another repo: install **`flightdeck-ai`** from PyPI and sparse-checkout upstream `examples/quickstart` for fixtures (pin the checkout ref to match your installed version when possible). |
+| [`promote-approval-twostep.yml`](github-actions/promote-approval-twostep.yml) | Example **`workflow_dispatch`** job that runs **`promote-request`** and logs **`request_id`** for a follow-up confirm. |
 
 ### Promoting from CI
 
 `flightdeck release promote` is intentionally **not** in the gate script: many teams run diff/verify on every PR and only promote from a protected branch or manual workflow with secrets and review. If you automate promote, reuse the same workspace (or a trusted replica), set policy explicitly, and pass a non-empty `--reason` (for example the Git run URL).
+
+### Human approval (`promotion_requires_approval`)
+
+When **`promotion_requires_approval: true`** in `flightdeck.yaml`, direct **`release promote`** / **`POST /v1/promote`** are rejected until a pending row is confirmed:
+
+1. **`flightdeck release promote-request …`** (or **`POST /v1/promote/request`**) — prints **`request_id=…`** on success; policy must pass for the request to be created.
+2. **`flightdeck release promote-confirm <request_id> --approval-reason "…"`** (or **`POST /v1/promote/confirm`**) — applies the promote; policy is evaluated again on confirm.
+
+Shell helper (bash): **[promote_with_approval.sh](promote_with_approval.sh)** — `request` and `confirm` subcommands wrap the CLI.
+
+GitHub Actions sketch: **[github-actions/promote-approval-twostep.yml](github-actions/promote-approval-twostep.yml)** — `workflow_dispatch` runs **request**; run **confirm** from a separate gated job or locally after review, passing the captured `request_id`.
 
 ## Related
 

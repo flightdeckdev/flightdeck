@@ -38,6 +38,17 @@ if (inCi) {
   await run("python", ["-m", "flightdeck.cli.main", "init"], { cwd: ws });
 }
 
+if (process.env.FD_E2E_FORCE_APPROVAL === "1") {
+  const cfgPath = path.join(ws, "flightdeck.yaml");
+  let text = fs.readFileSync(cfgPath, "utf8");
+  if (/promotion_requires_approval:\s*false/.test(text)) {
+    text = text.replace(/promotion_requires_approval:\s*false/, "promotion_requires_approval: true");
+  } else if (!/promotion_requires_approval:\s*true/.test(text)) {
+    text += "\npromotion_requires_approval: true\n";
+  }
+  fs.writeFileSync(cfgPath, text, "utf8");
+}
+
 let serveArgs;
 if (inCi) {
   serveArgs = ["run", "flightdeck", "serve", "--host", "127.0.0.1", "--port", port];

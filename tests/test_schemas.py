@@ -7,7 +7,8 @@ from typing import Any
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from flightdeck.models import Policy, PricingTable, ReleaseArtifact, RunEvent
+from flightdeck.catalog import PricingCatalog
+from flightdeck.models import Policy, PricingTable, ReleaseArtifact, RunEvent, WorkspacePublic
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -54,3 +55,5 @@ def test_committed_json_schemas_match_models() -> None:
     assert _read_json(root / "run_event.schema.json") == RunEvent.model_json_schema()
     assert _read_json(root / "pricing_table.schema.json") == PricingTable.model_json_schema()
     assert _read_json(root / "policy.schema.json") == Policy.model_json_schema()
+    assert _read_json(root / "pricing_catalog.schema.json") == PricingCatalog.model_json_schema()
+    assert _read_json(root / "workspace_public.schema.json") == WorkspacePublic.model_json_schema()

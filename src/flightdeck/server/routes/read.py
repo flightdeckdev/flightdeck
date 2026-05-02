@@ -2,11 +2,19 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from flightdeck.models import PromotionRequestRecord
+from flightdeck import __version__ as flightdeck_version
+from flightdeck.models import PromotionRequestRecord, WorkspacePublic
 from flightdeck.operations import OperationError, list_timeline, query_run_events_page
 from flightdeck.server.routes.common import ensure_app_state
 
 router = APIRouter()
+
+
+@router.get("/v1/workspace")
+def get_workspace(request: Request) -> WorkspacePublic:
+    """Non-secret workspace flags for operators and the web UI."""
+    cfg, _ = ensure_app_state(request)
+    return WorkspacePublic.from_workspace_config(cfg, server_version=flightdeck_version)
 
 
 @router.get("/v1/releases")

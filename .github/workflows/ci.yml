@@ -47,6 +47,14 @@ jobs:
           npx playwright install chromium
           npm run test:e2e
 
+      - name: Playwright E2E (approval workspace)
+        env:
+          FD_E2E_FORCE_APPROVAL: "1"
+        run: |
+          cd web
+          npx playwright install chromium
+          npx playwright test e2e/actions-approval.spec.ts
+
       - name: Lint
         run: uv run python -m ruff check src tests
 
@@ -113,6 +121,15 @@ jobs:
           cd web
           npx playwright install chromium
           npm run test:e2e
+
+      - name: Playwright E2E (approval workspace)
+        shell: bash
+        env:
+          FD_E2E_FORCE_APPROVAL: "1"
+        run: |
+          cd web
+          npx playwright install chromium
+          npx playwright test e2e/actions-approval.spec.ts
 
       - name: Lint
         run: uv run python -m ruff check src tests

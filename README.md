@@ -27,11 +27,10 @@ Current local spine:
 
 FlightDeck is **local-first** and ships as a Python CLI backed by SQLite.
 
-**v1.0.0** establishes **SemVer-stable public contracts** for the documented CLI
-(**[README.md](https://github.com/flightdeckdev/flightdeck/blob/main/README.md)** on `main`),
-committed **`schemas/v1/`**, and **`POST /v1/events`** with **`api_version` `v1`**. See
-**[RELEASE_NOTES.md](RELEASE_NOTES.md)** (same narrative on
-**[`main`](https://github.com/flightdeckdev/flightdeck/blob/main/RELEASE_NOTES.md)**).
+**v1.0.0** froze **SemVer-stable public contracts** for the documented CLI, committed **`schemas/v1/`**,
+and **`POST /v1/events`** with **`api_version` `v1`**. **v1.1.x** adds Phase 1 slices (optional pricing catalog on diffs,
+promotion request/confirm, read-only runs listing, **`GET /v1/workspace`** for UI and automation, Helm/fleet examples)
+without breaking those v1.0 shapes. See **[RELEASE_NOTES.md](RELEASE_NOTES.md)** and **[CHANGELOG.md](CHANGELOG.md)**.
 The product scope is still intentionally narrow (release governance, not a hosted agent platform).
 
 Not implemented yet:
@@ -46,10 +45,12 @@ Shipped locally:
 - `flightdeck serve` + JSON routes under `/v1/*` (read + diff/promote/rollback + event ingest); see **Local HTTP API** below
 - minimal Python SDK (`flightdeck.sdk.client`)
 - `flightdeck release rollback` (policy-gated, audited)
+- optional **`promotion_requires_approval`** in `flightdeck.yaml` with **`POST /v1/promote/request`** and **`POST /v1/promote/confirm`**
 
 ### Local HTTP API
 
-With **`flightdeck serve`** (default bind **127.0.0.1**), the app exposes **`GET /health`**, **`GET /v1/releases`**, **`GET /v1/promoted`**, **`GET /v1/actions`**, **`POST /v1/events`**, **`POST /v1/diff`**, **`POST /v1/promote`**, and **`POST /v1/rollback`**. **`POST /v1/promote`** and **`POST /v1/rollback`** accept requests only from loopback clients unless **`FLIGHTDECK_LOCAL_API_TOKEN`** is set, in which case callers must send **`Authorization: Bearer <token>`** (same behavior as the **`web/`** dev UI via **`VITE_FLIGHTDECK_LOCAL_API_TOKEN`**). See **[SECURITY.md](SECURITY.md)**.
+With **`flightdeck serve`** (default bind **127.0.0.1**), the app exposes **`GET /health`**, **`GET /v1/workspace`**
+(read-only workspace flags for scripts and the bundled UI), **`GET /v1/metrics`**, **`GET /v1/releases`**, **`GET /v1/promoted`**, **`GET /v1/actions`**, **`GET /v1/promotion-requests`**, **`GET /v1/runs`**, **`POST /v1/events`**, **`POST /v1/diff`**, **`POST /v1/promote`**, **`POST /v1/promote/request`**, **`POST /v1/promote/confirm`**, and **`POST /v1/rollback`**. **`POST /v1/promote`**, **`POST /v1/promote/request`**, **`POST /v1/promote/confirm`**, and **`POST /v1/rollback`** accept requests only from loopback clients unless **`FLIGHTDECK_LOCAL_API_TOKEN`** is set, in which case callers must send **`Authorization: Bearer <token>`** (same behavior as the **`web/`** dev UI via **`VITE_FLIGHTDECK_LOCAL_API_TOKEN`**). See **[docs/http-api.md](docs/http-api.md)** and **[SECURITY.md](SECURITY.md)**.
 
 ## Quickstart
 
@@ -116,6 +117,7 @@ Substitute them before ingestion, or run **`uv run flightdeck-quickstart-verify`
 - [Python SDK](docs/sdk.md) — `FlightdeckClient` / `AsyncFlightdeckClient` usage guide
 - [Operations and policy](docs/operations-and-policy.md) — diff, promote, rollback internals; policy model and confidence tiers
 - [Release artifacts and pricing](docs/release-artifact.md) — `release.yaml` format, bundle layout, checksum algorithm, workspace config, pricing tables
+- [Pricing catalog](docs/pricing-catalog.md) — optional `pricing_catalog_path`, catalog vs imported tables, troubleshooting
 - [JSON Schemas](schemas/v1/)
 - [Release notes (maintainer)](RELEASE_NOTES.md)
 - [Roadmap](ROADMAP.md)

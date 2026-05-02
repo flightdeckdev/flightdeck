@@ -21,7 +21,9 @@ This roadmap is meant to be clear from **what is already shipped** to **near-ter
 
 ## Next release
 
-Further **Phase 1** work after **v1.1.0** (deeper forensics / replay UX, richer approval UI if needed, OTLP-oriented telemetry per gaps table). Track **[CHANGELOG.md](CHANGELOG.md)**.
+Further **Phase 1** work after **v1.1.1** (deeper forensics / replay UX, OTLP-oriented telemetry per gaps table). Track **[CHANGELOG.md](CHANGELOG.md)**.
+
+**v1.1.1** (patch, shipped): **`GET /v1/workspace`** (read-only flags + **`server_version`**); web **Actions** page uses it for **direct promote** vs **request / pending list / confirm**; operator docs refresh (**README**, **release-artifact**, **examples**, **web-ui**, **http-api**, **sdk**, **`docs/pricing-catalog.md`**, **SECURITY**); **`examples/ci/promote_with_approval.sh`** and **`github-actions/promote-approval-twostep.yml`**; CI runs a second Playwright pass with **`FD_E2E_FORCE_APPROVAL`**. See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**.
 
 **v1.1.0** (minor, shipped): Phase 1 first slice — **`pricing_catalog_path`** + **`pricing.catalog`** / **`pricing.hints`** on diffs; **`promotion_requires_approval`** + promote **request/confirm** (HTTP + CLI) + **`GET /v1/promotion-requests`**; **`GET /v1/runs`** / **`runs list`**; **Helm** reference chart; **`examples/fleet/`**; SQLite migration **v4**. See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**.
 
@@ -90,7 +92,13 @@ Shipped on **`main`**:
 
 Goal: move from solid local tooling to repeatable production usage patterns.
 
-**v1.1.0** ships the first tranche: catalog + hints on diffs, approval-gated promote (HTTP + CLI), read-only runs listing, Helm + fleet reference docs, and migration **v4**. Remaining bullets below are still in scope for later minors/patches.
+**v1.1.0** ships the first tranche: catalog + hints on diffs, approval-gated promote (HTTP + CLI), read-only runs listing, Helm + fleet reference docs, and migration **v4**. **v1.1.1** closes the **web + discovery** gap for approval (**`GET /v1/workspace`**, Actions UX) and refreshes team docs / CI examples. Remaining bullets below are still in scope for later minors/patches.
+
+### Phase 1 progress (post–v1.1.0 / v1.1.1)
+
+- **Approval workflow:** **v1.1.0** added HTTP + CLI + **`GET /v1/promotion-requests`**. **v1.1.1** adds **`GET /v1/workspace`** and a first-class **web** path (request → pending table → confirm) keyed off `promotion_requires_approval`, plus **`examples/ci/promote_with_approval.sh`** and a **`workflow_dispatch`** sample workflow.
+- **Operator narrative:** README / **examples** index / **web-ui** / **release-artifact** / **http-api** / **sdk** / optional **`docs/pricing-catalog.md`** describe catalog fields, runs listing, and the two promote modes.
+- **Still open:** **Forensics** beyond read-only runs list (replay/trace-style views, exports), richer catalog lifecycle governance, OTLP-oriented telemetry — see gaps table above.
 
 ### Build in this phase
 

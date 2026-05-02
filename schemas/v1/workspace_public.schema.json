@@ -1,0 +1,36 @@
+{
+  "description": "Read-only workspace flags for ``GET /v1/workspace`` (no secrets, no full YAML).",
+  "properties": {
+    "api_version": {
+      "const": "v1",
+      "default": "v1",
+      "title": "Api Version",
+      "type": "string"
+    },
+    "kind": {
+      "const": "WorkspacePublic",
+      "default": "WorkspacePublic",
+      "title": "Kind",
+      "type": "string"
+    },
+    "pricing_catalog_configured": {
+      "title": "Pricing Catalog Configured",
+      "type": "boolean"
+    },
+    "promotion_requires_approval": {
+      "title": "Promotion Requires Approval",
+      "type": "boolean"
+    },
+    "server_version": {
+      "title": "Server Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "promotion_requires_approval",
+    "pricing_catalog_configured",
+    "server_version"
+  ],
+  "title": "WorkspacePublic",
+  "type": "object"
+}

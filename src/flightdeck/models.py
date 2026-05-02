@@ -30,6 +30,25 @@ class WorkspaceConfig(BaseModel):
     promotion_requires_approval: bool = False
 
 
+class WorkspacePublic(BaseModel):
+    """Read-only workspace flags for ``GET /v1/workspace`` (no secrets, no full YAML)."""
+
+    api_version: Literal["v1"] = "v1"
+    kind: Literal["WorkspacePublic"] = "WorkspacePublic"
+    promotion_requires_approval: bool
+    pricing_catalog_configured: bool
+    server_version: str
+
+    @classmethod
+    def from_workspace_config(cls, cfg: WorkspaceConfig, *, server_version: str) -> WorkspacePublic:
+        path = (cfg.pricing_catalog_path or "").strip()
+        return cls(
+            promotion_requires_approval=cfg.promotion_requires_approval,
+            pricing_catalog_configured=bool(path),
+            server_version=server_version,
+        )
+
+
 class PricingEntry(BaseModel):
     model: str
     input_usd_per_1k_tokens: float = Field(ge=0)
