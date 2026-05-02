@@ -301,6 +301,30 @@ def test_cli_runs_list_json(tmp_path: Path, monkeypatch) -> None:
     assert payload["matched_total"] == 1
 
 
+def test_cli_runs_export_jsonl_truncation_and_stderr(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    assert runner.invoke(cli, ["init"]).exit_code == 0
+    policy = write_policy(tmp_path, min_candidate_runs=0, min_baseline_runs=0, min_low_runs=0)
+    assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
+    pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
+    assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0
+    rdir = write_release(tmp_path, agent_id="ag", version="1", pricing_provider="openai", pricing_version="openai-2026-04-30")
+    rid = runner.invoke(cli, ["release", "register", str(rdir)]).output.strip()
+    now = datetime.now(tz=timezone.utc)
+    assert runner.invoke(cli, ["runs", "ingest", str(write_events(tmp_path, release_id=rid, agent_id="ag", n=5, ts=now))]).exit_code == 0
+    out_path = tmp_path / "exp.jsonl"
+    res = runner.invoke(
+        cli,
+        ["runs", "export", rid, "--window", "7d", "--limit", "2", "-o", str(out_path)],
+    )
+    assert res.exit_code == 0
+    lines = [ln for ln in out_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    assert len(lines) == 2
+    assert "WARNING" in (res.stderr or "")
+    assert "exported 2 of 5" in (res.stderr or "")
+
+
 def test_diff_survives_malformed_catalog_yaml_syntax(tmp_path: Path, monkeypatch) -> None:
     """Invalid YAML in pricing catalog must not crash diff (YAMLError → catalog warning)."""
     monkeypatch.chdir(tmp_path)

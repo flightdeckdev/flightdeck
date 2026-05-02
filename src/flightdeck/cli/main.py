@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 from uuid import uuid4
 
@@ -312,7 +313,7 @@ def policy_show() -> None:
 
 @cli.group()
 def runs() -> None:
-    """Ingest run events."""
+    """Ingest, list, and export run events."""
 
 
 @runs.command("list")
@@ -367,6 +368,66 @@ def runs_list(
     )
     for ev in payload["events"]:
         click.echo(json.dumps(ev, sort_keys=True))
+
+
+@runs.command("export")
+@click.argument("release_id")
+@click.option("--window", required=True, help="Time window like 7d, 24h, 30m.")
+@click.option("--env", "environment", default=None)
+@click.option("--tenant", "tenant_id", default=None)
+@click.option("--task", "task_id", default=None)
+@click.option("--trace-id", "trace_id", default=None, help="Filter to events whose request.trace_id matches (exact).")
+@click.option("--limit", default=500, show_default=True, type=click.IntRange(1, 500))
+@click.option(
+    "-o",
+    "--output",
+    "output_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Write JSONL to this file; default is stdout.",
+)
+def runs_export(
+    release_id: str,
+    window: str,
+    environment: str | None,
+    tenant_id: str | None,
+    task_id: str | None,
+    trace_id: str | None,
+    limit: int,
+    output_path: Path | None,
+) -> None:
+    """Export run events as JSONL (newest first), same filters as ``runs list`` (truncated to --limit, max 500)."""
+    cfg = load_config()
+    storage = Storage(cfg.db_path)
+    storage.migrate()
+    try:
+        payload = query_run_events_page(
+            cfg=cfg,
+            storage=storage,
+            release_id=release_id,
+            window=window,
+            environment=environment,
+            tenant_id=tenant_id,
+            task_id=task_id,
+            trace_id=trace_id,
+            limit=limit,
+        )
+    except OperationError as e:
+        raise click.ClickException(str(e)) from e
+    stream = output_path.open("w", encoding="utf-8", newline="\n") if output_path else None
+    try:
+        out = stream or sys.stdout
+        for ev in payload["events"]:
+            out.write(json.dumps(ev, sort_keys=True) + "\n")
+    finally:
+        if stream is not None:
+            stream.close()
+    if payload["truncated"]:
+        click.echo(
+            f"WARNING: exported {payload['returned']} of {payload['matched_total']} matching events "
+            f"(cap --limit {limit}).",
+            err=True,
+        )
 
 
 @runs.command("ingest")
