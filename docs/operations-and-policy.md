@@ -291,7 +291,7 @@ endpoints (`GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions`) and intern
 
 ## SQLite storage schema
 
-The operations layer reads and writes five tables (via `src/flightdeck/storage.py`):
+The operations layer reads and writes six domain tables (via `src/flightdeck/storage.py`), plus `schema_migrations` and `pricing_import_audit` maintained by the storage layer:
 
 | Table | Purpose |
 |-------|---------|

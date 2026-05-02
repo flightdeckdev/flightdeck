@@ -61,7 +61,7 @@ spec:
 All field values are stored verbatim in the `releases` SQLite table as `artifact_json`. The
 `spec.agent.agent_id` is the primary grouping key used by diff, promote, and rollback.
 
-**JSON Schema:** [`schemas/v1/release_artifact.schema.json`](../schemas/v1/release_artifact.schema.json)
+**JSON Schema:** [`schemas/v1/release.schema.json`](../schemas/v1/release.schema.json)
 
 ---
 

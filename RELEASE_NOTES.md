@@ -36,7 +36,7 @@ Optional OTEL libraries (not used by core today): **`pip install 'flightdeck-ai[
 
 ## Trust boundaries (local spine)
 
-- **`flightdeck serve`**: binding to a non-loopback address prints a warning; **there is no HTTP auth** in the default local server — treat network exposure as operator-controlled risk.
+- **`flightdeck serve`**: binding to a non-loopback address prints a warning. By default, mutation routes (`POST /v1/promote`, `POST /v1/rollback`) are restricted to loopback clients; set `FLIGHTDECK_LOCAL_API_TOKEN` to require a Bearer token instead (enabling non-loopback automation). Read routes and event ingest are open. Treat any network exposure as operator-controlled risk.
 - **`flightdeck release verify`**: compares **registered bundle checksum** vs **current directory tree hash**; exit **2** on mismatch (**1** for normal CLI errors).
 - **`flightdeck doctor`**: read-only checks for SQLite migrations through **`LATEST_SCHEMA_MIGRATION_VERSION`** and basic **`promoted_releases` ↔ `releases`** consistency; **`audit_seq`** on **`release_actions`** must be contiguous (**0.6.0+**).
 
