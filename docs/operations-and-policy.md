@@ -106,6 +106,28 @@ cost = (input_tokens / 1000) * input_usd_per_1k
 
 Runs are averaged across all events in the window to produce `cost_per_run_usd`.
 
+### Multi-provider and cross-model diffs
+
+Baseline and candidate releases are costed **independently using their own
+`spec.pricing_reference`**. This means:
+
+- A baseline on `openai/2024-02` and a candidate on `anthropic/2026-04` is a valid diff.
+- A baseline using `gpt-4o` and a candidate using `gpt-4.1` on the same pricing table is
+  also valid, as long as both model names have entries in their respective pricing tables.
+
+When the provider, pricing version, or model differs between the two sides, the
+`DiffOutcome` sets `pricing_or_model_changed = True`. This surfaces as:
+
+- **CLI:** `NOTE: cost delta includes pricing/model assumption changes (pricing reference
+  and/or model differ).` printed after the diff output.
+- **HTTP API (`POST /v1/diff`):** `pricing.pricing_or_model_changed: true` in the response.
+- **Web UI:** an `fd-alert--warn` callout on the Diff page naming both sides' pricing
+  references.
+
+The warning is informational — the diff still completes and policy is still evaluated.
+Treat the cost delta with caution when this flag is set, because price changes and model
+changes are conflated in the delta value.
+
 ### `compute_diff` vs. `promote_release` / `rollback_release`: filter scope
 
 `compute_diff` supports optional `tenant_id` and `task_id` filters in addition to

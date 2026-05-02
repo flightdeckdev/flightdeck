@@ -153,6 +153,11 @@ On submit, the raw diff response is parsed and rendered as:
 
 - **Summary card:** policy badge (PASS / FAIL), failure reasons list, sample counts and
   confidence label.
+- **Pricing/model-change callout:** when the diff response has
+  `pricing.pricing_or_model_changed === true`, a `fd-alert--warn` strip is shown below the
+  summary card. It displays the baseline and candidate
+  `provider/pricing_version model` pairs and notes that the cost delta includes pricing and
+  model assumption changes. This mirrors the `NOTE:` line in the CLI `release diff` output.
 - **Metric cards:** cost/run (USD), latency avg (ms), error rate — each showing baseline,
   candidate, and delta.
 - **Raw diff JSON** panel (collapsed by default via `JsonPanel`).
@@ -183,8 +188,19 @@ Both **Promote** and **Rollback** buttons are disabled while any request is in f
 any network call with an inline error.
 
 After a successful mutation:
-1. The API response JSON is shown in a `JsonPanel` (open by default).
-2. `notifyTimelineMutated()` is called, refreshing `OverviewPage` automatically.
+1. A structured **outcome card** is rendered showing:
+   - Action type (Promotion / Rollback) and a **Policy PASS/FAIL badge**.
+   - **Pointer** badge — `Updated` (green) when the promoted pointer changed, `Unchanged`
+     (neutral) when policy blocked the update.
+   - Metric tiles for **Action ID**, **Release**, **Baseline**, and **Reason**.
+   - Any policy failure reasons as a list under the metric grid.
+2. The raw API response JSON is available in a collapsed `JsonPanel` below the outcome card.
+3. `notifyTimelineMutated()` is called, refreshing `OverviewPage` automatically.
+
+The `pickOutcome` helper in `ActionsPage.tsx` coerces the `POST /v1/promote` or
+`POST /v1/rollback` 200-response into an `ActionOutcomePayload`. If the response does not
+match the documented contract (e.g. missing required fields), `pickOutcome` returns `null`
+and only the raw JSON panel is shown.
 
 **Auth:** When `VITE_FLIGHTDECK_LOCAL_API_TOKEN` is set in the build environment (or
 `.env.local` during dev), `fetchJson` adds `Authorization: Bearer <token>` to every request.
@@ -224,6 +240,28 @@ type HealthPayload = {
   status: string;
   /** Present on current servers; "bearer" when FLIGHTDECK_LOCAL_API_TOKEN is set. */
   mutation_auth?: "bearer" | "loopback";
+};
+
+type PolicyResultPayload = {
+  passed: boolean;
+  reasons: string[];
+  evaluated_at?: string;
+};
+
+/**
+ * Response shape for `POST /v1/promote` and `POST /v1/rollback` (HTTP 200).
+ * On HTTP 409 (policy blocked), the server wraps this in `{ detail: { message, outcome } }`.
+ * `promoted_pointer_changed` is `false` when blocked.
+ */
+type ActionOutcomePayload = {
+  action_id: string;
+  action: "promote" | "rollback";
+  release_id: string;
+  agent_id: string;
+  environment: string;
+  baseline_release_id: string | null;
+  promoted_pointer_changed: boolean;
+  policy: PolicyResultPayload;
 };
 ```
 

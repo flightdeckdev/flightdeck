@@ -437,13 +437,21 @@ JSONL (one event per line):
 {"api_version":"v1","type":"run_end","timestamp":"2026-05-01T12:01:00Z","agent_id":"agent_support","release_id":"rel_abc123",...}
 ```
 
-JSON array:
+JSON array (detected automatically when the file content starts with `[`):
 ```json
 [
   {"api_version":"v1","type":"run_end","timestamp":"2026-05-01T12:00:00Z",...},
   {"api_version":"v1","type":"run_end","timestamp":"2026-05-01T12:01:00Z",...}
 ]
 ```
+
+**Edge cases:**
+
+| Input | Outcome |
+|-------|---------|
+| Empty file (0 bytes or whitespace only) | Exits `0`, prints `Inserted 0 events`. Safe to ingest placeholder files. |
+| Malformed JSONL (invalid JSON on any non-blank line) | Exits `1` with a parse error. Already-inserted rows from earlier lines remain. |
+| JSON array file | Entire file parsed as a JSON array; blank lines inside the JSON are valid. |
 
 See [http-api.md § POST /v1/events](http-api.md) for the full `RunEvent` field reference.
 
