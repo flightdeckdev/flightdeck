@@ -145,6 +145,30 @@ This can happen if `run_id` values from different agents were ingested under the
 `release_id`. Ensure every `RunEvent` for a release carries the correct `agent_id`
 matching `spec.agent.agent_id` in the release artifact.
 
+### Pricing and model change detection
+
+`DiffOutcome` includes a `pricing_or_model_changed` flag that is `True` when any of the
+following differ between baseline and candidate:
+
+- `spec.pricing_reference.provider` (e.g. `"openai"` vs. `"anthropic"`)
+- `spec.pricing_reference.pricing_version` (e.g. `"openai-2026-04-30"` vs. a newer table)
+- `spec.runtime.model` (e.g. `"gpt-4.1-mini"` vs. `"gpt-4.1"`)
+
+When this flag is `True`, the CLI prints a note:
+
+```
+NOTE: cost delta includes pricing/model assumption changes (pricing reference and/or model differ).
+```
+
+The HTTP API's `/v1/diff` response includes `pricing.pricing_or_model_changed: true` in the
+`pricing` block, and the web UI's `DiffPage` shows an `fd-alert--warn` banner. This is an
+informational signal — the diff still computes and the policy still evaluates; cost deltas may
+reflect pricing assumption changes in addition to actual usage changes.
+
+Cross-provider diffs (e.g. OpenAI baseline vs. Anthropic candidate) are supported as long as
+separate pricing tables for each provider/version are imported. Each side is priced against its
+own table independently before deltas are computed.
+
 ### Rollup semantics
 
 `ledger.compute_rollup` aggregates a list of `RunEvent` objects into a `Rollup`:
@@ -278,19 +302,6 @@ min_low_runs: 20
 
 JSON Schema: [`schemas/v1/policy.schema.json`](../schemas/v1/policy.schema.json).
 
-### Constraint evaluation
-
-`ledger.evaluate_policy` checks constraints in order:
-
-1. **`max_cost_per_run_usd`** — candidate average cost must not exceed the limit.
-2. **`max_latency_ms`** — candidate average latency must not exceed the limit. Skipped
-   if the candidate window has no latency data.
-3. **`max_error_rate`** — candidate error rate must not exceed the limit.
-4. **`require_high_diff_confidence`** — when `True`, the diff must reach HIGH confidence.
-
-Each failed constraint appends a human-readable reason to the result. An empty `reasons`
-list means the policy passed (`passed = True`).
-
 ### Confidence tiers
 
 Confidence is determined by comparing event counts against resolved thresholds:
@@ -316,6 +327,32 @@ min_baseline_runs: 0
 min_low_runs: 0
 require_high_diff_confidence: false
 ```
+
+**`confidence_reason` format:** when confidence is not `HIGH`, a human-readable explanation is
+set on `DiffResult.confidence_reason`. It is a semicolon-joined string of the applicable parts:
+
+- `"candidate sample < {N} runs"` — candidate count is below `min_candidate_runs`
+- `"baseline sample < {N} runs"` — baseline count is below `min_baseline_runs`
+- `"LOW floor is {N} runs"` — either side is below `min_low_runs`
+- Falls back to `"insufficient sample size"` when none of the above apply (should not occur in practice).
+
+The same reason string is appended to the policy failure message when
+`require_high_diff_confidence` blocks promotion, e.g.:
+`"diff confidence is MEDIUM (candidate sample < 500 runs); promotion requires HIGH"`.
+
+### Constraint evaluation: all constraints are checked
+
+`evaluate_policy` checks **all** enabled constraints in order and accumulates every failure
+reason before returning. A single promotion attempt can fail multiple constraints simultaneously:
+
+1. `max_cost_per_run_usd` — candidate average cost must not exceed the limit.
+2. `max_latency_ms` — candidate average latency must not exceed the limit. Skipped when candidate has no latency data.
+3. `max_error_rate` — candidate error rate must not exceed the limit.
+4. `require_high_diff_confidence` — when `True`, the diff must reach HIGH confidence.
+
+Each failed constraint appends one entry to `policy.reasons`. An empty `reasons` list means
+the policy passed (`passed = True`). This means **multiple reasons can appear** when several
+constraints fail at once — e.g. cost and error rate both over-limit produce two entries.
 
 ### Promotion blocked by policy
 
