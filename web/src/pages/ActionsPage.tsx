@@ -1,6 +1,6 @@
-import { useState } from "react";
-import type { ActionOutcomePayload } from "../api";
-import { fetchJson } from "../api";
+import { useCallback, useEffect, useState } from "react";
+import type { ActionOutcomePayload, PromotionRequestListItem, WorkspacePublicPayload } from "../api";
+import { fetchJson, fetchPromotionRequests, fetchWorkspace } from "../api";
 import { Badge } from "../components/Badge";
 import { JsonPanel } from "../components/JsonPanel";
 import { useTimelineRefresh } from "../context/TimelineRefreshContext";
@@ -53,8 +53,16 @@ function pickOutcome(data: unknown): ActionOutcomePayload | null {
   };
 }
 
+type Busy = null | "promote" | "rollback" | "request" | "confirm";
+
 export function ActionsPage() {
   const { notifyTimelineMutated } = useTimelineRefresh();
+  const [workspace, setWorkspace] = useState<WorkspacePublicPayload | null>(null);
+  const [workspaceErr, setWorkspaceErr] = useState<string | null>(null);
+  const [pendingList, setPendingList] = useState<PromotionRequestListItem[]>([]);
+  const [pendingErr, setPendingErr] = useState<string | null>(null);
+  const [listNonce, setListNonce] = useState(0);
+
   const [actRelease, setActRelease] = useState("");
   const [actEnv, setActEnv] = useState("local");
   const [actWindow, setActWindow] = useState("7d");
@@ -62,12 +70,48 @@ export function ActionsPage() {
   const [actOutcome, setActOutcome] = useState<ActionOutcomePayload | null>(null);
   const [actRaw, setActRaw] = useState<string | null>(null);
   const [actErr, setActErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState<null | "promote" | "rollback">(null);
+  const [busy, setBusy] = useState<Busy>(null);
+
+  const [confirmRequestId, setConfirmRequestId] = useState("");
+  const [confirmReason, setConfirmReason] = useState("");
+  const [requestRaw, setRequestRaw] = useState<string | null>(null);
+
+  const refreshPending = useCallback(async () => {
+    if (!workspace?.promotion_requires_approval) return;
+    setPendingErr(null);
+    try {
+      const r = await fetchPromotionRequests({ status: "pending", limit: 50 });
+      setPendingList(r.requests);
+    } catch (e) {
+      setPendingErr(String(e));
+    }
+  }, [workspace?.promotion_requires_approval]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setWorkspaceErr(null);
+      try {
+        const w = await fetchWorkspace();
+        if (!cancelled) setWorkspace(w);
+      } catch (e) {
+        if (!cancelled) setWorkspaceErr(String(e));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    void refreshPending();
+  }, [refreshPending, listNonce]);
 
   const runAction = async (path: "/v1/promote" | "/v1/rollback") => {
     setActErr(null);
     setActOutcome(null);
     setActRaw(null);
+    setRequestRaw(null);
     const reason = actReason.trim();
     if (!reason) {
       setActErr("Reason is required.");
@@ -100,6 +144,86 @@ export function ActionsPage() {
     }
   };
 
+  const runRequestPromotion = async () => {
+    setActErr(null);
+    setActOutcome(null);
+    setActRaw(null);
+    setRequestRaw(null);
+    const reason = actReason.trim();
+    if (!reason) {
+      setActErr("Reason is required for the promotion request.");
+      return;
+    }
+    if (!window.confirm("Create a pending promotion request for this release?")) {
+      return;
+    }
+    setBusy("request");
+    try {
+      const data = await fetchJson<unknown>("/v1/promote/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          release_id: actRelease.trim(),
+          environment: actEnv.trim(),
+          window: actWindow.trim(),
+          reason,
+          actor: "react-ui",
+        }),
+      });
+      setRequestRaw(JSON.stringify(data, null, 2));
+      if (isRecord(data) && typeof data.request_id === "string") {
+        setConfirmRequestId(data.request_id);
+      }
+      setListNonce((n) => n + 1);
+      notifyTimelineMutated();
+    } catch (e) {
+      setActErr(String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const runConfirmPromotion = async () => {
+    setActErr(null);
+    setActOutcome(null);
+    setActRaw(null);
+    const rid = confirmRequestId.trim();
+    const ar = confirmReason.trim();
+    if (!rid) {
+      setActErr("Request ID is required to confirm.");
+      return;
+    }
+    if (!ar) {
+      setActErr("Approval reason is required.");
+      return;
+    }
+    if (!window.confirm("Confirm this promotion request and apply the promote if policy passes?")) {
+      return;
+    }
+    setBusy("confirm");
+    try {
+      const data = await fetchJson<unknown>("/v1/promote/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          request_id: rid,
+          approval_reason: ar,
+          actor: "react-ui",
+        }),
+      });
+      setActOutcome(pickOutcome(data));
+      setActRaw(JSON.stringify(data, null, 2));
+      setListNonce((n) => n + 1);
+      notifyTimelineMutated();
+    } catch (e) {
+      setActErr(String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const approvalOn = workspace?.promotion_requires_approval === true;
+
   return (
     <>
       <div className="fd-page-head">
@@ -112,6 +236,41 @@ export function ActionsPage() {
           </p>
         </div>
       </div>
+
+      {workspaceErr ? <p className="fd-alert fd-alert--error">{workspaceErr}</p> : null}
+
+      {workspace ? (
+        <section className="fd-card">
+          <p className="fd-muted fd-samples">
+            Server <span className="fd-mono fd-mono--sm">{workspace.server_version}</span>
+            {" · "}
+            Catalog{" "}
+            <Badge tone={workspace.pricing_catalog_configured ? "pass" : "neutral"}>
+              {workspace.pricing_catalog_configured ? "configured" : "not configured"}
+            </Badge>
+            {" · "}
+            Promote{" "}
+            <Badge tone={approvalOn ? "neutral" : "pass"}>
+              {approvalOn ? "human approval required" : "direct promotion"}
+            </Badge>
+          </p>
+          {approvalOn ? (
+            <p className="fd-muted fd-samples">
+              This workspace uses <code className="fd-mono fd-mono--sm">promotion_requires_approval</code>. Use{" "}
+              <strong>Request promotion</strong> then <strong>Confirm promotion</strong> (or CLI{" "}
+              <code className="fd-mono fd-mono--sm">release promote-request</code> /{" "}
+              <code className="fd-mono fd-mono--sm">promote-confirm</code>).{" "}
+              <code className="fd-mono fd-mono--sm">POST /v1/promote</code> alone will be rejected.
+            </p>
+          ) : (
+            <p className="fd-muted fd-samples">
+              <code className="fd-mono fd-mono--sm">POST /v1/promote</code> is allowed when policy passes. Turn on{" "}
+              <code className="fd-mono fd-mono--sm">promotion_requires_approval</code> in{" "}
+              <code className="fd-mono fd-mono--sm">flightdeck.yaml</code> for a two-step gate.
+            </p>
+          )}
+        </section>
+      ) : null}
 
       <section className="fd-card">
         <div className="fd-form-grid">
@@ -133,14 +292,25 @@ export function ActionsPage() {
           </label>
         </div>
         <div className="fd-actions">
-          <button
-            type="button"
-            className="fd-btn fd-btn--primary"
-            disabled={busy !== null}
-            onClick={() => void runAction("/v1/promote")}
-          >
-            {busy === "promote" ? "Promoting…" : "Promote"}
-          </button>
+          {approvalOn ? (
+            <button
+              type="button"
+              className="fd-btn fd-btn--primary"
+              disabled={busy !== null}
+              onClick={() => void runRequestPromotion()}
+            >
+              {busy === "request" ? "Requesting…" : "Request promotion"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="fd-btn fd-btn--primary"
+              disabled={busy !== null}
+              onClick={() => void runAction("/v1/promote")}
+            >
+              {busy === "promote" ? "Promoting…" : "Promote"}
+            </button>
+          )}
           <button
             type="button"
             className="fd-btn fd-btn--ghost"
@@ -151,6 +321,84 @@ export function ActionsPage() {
           </button>
         </div>
       </section>
+
+      {approvalOn ? (
+        <>
+          <section className="fd-card">
+            <div className="fd-card__head">
+              <h3 className="fd-card__subtitle">Pending promotion requests</h3>
+            </div>
+            {pendingErr ? <p className="fd-alert fd-alert--error">{pendingErr}</p> : null}
+            {pendingList.length === 0 ? (
+              <p className="fd-muted">No pending requests.</p>
+            ) : (
+              <div className="fd-table-wrap">
+                <table className="fd-table">
+                  <thead>
+                    <tr>
+                      <th>Request ID</th>
+                      <th>Release</th>
+                      <th>Env</th>
+                      <th>Created</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingList.map((row) => (
+                      <tr key={row.request_id}>
+                        <td>
+                          <code className="fd-mono fd-mono--sm" title={row.request_id}>
+                            {shortId(row.request_id, 14, 8)}
+                          </code>
+                        </td>
+                        <td>
+                          <code className="fd-mono fd-mono--sm">{shortId(row.release_id)}</code>
+                        </td>
+                        <td>{row.environment}</td>
+                        <td className="fd-muted">{row.created_at}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          <section className="fd-card">
+            <div className="fd-card__head">
+              <h3 className="fd-card__subtitle">Confirm promotion</h3>
+            </div>
+            <div className="fd-form-grid">
+              <label className="fd-field fd-field--full">
+                <span className="fd-field__label">Request ID</span>
+                <input
+                  className="fd-input"
+                  value={confirmRequestId}
+                  onChange={(e) => setConfirmRequestId(e.target.value)}
+                  placeholder="From the table above or promote-request output"
+                />
+              </label>
+              <label className="fd-field fd-field--full">
+                <span className="fd-field__label">Approval reason</span>
+                <input
+                  className="fd-input"
+                  value={confirmReason}
+                  onChange={(e) => setConfirmReason(e.target.value)}
+                />
+              </label>
+            </div>
+            <div className="fd-actions">
+              <button
+                type="button"
+                className="fd-btn fd-btn--primary"
+                disabled={busy !== null}
+                onClick={() => void runConfirmPromotion()}
+              >
+                {busy === "confirm" ? "Confirming…" : "Confirm promotion"}
+              </button>
+            </div>
+          </section>
+        </>
+      ) : null}
 
       {actErr ? <p className="fd-alert fd-alert--error">{actErr}</p> : null}
 
@@ -195,10 +443,7 @@ export function ActionsPage() {
               <div className="fd-metric__label">Previous baseline</div>
               <div className="fd-metric__row">
                 {actOutcome.baseline_release_id ? (
-                  <code
-                    className="fd-mono fd-mono--sm"
-                    title={actOutcome.baseline_release_id}
-                  >
+                  <code className="fd-mono fd-mono--sm" title={actOutcome.baseline_release_id}>
                     {shortId(actOutcome.baseline_release_id)}
                   </code>
                 ) : (
@@ -216,6 +461,8 @@ export function ActionsPage() {
           ) : null}
         </section>
       ) : null}
+
+      {requestRaw ? <JsonPanel title="Promotion request (raw JSON)" value={requestRaw} defaultOpen /> : null}
 
       {actRaw ? (
         <JsonPanel title="Raw response JSON" value={actRaw} defaultOpen={actOutcome === null} />

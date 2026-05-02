@@ -148,10 +148,21 @@ diff:
   min_candidate_runs: 500   # HIGH confidence threshold (candidate side)
   min_baseline_runs: 500    # HIGH confidence threshold (baseline side)
   min_low_runs: 50          # LOW confidence floor
+# Optional: YAML PricingCatalog for cross-vendor comparable lines on diffs (see schemas/v1/pricing_catalog.schema.json)
+# pricing_catalog_path: pricing/catalog.yaml
+# Optional: when true, direct promote is rejected until a pending request is confirmed (HTTP/CLI request + confirm)
+# promotion_requires_approval: false
 ```
 
 All fields have defaults; an empty `flightdeck.yaml` is valid. `db_path` accepts any
 relative or absolute path — the parent directory is created automatically on first use.
+
+**`pricing_catalog_path`** — optional path to a [`PricingCatalog`](../schemas/v1/pricing_catalog.schema.json) YAML
+(relative to the workspace cwd or absolute). When set, diffs include additive `pricing.catalog` / `pricing.hints`.
+**`promotion_requires_approval`** — when `true`, `POST /v1/promote` and `flightdeck release promote` reject until a row is
+completed via `POST /v1/promote/request` then `POST /v1/promote/confirm` (or CLI `release promote-request` / `promote-confirm`).
+**`GET /v1/workspace`** exposes non-secret booleans for automation and the web UI (`promotion_requires_approval`,
+`pricing_catalog_configured`, `server_version`).
 
 `diff.*` thresholds are the **workspace defaults** used when the active policy does not
 override them. The policy's `min_*` fields take precedence when set (including `0` for

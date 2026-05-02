@@ -18,6 +18,27 @@ test("hash routes reach diff and promote pages", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Promote & rollback", level: 2 })).toBeVisible();
 });
 
+test("GET /v1/workspace returns WorkspacePublic", async ({ request }) => {
+  const res = await request.get("/v1/workspace");
+  expect(res.ok()).toBeTruthy();
+  const j = await res.json();
+  expect(j).toMatchObject({
+    api_version: "v1",
+    kind: "WorkspacePublic",
+    promotion_requires_approval: false,
+    pricing_catalog_configured: false,
+  });
+  expect(typeof j.server_version).toBe("string");
+  expect(j.server_version.length).toBeGreaterThan(0);
+});
+
+test("actions page shows direct Promote when approval off", async ({ page }) => {
+  await page.goto("/#/actions");
+  await expect(page.getByText("direct promotion")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Promote" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Request promotion" })).not.toBeVisible();
+});
+
 test("health endpoint", async ({ request }) => {
   const res = await request.get("/health");
   expect(res.ok()).toBeTruthy();

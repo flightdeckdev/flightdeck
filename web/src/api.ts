@@ -81,6 +81,48 @@ export type ActionOutcomePayload = {
   policy: PolicyResultPayload;
 };
 
+function formatHttpErrorBody(data: unknown): string {
+  if (typeof data !== "object" || data === null) {
+    try {
+      return JSON.stringify(data);
+    } catch {
+      return String(data);
+    }
+  }
+  if (!("detail" in data)) {
+    try {
+      return JSON.stringify(data);
+    } catch {
+      return String(data);
+    }
+  }
+  const detail = (data as { detail: unknown }).detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (typeof item === "object" && item !== null && "msg" in item) {
+          return String((item as { msg: unknown }).msg);
+        }
+        try {
+          return JSON.stringify(item);
+        } catch {
+          return String(item);
+        }
+      })
+      .join("; ");
+  }
+  if (detail && typeof detail === "object" && "message" in detail) {
+    const m = (detail as { message: unknown }).message;
+    if (typeof m === "string") return m;
+  }
+  try {
+    return JSON.stringify(detail);
+  } catch {
+    return String(detail);
+  }
+}
+
 export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   const token = import.meta.env.VITE_FLIGHTDECK_LOCAL_API_TOKEN;
@@ -90,13 +132,52 @@ export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T>
   const res = await fetch(path, { ...init, headers });
   const data: unknown = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const detail =
-      typeof data === "object" && data !== null && "detail" in data
-        ? String((data as { detail: unknown }).detail)
-        : JSON.stringify(data);
-    throw new Error(detail || `HTTP ${res.status}`);
+    const message = formatHttpErrorBody(data);
+    throw new Error(message || `HTTP ${res.status}`);
   }
   return data as T;
+}
+
+/** `GET /v1/workspace` — read-only flags (see `schemas/v1/workspace_public.schema.json`). */
+export type WorkspacePublicPayload = {
+  api_version: string;
+  kind: "WorkspacePublic";
+  promotion_requires_approval: boolean;
+  pricing_catalog_configured: boolean;
+  server_version: string;
+};
+
+export type PromotionRequestListItem = {
+  request_id: string;
+  status: string;
+  release_id: string;
+  agent_id: string;
+  environment: string;
+  window: string;
+  reason: string;
+  actor: string;
+  baseline_release_id: string | null;
+  policy: PolicyResultPayload;
+  created_at: string;
+  resolved_at: string | null;
+  completed_action_id: string | null;
+};
+
+export async function fetchWorkspace(): Promise<WorkspacePublicPayload> {
+  return fetchJson<WorkspacePublicPayload>("/v1/workspace");
+}
+
+export async function fetchPromotionRequests(params?: {
+  status?: string;
+  limit?: number;
+}): Promise<{ requests: PromotionRequestListItem[] }> {
+  const sp = new URLSearchParams();
+  if (params?.status) sp.set("status", params.status);
+  if (params?.limit != null) sp.set("limit", String(params.limit));
+  const q = sp.toString();
+  return fetchJson<{ requests: PromotionRequestListItem[] }>(
+    `/v1/promotion-requests${q ? `?${q}` : ""}`,
+  );
 }
 
 export async function fetchHealth(): Promise<HealthPayload> {

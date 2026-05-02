@@ -91,6 +91,10 @@ See [SECURITY.md](../SECURITY.md) for the full access model.
 
 `GET /health` — returns `{"status": "ok", "mutation_auth": "loopback"|"bearer"}` when the server is up (`mutation_auth` describes promote/rollback auth; see **HTTP API**).
 
+### `get_workspace() -> dict`
+
+`GET /v1/workspace` — returns `WorkspacePublic` JSON: `promotion_requires_approval`, `pricing_catalog_configured` (whether `pricing_catalog_path` is set to a non-empty string), and `server_version` (installed `flightdeck-ai` SemVer). Same method exists on `AsyncFlightdeckClient`. See [http-api.md § GET /v1/workspace](http-api.md#get-v1workspace).
+
 ### `GET /v1/metrics` (no SDK wrapper)
 
 The metrics endpoint has no dedicated SDK method. Call it directly via `httpx` or `requests`:

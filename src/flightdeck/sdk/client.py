@@ -44,6 +44,11 @@ class FlightdeckClient:
         resp.raise_for_status()
         return resp.json()
 
+    def get_workspace(self) -> dict[str, Any]:
+        resp = self._request_with_retry("GET", "/v1/workspace", headers=self._auth_headers() or None)
+        resp.raise_for_status()
+        return resp.json()
+
     def list_releases(self) -> dict[str, Any]:
         resp = self._request_with_retry("GET", "/v1/releases", headers=self._auth_headers() or None)
         resp.raise_for_status()
@@ -290,6 +295,11 @@ class AsyncFlightdeckClient:
 
     async def health(self) -> dict[str, Any]:
         resp = await self._request_with_retry("GET", "/health", headers=self._auth_headers() or None)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_workspace(self) -> dict[str, Any]:
+        resp = await self._request_with_retry("GET", "/v1/workspace", headers=self._auth_headers() or None)
         resp.raise_for_status()
         return resp.json()
 

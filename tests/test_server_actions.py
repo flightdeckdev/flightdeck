@@ -4,10 +4,13 @@ import os
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
+import yaml
 from click.testing import CliRunner
 from fastapi.testclient import TestClient
 
+from flightdeck import __version__ as flightdeck_version
 from flightdeck.cli.main import cli
 from flightdeck.config import load_config
 from flightdeck.server.app import create_app
@@ -75,6 +78,15 @@ def test_http_routes_expose_read_and_diff(tmp_path: Path) -> None:
             rel = client.get("/v1/releases")
             assert rel.status_code == 200
             assert any(item["release_id"] == baseline_id for item in rel.json()["releases"])
+
+            ws_pub = client.get("/v1/workspace")
+            assert ws_pub.status_code == 200
+            wj = ws_pub.json()
+            assert wj["kind"] == "WorkspacePublic"
+            assert wj["api_version"] == "v1"
+            assert wj["promotion_requires_approval"] is False
+            assert wj["pricing_catalog_configured"] is False
+            assert wj["server_version"] == flightdeck_version
 
             promoted = client.get("/v1/promoted")
             assert promoted.status_code == 200
@@ -248,6 +260,27 @@ def test_http_promote_policy_block_returns_conflict_and_keeps_audit(tmp_path: Pa
         last = storage.list_release_actions(agent_id="agent_support", environment="local")[0]
         assert last.release_id == candidate_id
         assert last.policy_result.passed is False
+
+
+def test_http_v1_workspace_reflects_catalog_and_approval_flags(tmp_path: Path) -> None:
+    ws = tmp_path / "ws_workspace_pub"
+    ws.mkdir(parents=True, exist_ok=True)
+    runner = CliRunner()
+    with _cwd(ws):
+        assert runner.invoke(cli, ["init"]).exit_code == 0
+        cfg_path = ws / "flightdeck.yaml"
+        data: dict[str, Any] = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+        data["pricing_catalog_path"] = "pricing/catalog.yaml"
+        data["promotion_requires_approval"] = True
+        cfg_path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8", newline="\n")
+
+        with TestClient(create_app()) as client:
+            r = client.get("/v1/workspace")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["pricing_catalog_configured"] is True
+    assert body["promotion_requires_approval"] is True
+    assert body["server_version"] == flightdeck_version
 
 
 def test_ui_root_serves_vite_index(tmp_path: Path, monkeypatch) -> None:

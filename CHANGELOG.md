@@ -6,6 +6,18 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ## Unreleased
 
+## 1.1.1 - 2026-05-02
+
+### Added
+
+- **`GET /v1/workspace`:** read-only JSON for operators and the web UI — **`promotion_requires_approval`**, **`pricing_catalog_configured`**, **`server_version`** (normative schema + Python SDK helper).
+- **Web Actions:** Promote flow uses workspace flags — direct **`POST /v1/promote`** when approval is off; **request → list pending → confirm** when **`promotion_requires_approval`** is on, with clearer errors.
+- **Docs:** README / **release-artifact** / **examples** / **web-ui** / **http-api** / **sdk** updates for Phase 1 remainder; optional **`docs/pricing-catalog.md`**; **`examples/ci/promote_with_approval.sh`** and CI README **GitHub Actions** pattern for approval-gated promote.
+
+### Changed
+
+- **Examples / CI snippets:** **`flightdeck-ai>=1.1.1`** where version pins apply.
+
 ## 1.1.0 - 2026-05-03
 
 ### Added

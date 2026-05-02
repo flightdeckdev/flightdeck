@@ -50,6 +50,8 @@ npm run test:e2e
 
 **`playwright.config.ts`** starts **`scripts/e2e-server.mjs`**: a fresh workspace under **`.tmp/playwright-fd-workspace/`**, then **`flightdeck serve`** on **`http://127.0.0.1:9876`**. On GitHub Actions the server uses **`uv run flightdeck …`**; locally it uses **`python -m flightdeck.cli.main`** or **`py -3`**.
 
+Set **`FD_E2E_FORCE_APPROVAL=1`** before Playwright to rewrite **`flightdeck.yaml`** with **`promotion_requires_approval: true`** (used by **`e2e/actions-approval.spec.ts`**; CI runs it as a second step after the default suite).
+
 Run **`npm`** commands from this **`web/`** directory (repo root is one level up: **`cd web`**).
 
 ## App architecture
@@ -60,7 +62,7 @@ The React app uses **HashRouter** (`#/` paths) so it works without server-side r
 |-------|-----------|---------|
 | `#/` | `OverviewPage` | Releases table, promoted pointers, recent audit actions |
 | `#/diff` | `DiffPage` | Run-diff form; calls `POST /v1/diff` |
-| `#/actions` | `ActionsPage` | Promote / rollback form; calls `POST /v1/promote` or `POST /v1/rollback` |
+| `#/actions` | `ActionsPage` | `GET /v1/workspace` then promote / rollback (direct **`POST /v1/promote`** or request/confirm when approval is on) |
 
 **Shell and context:** `AppShell` wraps all pages in a `TimelineRefreshProvider`. When a promote/rollback mutation succeeds in `ActionsPage`, it calls `notifyTimelineMutated()`. `OverviewPage` watches the `generation` counter and re-fetches automatically — no page reload needed.
 

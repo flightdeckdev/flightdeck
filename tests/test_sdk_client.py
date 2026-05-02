@@ -101,6 +101,26 @@ def test_flightdeck_client_list_releases_get() -> None:
         assert client.list_releases() == {"releases": []}
 
 
+def test_flightdeck_client_get_workspace_get() -> None:
+    payload = {
+        "api_version": "v1",
+        "kind": "WorkspacePublic",
+        "promotion_requires_approval": True,
+        "pricing_catalog_configured": False,
+        "server_version": "9.9.9",
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert request.url.path == "/v1/workspace"
+        return httpx.Response(200, json=payload)
+
+    transport = httpx.MockTransport(handler)
+    with httpx.Client(transport=transport, base_url="http://flightdeck.test") as http:
+        client = FlightdeckClient("http://flightdeck.test", client=http)
+        assert client.get_workspace() == payload
+
+
 def test_flightdeck_client_promote_raises_on_policy_block() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "POST"

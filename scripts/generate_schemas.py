@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from flightdeck.catalog import PricingCatalog
-from flightdeck.models import Policy, PricingTable, ReleaseArtifact, RunEvent
+from flightdeck.models import Policy, PricingTable, ReleaseArtifact, RunEvent, WorkspacePublic
 
 
 def write_schema(path: Path, schema: dict) -> None:
@@ -19,6 +19,7 @@ def main() -> None:
     write_schema(root / "pricing_table.schema.json", PricingTable.model_json_schema())
     write_schema(root / "policy.schema.json", Policy.model_json_schema())
     write_schema(root / "pricing_catalog.schema.json", PricingCatalog.model_json_schema())
+    write_schema(root / "workspace_public.schema.json", WorkspacePublic.model_json_schema())
 
 
 if __name__ == "__main__":

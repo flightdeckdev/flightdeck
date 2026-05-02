@@ -4,6 +4,10 @@ High-level notes for **shipping FlightDeck**. Detailed history: **[CHANGELOG.md]
 
 Narrative docs (including the CLI reference) are maintained on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** `main`; this file and **`schemas/`** ship in minimal clones.
 
+## v1.1.1 — Workspace discovery, web approval UX, docs + CI cookbook
+
+Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): **`GET /v1/workspace`** exposes non-secret workspace flags (**`promotion_requires_approval`**, **`pricing_catalog_configured`**, **`server_version`**) for scripting and the **Actions** page; web **Promote** follows the two-step request/confirm path when approval is required; expanded operator docs and **`examples/ci/promote_with_approval.sh`** + README workflow snippet. **Stable contracts:** additive HTTP and JSON Schema only.
+
 ## v1.1.0 — Phase 1 first slice (catalog, approval, runs, Helm, fleet)
 
 Minor release (see **[CHANGELOG.md](CHANGELOG.md)**): optional **`pricing_catalog_path`** + **`PricingCatalog`** YAML for cross-vendor comparable **`pricing.catalog`** lines on diffs; **`pricing.hints`** for multi-version and model-name diagnostics; **`promotion_requires_approval`** with **`POST /v1/promote/request`** / **`POST /v1/promote/confirm`** / **`GET /v1/promotion-requests`** and matching CLI; **`GET /v1/runs`** and **`flightdeck runs list`**; SQLite migration **v4** (`promotion_requests`); reference **Helm** chart and **fleet** docs under **`examples/`**. **Stable contracts:** additive HTTP and CLI surfaces; existing **`v1`** event and release payloads unchanged.

@@ -22,7 +22,7 @@ Two access tiers:
 | Route | No token configured | `FLIGHTDECK_LOCAL_API_TOKEN` set |
 |-------|--------------------|---------------------------------|
 | `GET /health` | open | open |
-| `GET /v1/*` (reads, including `GET /v1/metrics`, `GET /v1/runs`, `GET /v1/promotion-requests`) | open | open |
+| `GET /v1/*` (reads, including `GET /v1/workspace`, `GET /v1/metrics`, `GET /v1/runs`, `GET /v1/promotion-requests`) | open | open |
 | `POST /v1/events` | open† | open (no Bearer required) |
 | `POST /v1/diff` | open | open |
 | `POST /v1/promote` | loopback only | `Authorization: Bearer <token>` required |
@@ -91,6 +91,24 @@ Read-only JSON snapshot of aggregate counts in the local SQLite ledger (releases
 ```
 
 `schema_version` matches the highest applied SQLite migration (`LATEST_SCHEMA_MIGRATION_VERSION` in `flightdeck.storage`).
+
+---
+
+## `GET /v1/workspace`
+
+Read-only flags derived from `flightdeck.yaml` plus the running package version. Used by the web UI and automation to choose **direct promote** vs **request/confirm** without embedding workspace YAML in the client. No secrets and no catalog file contents — only whether a **non-empty** `pricing_catalog_path` is set (`pricing_catalog_configured`).
+
+**Response** (`WorkspacePublic` — see `schemas/v1/workspace_public.schema.json`)
+
+```json
+{
+  "api_version": "v1",
+  "kind": "WorkspacePublic",
+  "promotion_requires_approval": false,
+  "pricing_catalog_configured": false,
+  "server_version": "1.1.1"
+}
+```
 
 ---
 

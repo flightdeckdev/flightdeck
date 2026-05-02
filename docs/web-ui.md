@@ -17,8 +17,8 @@ The app uses **HashRouter** (`react-router-dom`) so all navigation stays within 
 | Hash path | Component | HTTP calls | Notes |
 |-----------|-----------|-----------|-------|
 | `#/` | `OverviewPage` | `GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions`, `GET /v1/metrics` (parallel where applicable) | Ledger metrics card is read-only counters |
-| `#/diff` | `DiffPage` | `POST /v1/diff` | |
-| `#/actions` | `ActionsPage` | `POST /v1/promote` or `POST /v1/rollback` | Redirects to `#/` when `VITE_FLIGHTDECK_UI_READ_ONLY=true` |
+| `#/diff` | `DiffPage` | `POST /v1/diff` | Renders `pricing.warnings`, optional **`pricing.catalog`** / **`pricing.hints`**, per-1k prices when present |
+| `#/actions` | `ActionsPage` | `GET /v1/workspace`, `GET /v1/promotion-requests` (when `promotion_requires_approval`), `POST /v1/promote` **or** `POST /v1/promote/request` + `POST /v1/promote/confirm`, `POST /v1/rollback` | Workspace strip shows server version + mode; see **ActionsPage** below |
 | `#/*` (any other) | — | Redirects to `#/` | |
 
 `App.tsx` declares the route tree. `AppShell` is the layout wrapper rendered for all routes.
@@ -75,13 +75,16 @@ so it is stable across renders.
 
 Throws if called outside `TimelineRefreshProvider`.
 
-**Data flow for a successful promote:**
+**Data flow for a successful direct promote** (when `promotion_requires_approval` is **false** in `flightdeck.yaml`):
 
 1. User fills the `ActionsPage` form and clicks **Promote**.
 2. `ActionsPage` calls `fetchJson` → `POST /v1/promote`.
 3. On success, `notifyTimelineMutated()` is called.
 4. `OverviewPage` (mounted in the same shell) sees `generation` change via context.
 5. `useEffect` fires `loadTimeline()` and re-renders tables with fresh data.
+
+When **`promotion_requires_approval`** is **true**, step 2 uses **`POST /v1/promote/request`** instead; confirm uses
+**`POST /v1/promote/confirm`** from the same page. `GET /v1/workspace` on mount drives which buttons are shown.
 
 ---
 
@@ -163,6 +166,8 @@ On submit, the raw diff response is parsed and rendered as:
   confidence label (including `confidence_reason` when present).
 - **Pricing table warnings:** when `pricing.warnings` is a non-empty string array, a
   `fd-alert--warn` list is shown above the pricing/model-change banner (diagnostic only).
+- **Catalog / hints:** when `pricing.catalog` or `pricing.hints` is present, the UI surfaces
+  catalog enabled state, lines, and hint strings (see [pricing-catalog.md](pricing-catalog.md)).
 - **Pricing change warning:** when the diff response includes a `pricing` block with
   `pricing_or_model_changed: true`, a `fd-alert--warn` banner is shown in the summary
   card. It names the baseline and candidate provider/version/model so the user knows the
@@ -185,48 +190,40 @@ token. See [http-api.md](http-api.md) for the full response schema.
 
 ## `ActionsPage` (`web/src/pages/ActionsPage.tsx`)
 
-Mutation form for promote and rollback. Fields:
+On mount, loads **`GET /v1/workspace`** (`fetchWorkspace`) and renders a short status strip:
+**`server_version`**, whether a **`pricing_catalog_path`** is configured (**`pricing_catalog_configured`**), and
+whether **`promotion_requires_approval`** is on.
+
+Mutation form fields:
 
 | Field | Default | Maps to |
 |-------|---------|---------|
 | Release ID | (empty) | `release_id` |
 | Environment | `local` | `environment` |
 | Window | `7d` | `window` |
-| Reason (required) | (empty) | `reason` |
+| Reason (required) | (empty) | `reason` (promote, rollback, and promotion **request**) |
 
 The `actor` field is hardcoded to `"react-ui"` for audit log attribution.
 
-Both **Promote** and **Rollback** buttons are disabled while any request is in flight. A
-`window.confirm` dialog appears before each mutation. An empty reason field aborts before
-any network call with an inline error.
+**Direct promotion** (default): **Promote** calls `POST /v1/promote`. **Rollback** always calls `POST /v1/rollback`.
 
-After a successful mutation:
+**Approval mode:** **Promote** is replaced by **Request promotion** (`POST /v1/promote/request`). A **Pending promotion requests**
+table refreshes from `GET /v1/promotion-requests?status=pending`. **Confirm promotion** posts `POST /v1/promote/confirm` with
+`request_id` (prefilled after a successful request) and `approval_reason`. A collapsible **Promotion request (raw JSON)**
+panel shows the request response.
 
-1. The response is parsed by `pickOutcome()` — a defensive coercion function that returns
-   an `ActionOutcomePayload` when the response matches the documented contract, or `null`
-   when it does not (allowing graceful fallback to the raw JSON panel).
-2. If `pickOutcome()` returns a structured value, a **outcome card** is rendered:
-   - **Policy badge**: `PASS` / `FAIL` tone from `actOutcome.policy.passed`.
-   - **Pointer badge**: `Updated` (pass tone) or `Unchanged` (neutral tone) from
-     `promoted_pointer_changed`. Shown alongside `agent_id` and `environment`.
-   - **Metric grid**: Action ID, Release ID, and Previous baseline (truncated via
-     `shortId()`; full value on `title` hover). When `baseline_release_id` is `null`
-     (first promotion), "none (first promotion)" is shown.
-   - **Policy reasons list** (`fd-reasons`): rendered only when `policy.reasons` is
-     non-empty (e.g. on a FAIL or when advisory reasons are present).
-3. The raw response JSON is always kept in a `JsonPanel` titled "Raw response JSON".
-   It opens by default **only** when `pickOutcome()` returned `null` (i.e. the outcome
-   card could not be rendered).
-4. `notifyTimelineMutated()` is called, refreshing `OverviewPage` automatically.
+All primary actions use `window.confirm`. Buttons are disabled while a request is in flight (`busy` state). Empty
+reason / empty confirm fields abort with inline errors.
 
-**Auth:** When `VITE_FLIGHTDECK_LOCAL_API_TOKEN` is set in the build environment (or
-`.env.local` during dev), `fetchJson` adds `Authorization: Bearer <token>` to every request.
-This satisfies the `FLIGHTDECK_LOCAL_API_TOKEN` gate on `POST /v1/promote` and
-`POST /v1/rollback`. See [http-api.md § Authentication](http-api.md#authentication-and-access-control).
+After a successful **promote** or **rollback** (or **confirm**):
 
-**HTTP 409 handling:** when the server returns 409 (policy blocked), `fetchJson` throws with
-the `detail.message` extracted from the response body. The error is shown in the alert
-element; the audit ledger entry is still recorded server-side.
+1. The response is parsed by `pickOutcome()` when it matches the promote/rollback outcome contract; otherwise the raw JSON panel opens.
+2. Outcome card shows policy badge, pointer badge, metric grid, and reasons list when applicable.
+3. `notifyTimelineMutated()` runs so `OverviewPage` refetches.
+
+**Auth:** `VITE_FLIGHTDECK_LOCAL_API_TOKEN` is sent on every `fetchJson` call, including **`POST /v1/promote/request`** and **`POST /v1/promote/confirm`**. See [http-api.md § Authentication](http-api.md#authentication-and-access-control).
+
+**HTTP errors:** `fetchJson` formats FastAPI **`detail`** strings, validation arrays, and `{ message: … }` objects into a single `Error` message for the alert line.
 
 ---
 
@@ -293,7 +290,7 @@ Thin wrapper around `fetch`:
    `Authorization: Bearer …` header if the env var is non-empty and no `Authorization`
    header is already set.
 2. Calls `fetch(path, { ...init, headers })`.
-3. On non-2xx, extracts `response.json().detail` (string or array) and throws `Error(detail)`.
+3. On non-2xx, formats `response.json().detail` (string, validation array, or object with `message`) into a readable message and throws `Error(…)`.
 4. On JSON parse failure, falls back to `{}` before checking `res.ok`.
 
 ### `fetchHealth(): Promise<HealthPayload>`
@@ -310,6 +307,15 @@ Fires three `GET` requests in parallel via `Promise.all`:
 
 Returns a merged `TimelinePayload`. Used by `OverviewPage` on mount and on every
 `generation` increment.
+
+### `fetchWorkspace(): Promise<WorkspacePublicPayload>`
+
+Calls `GET /v1/workspace`. Used by `ActionsPage` on mount.
+
+### `fetchPromotionRequests({ status?, limit? })`
+
+Calls `GET /v1/promotion-requests` with optional query parameters. Used by `ActionsPage` when
+`promotion_requires_approval` is true to populate the pending requests table.
 
 ---
 
