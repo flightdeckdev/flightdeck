@@ -10,7 +10,7 @@ npm ci
 npm run build
 ```
 
-After any change under **`web/src/`**, run **`npm run build`** again and commit the updated **`src/flightdeck/server/static/`** tree. **CI** rebuilds and runs **`git diff --exit-code`** on that path so committed assets cannot drift.
+After any change under **`web/src/`**, run **`npm run build`** again and commit the updated **`src/flightdeck/server/static/`** tree. The build runs **`scripts/normalize-static-lf.mjs`** after Vite so emitted HTML/JS/CSS use **LF** on Windows (avoids CRLF-only noise against **`.gitattributes`**). **CI** rebuilds and runs **`git diff --exit-code`** on that path so committed assets cannot drift.
 
 ## Local development (`npm run dev`)
 
