@@ -38,6 +38,12 @@ flightdeck serve
 
 See [SECURITY.md](../SECURITY.md) for the full trust model.
 
+## Web UI
+
+When the server is running, visiting `http://127.0.0.1:8765/` serves the built React web UI
+(`src/flightdeck/server/static/index.html`). Static assets are served from `/assets/*`. The UI
+requires no authentication and communicates with the same `/v1/*` routes documented below.
+
 ## Base URL
 
 All paths below are relative to the server base URL, e.g. `http://127.0.0.1:8765`.
@@ -173,7 +179,10 @@ Ingest `RunEvent` records (runtime evidence for diff and policy evaluation).
 ```
 
 `api_version` may be omitted (defaults to `"v1"`). Any other value returns HTTP 400.
-`run_id` must be unique per workspace; duplicates are silently ignored by storage.
+`run_id` must be unique within the workspace database; duplicates are silently ignored by storage.
+
+**Empty `events` array:** sending an empty array (`"events": []`) is rejected with HTTP 422
+(Pydantic validation — `min_length=1` constraint on the request body).
 
 **Response**
 ```json
@@ -195,7 +204,7 @@ Full field reference: [`schemas/v1/run_event.schema.json`](../schemas/v1/run_eve
 | `workspace_id` | string | no (defaults to `"ws_local"`) | Workspace identifier for multi-workspace setups. |
 | `agent_id` | string | **yes** | Stable agent identifier (must match the `spec.agent.agent_id` in the registered release). |
 | `release_id` | string | **yes** | The `release_id` returned by `flightdeck release register`. Links the event to a release record. |
-| `run_id` | string | **yes** | Unique run identifier per workspace. Duplicate `run_id` values are silently skipped. |
+| `run_id` | string | **yes** | Unique run identifier within the workspace database. Duplicate `run_id` values are silently skipped. |
 | `tenant_id` | string | **yes** | Tenant identifier. Used as a filter dimension in diff queries (`--tenant`). |
 | `task_id` | string | **yes** | Task type identifier. Used as a filter dimension in diff queries (`--task`). |
 | `environment` | string | **yes** | Deployment environment (e.g. `"production"`, `"staging"`). Must match the environment used in promote/rollback. |
@@ -251,7 +260,9 @@ the audit ledger.
 }
 ```
 
-`window` format: `{N}d` (days), `{N}h` (hours), `{N}m` (minutes). Required.
+`window` format: `{N}d` (days), `{N}h` (hours), `{N}m` (minutes). Required. `N` must be a
+positive integer (e.g. `"7d"`, `"24h"`, `"30m"`). Zero or negative values and unsupported units
+return HTTP 400.
 `environment` defaults to `WorkspaceConfig.default_environment` when `null`.
 
 **Response**

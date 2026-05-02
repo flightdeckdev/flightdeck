@@ -247,6 +247,10 @@ flightdeck release promote RELEASE_ID --env ENV --window WINDOW --reason REASON
 | `--window` | **Required.** Evidence window used for policy evaluation |
 | `--reason` | **Required.** Rationale written to the audit ledger (non-empty) |
 
+The `actor` field written to the audit ledger is resolved automatically from the environment:
+`$USER` (Unix), `$USERNAME` (Windows), or `"unknown"` if neither is set. There is no `--actor`
+flag on the CLI; the `actor` parameter is only configurable via the HTTP API or SDK.
+
 The currently promoted release for `(agent_id, environment)` becomes the baseline for
 the diff. If no release is currently promoted, the first promotion skips policy
 evaluation and succeeds unconditionally.

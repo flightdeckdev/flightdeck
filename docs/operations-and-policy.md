@@ -59,7 +59,9 @@ compute_diff(
 3. Load the pricing table for each release (provider + pricing_version from
    `spec.pricing_reference`). Missing tables raise `OperationError` with a hint to run
    `flightdeck pricing import`.
-4. Parse `window` into a `timedelta`; compute `since = now - delta`, `until = now`.
+4. Parse `window` into a `timedelta`; compute `since = now - delta`, `until = now`. Valid formats:
+   `{N}d` (days), `{N}h` (hours), `{N}m` (minutes) where `N` is a positive integer. Invalid
+   formats raise `OperationError` (HTTP 400 / CLI exit 1).
 5. Query `run_events` for each release ID filtered by environment, tenant, task, and the
    time window.
 6. Call `ledger.diff_releases` to compute per-side rollups (cost, latency, error rate),
@@ -389,4 +391,5 @@ corresponding check in `test_schemas.py` (or `test_doctor.py`).
 | `Pricing table missing model entry` | Pricing table does not list the model used in the release | Add the model to the pricing YAML and reimport with `--replace` |
 | `Reason is required for promote/rollback actions` | Empty `--reason` flag | Provide a non-empty `--reason` |
 | `No promoted release exists for this agent/environment; nothing to roll back to` | Trying to roll back with no baseline | Promote a release first |
+| `Promoted baseline release is missing: rel_...` | A promoted pointer exists in `promoted_releases` but the referenced release row is gone from `releases` (manual DB edit or truncation) | Run `flightdeck doctor` to detect the dangling pointer; re-register the missing release or restore the database |
 | `Workspace config not found: flightdeck.yaml` | Missing `flightdeck.yaml` | `flightdeck init` |
