@@ -65,7 +65,7 @@ jobs:
         shell: bash
         env:
           FD_PROJECT: ${{ github.workspace }}
-          WORKSPACE: ${{ runner.temp }}/fd-ledger-gate
+          WORKSPACE: ${{ runner.temp }}/fd-ledger-gate-${{ github.run_id }}-${{ github.run_attempt }}
           QUICKSTART_ROOT: ${{ github.workspace }}/examples/quickstart
         run: bash examples/ci/ledger-gate.sh
 
@@ -133,7 +133,7 @@ jobs:
         shell: bash
         env:
           FD_PROJECT: ${{ github.workspace }}
-          WORKSPACE: ${{ runner.temp }}/fd-ledger-gate
+          WORKSPACE: ${{ runner.temp }}/fd-ledger-gate-${{ github.run_id }}-${{ github.run_attempt }}
           QUICKSTART_ROOT: ${{ github.workspace }}/examples/quickstart
         run: bash examples/ci/ledger-gate.sh
 

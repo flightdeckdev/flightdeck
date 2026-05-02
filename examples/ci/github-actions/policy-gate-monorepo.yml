@@ -30,6 +30,6 @@ jobs:
       - name: Run ledger gate (diff + verify, no promote)
         env:
           FD_PROJECT: ${{ github.workspace }}
-          WORKSPACE: ${{ runner.temp }}/fd-ledger-gate-${{ github.run_id }}
+          WORKSPACE: ${{ runner.temp }}/fd-ledger-gate-${{ github.run_id }}-${{ github.run_attempt }}
           QUICKSTART_ROOT: ${{ github.workspace }}/examples/quickstart
         run: bash examples/ci/ledger-gate.sh

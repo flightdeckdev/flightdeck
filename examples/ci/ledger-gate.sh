@@ -8,12 +8,24 @@ QUICKSTART_ROOT="${QUICKSTART_ROOT:?Set QUICKSTART_ROOT to examples/quickstart (
 BASELINE_PH="__BASELINE_RELEASE_ID__"
 CANDIDATE_PH="__CANDIDATE_RELEASE_ID__"
 
+if [[ "$WORKSPACE" == "/" || "$WORKSPACE" == "." || "$WORKSPACE" == ".." ]]; then
+  echo "ledger-gate: refusing unsafe WORKSPACE=$WORKSPACE" >&2
+  exit 1
+fi
+
+if [[ -n "${GITHUB_WORKSPACE:-}" && "$WORKSPACE" == "$GITHUB_WORKSPACE" ]]; then
+  echo "ledger-gate: refusing WORKSPACE=GITHUB_WORKSPACE (would clobber the checkout)" >&2
+  exit 1
+fi
+
 if [[ -n "${FD_PROJECT:-}" ]]; then
   _fd() { ( cd "$WORKSPACE" && uv run --directory "$FD_PROJECT" flightdeck "$@"; ); }
 else
   _fd() { ( cd "$WORKSPACE" && flightdeck "$@"; ); }
 fi
 
+# Fresh ledger each run (CI reruns / self-hosted runners may reuse RUNNER_TEMP paths).
+rm -rf "$WORKSPACE"
 mkdir -p "$WORKSPACE"
 _fd init
 _fd pricing import "$QUICKSTART_ROOT/pricing-baseline.yaml"

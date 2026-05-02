@@ -14,7 +14,7 @@ Environment:
 
 | Variable | Required | Meaning |
 |----------|----------|---------|
-| `WORKSPACE` | yes | Empty directory for `flightdeck.yaml` and the SQLite DB |
+| `WORKSPACE` | yes | **Dedicated throwaway directory** for `flightdeck.yaml` and the SQLite DB (the script **deletes and recreates** it each run so CI reruns stay deterministic) |
 | `QUICKSTART_ROOT` | yes | Path to `examples/quickstart` (or your own copy of those fixtures) |
 | `FD_PROJECT` | no | If set, invokes `uv run --directory "$FD_PROJECT" flightdeck …` from `WORKSPACE` (FlightDeck monorepo / dev clone). If unset, uses `flightdeck` on `PATH` (for example after `pip install flightdeck-ai`). |
 

@@ -6,6 +6,10 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ## Unreleased
 
+### Fixed
+
+- **examples/ci `ledger-gate.sh`:** remove and recreate **`WORKSPACE`** before **`flightdeck init`** so GitHub Actions reruns and warm **`RUNNER_TEMP`** paths do not hit “**flightdeck.yaml already exists**”. **`.github/workflows/ci.yml`** uses a unique **`WORKSPACE`** per workflow run (**`run_id`** + **`run_attempt`**).
+
 ## 1.0.2 - 2026-05-02
 
 ### Added
