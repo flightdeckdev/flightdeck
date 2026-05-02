@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import yaml
@@ -231,6 +231,86 @@ def test_get_v1_runs(tmp_path: Path) -> None:
             assert data["matched_total"] == 3
             assert data["returned"] == 3
             assert len(data["events"]) == 3
+            assert data["offset"] == 0
+            assert data["limit"] == 10
+
+
+def test_get_v1_runs_export_ndjson_and_headers(tmp_path: Path) -> None:
+    ws = tmp_path / "runs_export_http"
+    ws.mkdir(parents=True, exist_ok=True)
+    runner = CliRunner()
+    with _cwd(ws):
+        assert runner.invoke(cli, ["init"]).exit_code == 0
+        policy = write_policy(ws, min_candidate_runs=0, min_baseline_runs=0, min_low_runs=0)
+        assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
+        pricing = write_pricing(ws, provider="openai", pricing_version="openai-2026-04-30")
+        assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0
+        rdir = write_release(ws, agent_id="ag", version="1", pricing_provider="openai", pricing_version="openai-2026-04-30")
+        rid = runner.invoke(cli, ["release", "register", str(rdir)]).output.strip()
+        now = datetime.now(tz=timezone.utc)
+        ev = write_events(ws, release_id=rid, agent_id="ag", n=2, ts=now)
+        assert runner.invoke(cli, ["runs", "ingest", str(ev)]).exit_code == 0
+
+    with _cwd(ws):
+        with TestClient(create_app()) as client:
+            resp = client.get(
+                "/v1/runs/export",
+                params={"release_id": rid, "window": "7d", "limit": 10},
+            )
+            assert resp.status_code == 200
+            assert resp.headers.get("X-Flightdeck-Matched-Total") == "2"
+            assert resp.headers.get("X-Flightdeck-Returned") == "2"
+            assert resp.headers.get("X-Flightdeck-Truncated") == "false"
+            lines = [ln for ln in resp.text.splitlines() if ln.strip()]
+            assert len(lines) == 2
+
+
+def test_get_v1_runs_session_filter_and_offset(tmp_path: Path) -> None:
+    ws = tmp_path / "runs_sess_off"
+    ws.mkdir(parents=True, exist_ok=True)
+    runner = CliRunner()
+    with _cwd(ws):
+        assert runner.invoke(cli, ["init"]).exit_code == 0
+        policy = write_policy(ws, min_candidate_runs=0, min_baseline_runs=0, min_low_runs=0)
+        assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
+        pricing = write_pricing(ws, provider="openai", pricing_version="openai-2026-04-30")
+        assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0
+        rdir = write_release(ws, agent_id="ag", version="1", pricing_provider="openai", pricing_version="openai-2026-04-30")
+        rid = runner.invoke(cli, ["release", "register", str(rdir)]).output.strip()
+        # Anchor before "now" so stagger_ts (+0..+4s) stays inside query_run_events_page's
+        # half-open window (timestamp < utc_now() at request time).
+        now = datetime.now(tz=timezone.utc) - timedelta(hours=1)
+        ev = write_events(
+            ws,
+            release_id=rid,
+            agent_id="ag",
+            n=5,
+            ts=now,
+            stagger_ts=True,
+            session_ids=["sx", "sx", "sy", "sy", "sy"],
+        )
+        assert runner.invoke(cli, ["runs", "ingest", str(ev)]).exit_code == 0
+
+    with _cwd(ws):
+        with TestClient(create_app()) as client:
+            r_sess = client.get(
+                "/v1/runs",
+                params={"release_id": rid, "window": "7d", "limit": 10, "session_id": "sx"},
+            )
+            assert r_sess.status_code == 200
+            assert r_sess.json()["matched_total"] == 2
+
+            r_off = client.get(
+                "/v1/runs",
+                params={"release_id": rid, "window": "7d", "limit": 2, "offset": 2},
+            )
+            assert r_off.status_code == 200
+            body = r_off.json()
+            assert body["matched_total"] == 5
+            assert body["returned"] == 2
+            assert body["offset"] == 2
+            ids = [e["run_id"] for e in body["events"]]
+            assert f"{rid}_2" in ids and f"{rid}_1" in ids
 
 
 def test_runs_trace_id_filter_http_and_cli(tmp_path: Path) -> None:
@@ -323,6 +403,7 @@ def test_cli_runs_export_jsonl_truncation_and_stderr(tmp_path: Path, monkeypatch
     assert len(lines) == 2
     assert "WARNING" in (res.stderr or "")
     assert "exported 2 of 5" in (res.stderr or "")
+    assert "offset=0" in (res.stderr or "")
 
 
 def test_diff_survives_malformed_catalog_yaml_syntax(tmp_path: Path, monkeypatch) -> None:
