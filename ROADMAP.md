@@ -1,6 +1,6 @@
 # Roadmap
 
-FlightDeck is **AI release governance** for production agents: immutable releases, runtime evidence, trusted diffs, and policy-gated promotion.
+FlightDeck helps teams **ship AI agents safely** with release diffs, runtime evidence, and policy gates: immutable releases, runtime evidence, trusted diffs, and policy-gated promotion.
 
 This roadmap is meant to be clear from **what is already shipped** to **near-term commitments** and **long-horizon possibilities**. It also calls out what still makes the product feel standalone in production settings.
 

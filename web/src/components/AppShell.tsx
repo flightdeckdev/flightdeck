@@ -13,7 +13,7 @@ export function AppShell() {
         <header className="fd-header">
           <div className="fd-header__brand">
             <h1 className="fd-header__title">FlightDeck</h1>
-            <p className="fd-header__tagline">Local release governance</p>
+            <p className="fd-header__tagline">Diffs, evidence, policy gates</p>
           </div>
           <nav className="fd-nav" aria-label="Primary">
             <NavLink to="/" end className={navCls}>

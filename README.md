@@ -1,27 +1,67 @@
 # FlightDeck
 
-FlightDeck is **AI Release Governance** for production agents.
+**Ship AI agents safely with release diffs, runtime evidence, and policy gates.**
 
-It gives teams a local-first control loop for release safety: register immutable agent
-releases, ingest runtime evidence, compare trusted diffs, and gate promotion with policy.
+FlightDeck is **local-first** (CLI + SQLite + optional **`flightdeck serve`** UI). It is not an agent framework, prompt IDE, tracing dashboard, or gateway — it is where **what shipped**, **what ran**, **what it cost**, and **whether promote is allowed** are recorded and compared.
 
-FlightDeck is not an agent framework, prompt IDE, tracing dashboard, or gateway. It is the
-operating record for what changed, what it costs, how it behaves, and whether it is safe to
-promote.
+## In ~20 seconds
 
-## Why It Exists
+1. **Register** immutable agent releases (`release.yaml` + bundle checksum).
+2. **Ingest** run evidence (`RunEvent` JSONL or **`POST /v1/events`**).
+3. **Diff** baseline vs candidate: cost, latency, errors, and confidence (optional **pricing catalog** lines on top).
+4. **Promote** only when policy passes; optional **human approval** (request → confirm) before the ledger moves.
 
-AI agent changes can silently alter cost, latency, failure rate, and unit economics. FlightDeck
-turns those changes into explicit release decisions backed by runtime evidence.
+## Example outcome
 
-Current local spine:
+You ship a candidate whose **system prompt drifts by a handful of tokens**; under your imported tariffs the diff shows **cost per run up ~31%** while policy caps spend. **`flightdeck release promote`** (or the HTTP promote path) **stays blocked** until you change the model, relax policy with intent, or widen evidence — not because CI is slow, but because the **governed ledger** says no.
 
-- versioned `release.yaml` artifacts with bundle checksums
-- `RunEvent` ingestion from JSONL or JSON arrays
-- immutable pricing tables with explicit `--replace`
-- trusted `flightdeck release diff`
-- policy-gated `flightdeck release promote`
-- promotion decision history
+## Who should use this?
+
+- Teams that **version agent builds** (prompts, tools, model pins) and need a **durable audit trail**.
+- Engineers who want **one command** to answer “is this candidate safe to roll forward?” with **numbers**, not gut feel.
+- Anyone who has outgrown **ad hoc** folder diffs or **spreadsheet** promote checklists.
+
+## How FlightDeck fits your stack
+
+FlightDeck sits **next to** your agent runtime (not in the inference hot path): emit evidence, run **`flightdeck`** from a laptop or CI, gate **promote** with policy (and optional approval).
+
+```mermaid
+flowchart LR
+  subgraph runtime [Your agent runtime]
+    agent[Agent or service]
+  end
+  subgraph fd [FlightDeck workspace]
+    ingest[Ingest RunEvents]
+    ledger[(SQLite ledger)]
+    diff[release diff]
+    promote[promote or rollback]
+  end
+  subgraph automation [Automation]
+    ci[CI job or operator]
+  end
+  agent -->|"JSONL or HTTP events"| ingest
+  ingest --> ledger
+  ledger --> diff
+  diff --> ci
+  ci -->|"policy pass"| promote
+```
+
+## Comparison at a glance
+
+| | **FlightDeck** | **Langfuse** | **Arize Phoenix / Cloud** | **Git / CI alone** |
+|--|----------------|----------------|---------------------------|---------------------|
+| **Primary job** | **Release + promote governance** for agents (ledger, diff, policy) | Tracing, sessions, evals, LLM observability | ML / model observability and monitoring | Source control and generic pipelines |
+| **Immutable release artifact** | Yes (`release.yaml` + checksum) | No | No | Only if you build it |
+| **Evidence + cost/latency diff** | Yes (runs + pricing tables / optional catalog) | Different lens (trace-level) | Different lens | DIY |
+| **Policy gate on promote** | First-class | No | No | DIY |
+
+**Try the UI:** run **`flightdeck serve`**, then open **http://127.0.0.1:8765/** — Overview, Diff, and Actions (see [docs/web-ui.md](docs/web-ui.md)).
+
+## Why it exists
+
+Small prompt or model changes can silently move **cost**, **latency**, and **error rate**. FlightDeck turns those moves into **explicit promote decisions** backed by ingested runs — before production pointers advance.
+
+**Current local spine:** versioned **`release.yaml`** + checksums · **`RunEvent`** ingest (JSONL or arrays) · immutable **pricing** imports · **`flightdeck release diff`** · policy-gated **`release promote`** / rollback · full **audit history**.
 
 ## Status
 

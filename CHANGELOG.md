@@ -17,6 +17,7 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 ### Changed
 
 - **Examples / CI snippets:** **`flightdeck-ai>=1.1.1`** where version pins apply.
+- **Positioning:** README, PyPI short description, CLI `--help`, and web header tagline emphasize outcome-oriented messaging (diffs, evidence, policy gates) plus README sections for stack fit and product comparisons.
 
 ## 1.1.0 - 2026-05-03
 

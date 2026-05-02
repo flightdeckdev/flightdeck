@@ -1,4 +1,4 @@
-"""FlightDeck CLI - AI Release Governance."""
+"""FlightDeck CLI — release diffs, runtime evidence, policy gates."""
 
 from __future__ import annotations
 
@@ -68,7 +68,7 @@ def parse_events_file(path: Path) -> list[RunEvent]:
 @click.group()
 @click.version_option(version=__version__, prog_name="flightdeck")
 def cli() -> None:
-    """FlightDeck - AI Release Governance (release safety ledger + trustworthy diffs)."""
+    """Ship AI agents safely — release diffs, runtime evidence, policy gates."""
 
 
 @cli.command()
