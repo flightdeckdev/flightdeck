@@ -111,6 +111,7 @@ Substitute them before ingestion, or run **`uv run flightdeck-quickstart-verify`
 
 - [CLI reference](docs/cli.md) — all commands, flags, arguments, and exit codes
 - [HTTP API reference](docs/http-api.md) — all `/v1/*` routes, request/response shapes, auth, `RunEvent` field reference
+- [Web UI](docs/web-ui.md) — browser UI served by `flightdeck serve`: Overview, Diff, and Promote pages; auth; dev mode
 - [Python SDK](docs/sdk.md) — `FlightdeckClient` / `AsyncFlightdeckClient` usage guide
 - [Operations and policy](docs/operations-and-policy.md) — diff, promote, rollback internals; policy model and confidence tiers
 - [Release artifacts and pricing](docs/release-artifact.md) — `release.yaml` format, bundle layout, checksum algorithm, workspace config, pricing tables

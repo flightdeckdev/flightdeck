@@ -50,23 +50,22 @@ npm run test:e2e
 
 Run **`npm`** commands from this **`web/`** directory (repo root is one level up: **`cd web`**).
 
-## PR split (subagent-friendly)
+## Architecture
 
-**Already landed:** Vite + React + TS **`web/`**, committed **`static/`**, FastAPI **`/assets`** mount, CI **`npm run build`** + **`git diff --exit-code`** on **`static/`**, Playwright smoke, LF normalization via **`.gitattributes`** (stable **`git diff`** on Windows).
+The source is organized under **`web/src/`**:
 
-**Suggested follow-ups:**
+| Path | Purpose |
+|------|---------|
+| `main.tsx` | React entry point; mounts `<App />` into `#root` |
+| `App.tsx` | `HashRouter` with routes for `OverviewPage`, `DiffPage`, and `ActionsPage` inside `AppShell` |
+| `api.ts` | Typed fetch helpers (`fetchJson`, `loadTimeline`) and row types (`ReleaseRow`, `ActionRow`, …) |
+| `components/AppShell.tsx` | Persistent header with primary nav links; wraps `TimelineRefreshProvider` |
+| `components/Badge.tsx` | Inline `PASS`/`FAIL` badge with tone variants |
+| `components/JsonPanel.tsx` | Collapsible raw JSON panel used on Diff and Actions pages |
+| `context/TimelineRefreshContext.tsx` | Shared `generation` counter; incremented after successful mutations so `OverviewPage` re-fetches automatically |
+| `pages/OverviewPage.tsx` | Releases, promoted pointers, and recent actions tables |
+| `pages/DiffPage.tsx` | Interactive diff form; renders metric cards and policy result |
+| `pages/ActionsPage.tsx` | Promote and rollback form; calls `notifyTimelineMutated()` on success |
+| `index.css` | All scoped `fd-*` CSS classes (no external CSS framework) |
 
-1. **PR B — UI behavior**  
-   Timeline UX (tables, loading states, `/v1/actions` query filters), mutation UX (inline errors, disable buttons while pending). Touch **`web/src/`** only, then **`npm run build`** and commit **`static/`**.
-
-   *Subagent prompt:* “Improve **`web/src/App.tsx`** (and small new components under **`web/src/`**) for timeline and promote/rollback UX only; rebuild **`static/`**; do not change Python HTTP contracts.”
-
-2. **PR C — Optional**  
-   React Router, richer diff visualization, shared design tokens. (**Playwright** smoke is under **`e2e/`**; see **Playwright E2E** above.)
-
-**Parallel subagents for PR B** (non-overlapping files if you split components first):
-
-- **Agent 1 — Read path:** `TimelinePanel` (or equivalent) + styles for releases/promoted/actions.
-- **Agent 2 — Write path:** `DiffPanel` + `MutationPanel` + token-aware **`fetch`** helpers.
-
-Rebase one branch onto the other, run **`npm run build` once**, fix any conflicts in **`static/`**, then push.
+For user-facing UI documentation (what each page does, authentication, common issues) see **[docs/web-ui.md](../docs/web-ui.md)**.
