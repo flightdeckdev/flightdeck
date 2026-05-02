@@ -12,8 +12,8 @@ Extended maintainer docs (research workflow, org checklist, canonical publish) l
 
 ## Mission
 
-FlightDeck is AI Release Governance for production agents. The core product promise is
-trustworthy release safety: version releases, ingest runtime evidence, compare diffs, and gate
+FlightDeck helps teams **ship AI agents safely** with **release diffs**, **runtime evidence**, and **policy gates**.
+The core product promise is trustworthy release safety: version releases, ingest runtime evidence, compare diffs, and gate
 promotion with policy.
 
 ## Current Wedge

@@ -12,7 +12,7 @@ def test_cli_help() -> None:
 
     assert result.exit_code == 0
     assert "FlightDeck" in result.output
-    assert "AI Release Governance" in result.output
+    assert "Ship AI agents safely" in result.output
 
 
 def test_cli_version() -> None:
