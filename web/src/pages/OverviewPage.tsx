@@ -34,6 +34,7 @@ function TableShell({
 }
 
 export function OverviewPage() {
+  const { generation } = useTimelineRefresh();
   const [data, setData] = useState<TimelinePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
