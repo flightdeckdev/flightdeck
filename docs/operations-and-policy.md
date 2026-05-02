@@ -86,7 +86,11 @@ compute_diff(
 3. Load the pricing table for each release (provider + pricing_version from
    `spec.pricing_reference`). Missing tables raise `OperationError` with a hint to run
    `flightdeck pricing import`.
-4. Parse `window` into a `timedelta`; compute `since = now - delta`, `until = now`.
+4. Parse `window` into a `timedelta` via `ledger.parse_window`. Valid units are `d`
+   (days), `h` (hours), and `m` (minutes) — seconds and weeks are not supported. The
+   numeric part must be a positive integer; `"0h"`, `"-7d"`, and `"7w"` all raise
+   `OperationError`. Compute `since = until - delta`, `until = now` (UTC at call time).
+   Events are queried with `timestamp >= since AND timestamp < until` (half-open interval).
 5. Query `run_events` for each release ID filtered by environment, tenant, task, and the
    time window.
 6. Call `ledger.diff_releases` to compute per-side rollups (cost, latency, error rate),
@@ -144,6 +148,24 @@ Each side of the diff must have a single consistent agent_id among run events.
 This can happen if `run_id` values from different agents were ingested under the same
 `release_id`. Ensure every `RunEvent` for a release carries the correct `agent_id`
 matching `spec.agent.agent_id` in the release artifact.
+
+### Diffs where one side has no run events
+
+`diff_releases` only runs the cross-agent agent consistency check when **both** sides
+have events. If one side (or both) has zero events in the window, the consistency check is
+skipped. The rollup for the empty side evaluates to zero runs, zero cost, no latency data,
+and zero error rate. Confidence is determined by the sample count thresholds as normal:
+
+- With default thresholds (`min_candidate_runs=500`, `min_baseline_runs=500`,
+  `min_low_runs=50`), a baseline with zero runs will produce `LOW` confidence.
+- With all thresholds set to `0` (staging policy), zero events on either side can reach
+  `HIGH` confidence.
+
+**Practical implication:** if you register a new baseline with no run history and
+immediately diff it against a candidate, the diff will complete without error, but
+`baseline_runs` will be 0 and confidence will be `LOW` (or lower than `HIGH` with default
+thresholds). This is a valid signal — it means the baseline has no observable data to
+compare against.
 
 ### Pricing and model change detection
 
@@ -490,6 +512,26 @@ The operations layer reads and writes seven tables (via `src/flightdeck/storage.
 that migrations are applied through `LATEST_SCHEMA_MIGRATION_VERSION` and that
 `audit_seq` has no gaps.
 
+### `run_events` column layout
+
+The `run_events` table stores six indexed columns extracted from each `RunEvent` (used for
+filtering in diff and promote/rollback queries) plus the full serialized event:
+
+| Column | Source | Notes |
+|--------|--------|-------|
+| `run_id` | `RunEvent.run_id` | PRIMARY KEY; duplicate inserts are silently skipped (idempotent ingestion) |
+| `release_id` | `RunEvent.release_id` | Covered by the `(release_id, timestamp)` index added in migration v2 |
+| `agent_id` | `RunEvent.agent_id` | Stored for direct inspection; not used as a WHERE clause in current query paths |
+| `tenant_id` | `RunEvent.tenant_id` | Used as a filter in `query_runs` (optional `--tenant` flag on `release diff`) |
+| `task_id` | `RunEvent.task_id` | Used as a filter in `query_runs` (optional `--task` flag on `release diff`) |
+| `environment` | `RunEvent.environment` | Used as a filter in all diff and promote/rollback queries |
+| `timestamp` | `RunEvent.timestamp` | ISO-8601 string; used for time-window filtering (`since ≤ timestamp < until`) |
+| `event_json` | Full `RunEvent` serialized to JSON | Deserialized into `RunEvent` objects by `query_runs` before returning |
+
+Fields that are stored inside `event_json` but **not** in top-level columns — and therefore
+not filterable in diff queries — include `workspace_id`, `labels`, `request`, and all
+`usage.*` fields. The `usage` data is read from `event_json` during cost computation in `compute_rollup`.
+
 ### Storage connection settings
 
 Every connection is configured with four pragmas before any statement runs:
@@ -536,13 +578,18 @@ corresponding check in `test_schemas.py` (or `test_doctor.py`).
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| `Unknown baseline release: rel_...` | Release not registered | `flightdeck release register <path>` |
-| `Missing pricing table for baseline openai/2024-02` | Pricing not imported | `flightdeck pricing import <path>` |
+| `Unknown baseline release: rel_...` | Baseline release ID not registered | `flightdeck release register <path>` |
+| `Unknown candidate release: rel_...` | Candidate release ID not registered | `flightdeck release register <path>` |
+| `Missing pricing table for baseline openai/2024-02` | Pricing not imported for baseline provider/version | `flightdeck pricing import <path>` |
+| `Missing pricing table for candidate openai/2024-02` | Pricing not imported for candidate provider/version | `flightdeck pricing import <path>` |
+| `Missing pricing table for rollback target openai/2024-02` | Pricing not imported for promote/rollback target | `flightdeck pricing import <path>` |
+| `Missing pricing table for promoted_baseline openai/2024-02` | Pricing for the currently-promoted baseline is not present | Import the missing table with `flightdeck pricing import <path>` |
 | `Cross-agent diff is not allowed` | Releases belong to different agents | Use releases from the same `agent_id` |
 | `Each side of the diff must have a single consistent agent_id among run events` | Ingested events for that release contain mixed `agent_id` values | Verify all `RunEvent` records use the correct `agent_id` matching the release artifact; re-ingest corrected events |
 | `Pricing table missing model entry` | Pricing table does not list the model used in the release | Add the model to the pricing YAML and reimport with `--replace` |
 | `Reason is required for promote/rollback actions` | Empty `--reason` flag | Provide a non-empty `--reason` |
 | `No promoted release exists for this agent/environment; nothing to roll back to` | Trying to roll back with no baseline | Promote a release first |
+| `Promoted baseline release is missing: rel_...` | A promoted pointer exists but the referenced release record is gone (e.g. manual DB edit) | Restore from backup; then re-register the release if the artifact is available and promote it to reset the pointer |
 | `Workspace config not found: flightdeck.yaml` | Missing `flightdeck.yaml` | `flightdeck init` |
 
 ---

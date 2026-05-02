@@ -150,6 +150,13 @@ Form-based interface for `POST /v1/diff`. Fields mirror the request body:
 | Window | `7d` | `window` |
 | Environment | `local` | `environment` (sent as `null` when empty) |
 
+`tenant_id` and `task_id` are **not exposed** in the UI form. To run a diff narrowed to a
+specific tenant or task, use the CLI (`flightdeck release diff --tenant <id> --task <id>`)
+or call `POST /v1/diff` directly with the `tenant_id` and `task_id` fields. See
+[http-api.md § POST /v1/diff](http-api.md#post-v1diff) and
+[operations-and-policy.md § compute_diff vs. promote_release filter scope](operations-and-policy.md#compute_diff-vs-promote_release--rollback_release-filter-scope)
+for details on what those filters affect.
+
 On submit, the raw diff response is parsed and rendered as:
 
 - **Summary card:** policy badge (PASS / FAIL), failure reasons list, sample counts and

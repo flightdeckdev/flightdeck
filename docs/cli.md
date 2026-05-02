@@ -329,6 +329,10 @@ below each action line.
 2026-05-01T13:00:00+00:00	promote	PASS	rel_abc123	baseline=rel_prev789	actor=ci-bot	reason=passed staging
 ```
 
+**No record limit:** `release history` returns all matching rows from `release_actions`
+(newest first). For scripted access to a bounded window, use `GET /v1/actions` which
+accepts a `limit` query parameter (1–500, default 50).
+
 ---
 
 ## `flightdeck pricing`

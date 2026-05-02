@@ -87,7 +87,7 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ### Changed
 
-- **Slim distribution:** this repository omits the full in-tree **`docs/`** tree, org mirror scripts, and **`verify-repo-standards`** wrappers. Narrative docs and maintainer runbooks live on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)**; in-repo links now point there where applicable.
+- **Slim distribution:** this repository ships a focused in-tree **`docs/`** tree (CLI, HTTP API, SDK, operations/policy, release artifact, web UI references); org mirror scripts and **`verify-repo-standards`** wrappers are not included. Extended maintainer runbooks and the canonical README live on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)**; in-repo links now point there where applicable.
 - **`pyproject.toml`:** OpenTelemetry packages are **optional** only (**`telemetry`** / **`all`** extras); the default install matches the **1.0.0** dependency story (core does not import OpenTelemetry).
 - **`.pre-commit-config.yaml`:** **ruff** replaces **black** / **isort**; **`ruff-pre-commit`** pinned to **v0.15.12** to match **`dev`** (**`ruff==0.15.12`**).
 - **CI:** Python **3.13** and **3.14** added to the Ubuntu and Windows matrices (superseded by **3.14**-only policy as of **1.0.2**).

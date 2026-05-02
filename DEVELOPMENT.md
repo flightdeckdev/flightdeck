@@ -32,6 +32,8 @@ Optional extras (telemetry, SDK helpers): e.g. **`uv sync --extra dev --extra te
 
 FlightDeck's core package (`flightdeck-ai`) does not import OpenAI, Anthropic, or OpenTelemetry at runtime. These extras exist so your project can declare a single dependency (`flightdeck-ai[openai]`) and get a compatible version of both without resolving conflicts manually.
 
+**Note on listed core dependencies:** `pyproject.toml` currently lists `sqlalchemy`, `aiosqlite`, and `rich` as direct (non-optional) dependencies, but `src/flightdeck/` does not import any of them — the package uses the standard-library `sqlite3` module and plain `click` output. These entries are carried over from earlier prototypes and are scheduled for removal in a future cleanup release.
+
 ## Setup (pip — fallback)
 
 ```bash
