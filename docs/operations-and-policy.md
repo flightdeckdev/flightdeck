@@ -34,6 +34,33 @@ The three primary functions:
 All raise `OperationError` (a `ValueError` subclass) for user-visible problems. The CLI
 maps these to `click.ClickException`; the HTTP layer maps them to HTTP 400.
 
+### Server initialization: lifespan vs. `ensure_app_state`
+
+`server/app.py` registers a FastAPI **lifespan** handler that runs at startup:
+
+```python
+cfg = load_config()           # reads flightdeck.yaml from cwd
+storage = Storage(cfg.db_path)
+storage.migrate()
+app.state.cfg = cfg
+app.state.storage = storage
+app.state.local_api_token = os.environ.get("FLIGHTDECK_LOCAL_API_TOKEN")
+```
+
+Every request handler then calls `ensure_app_state(request)` from
+`server/routes/common.py`. That function returns `(cfg, storage)` immediately if
+`app.state.cfg` and `app.state.storage` are already set. If they are **not** set (e.g. in
+tests that construct the app without going through the full lifespan, or in unusual embedding
+scenarios), it re-runs the same load-and-migrate sequence and stores the results on
+`app.state`. This lazy fallback means tests can call routes without starting uvicorn, but
+it also means the working directory at **first request time** determines which
+`flightdeck.yaml` is loaded, not the directory at process start.
+
+`_require_mutation_access` (called by `POST /v1/promote` and `POST /v1/rollback`) reads
+`request.app.state.local_api_token` set during lifespan or lazy init. The test client host
+`"testclient"` is included in `_LOCAL_CLIENT_HOSTS` alongside loopback addresses so that
+integration tests can call mutation routes without a Bearer token.
+
 ---
 
 ## `compute_diff`
@@ -390,3 +417,68 @@ corresponding check in `test_schemas.py` (or `test_doctor.py`).
 | `Reason is required for promote/rollback actions` | Empty `--reason` flag | Provide a non-empty `--reason` |
 | `No promoted release exists for this agent/environment; nothing to roll back to` | Trying to roll back with no baseline | Promote a release first |
 | `Workspace config not found: flightdeck.yaml` | Missing `flightdeck.yaml` | `flightdeck init` |
+
+---
+
+## Operational runbook
+
+### SQLite `SQLITE_BUSY` errors
+
+FlightDeck uses WAL mode with a 5-second busy timeout (see [Storage connection settings](#storage-connection-settings)). `SQLITE_BUSY` occurs when a write lock is held longer than 5 seconds.
+
+**Typical causes:**
+
+- Another `flightdeck serve` or CLI command is running a long `BEGIN IMMEDIATE` transaction.
+- The database file is on a network filesystem that does not support `LOCK_EX` correctly
+  (WAL mode requires byte-range locking).
+- OS-level anti-virus or backup software has the file open.
+
+**Remedies:**
+
+1. Ensure only one writer is active at a time (CLI and server share the same DB file).
+2. Move `db_path` to a local filesystem if you see persistent locking issues on NFS or SMB.
+3. For batch operations that hit the limit, reduce parallelism — FlightDeck is designed for
+   single-user local use, not concurrent writers.
+
+### Backup and restore
+
+The full FlightDeck state lives in two places:
+
+- `flightdeck.yaml` — workspace config (safe to version-control; contains no secrets)
+- `.flightdeck/flightdeck.db` — SQLite database (gitignored by default)
+
+**Backup** (safe copy while the server is not running):
+
+```bash
+cp .flightdeck/flightdeck.db .flightdeck/flightdeck.db.bak
+```
+
+**Backup with WAL checkpoint** (safe while the server is running; ensures WAL is flushed):
+
+```bash
+sqlite3 .flightdeck/flightdeck.db "PRAGMA wal_checkpoint(FULL);"
+cp .flightdeck/flightdeck.db .flightdeck/flightdeck.db.bak
+```
+
+**Restore:** stop the server, replace `flightdeck.db` with the backup, restart.
+
+```bash
+cp .flightdeck/flightdeck.db.bak .flightdeck/flightdeck.db
+```
+
+After restore, run `flightdeck doctor` to confirm integrity.
+
+### Interpreting `flightdeck doctor` failures
+
+| Check | Failure message | Meaning | Fix |
+|-------|----------------|---------|-----|
+| `schema_migrations` | `migrations applied=[1, 2] but expected 1..3` | A newer migration has not run (DB was created by an older version) | Run `flightdeck doctor` again (it calls `migrate()` at start); if it still fails, the DB file may be from a version with a different schema history |
+| `promoted_pointer:<agent>:<env>` | `release_id=rel_... not found in releases` | A promoted pointer references a deleted or never-registered release | Re-register the release with the same ID (not supported) or reset the promoted pointer by promoting a known good release |
+| `audit_seq` | `gap at seq=5` or `duplicate seq=3` | The `release_actions` table has a missing or duplicate `audit_seq` | Indicates a manual DB edit or incomplete write; restore from backup and reinspect the affected rows with `sqlite3` |
+
+For the `audit_seq` gap case, you can inspect the table directly:
+
+```bash
+sqlite3 .flightdeck/flightdeck.db \
+  "SELECT audit_seq, action, release_id, created_at FROM release_actions ORDER BY audit_seq;"
+```
