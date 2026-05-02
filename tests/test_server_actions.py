@@ -160,6 +160,40 @@ def test_http_promote_requires_reason(tmp_path: Path) -> None:
     assert res.status_code == 422
 
 
+def test_http_promote_policy_block_returns_conflict_and_keeps_audit(tmp_path: Path) -> None:
+    ws = tmp_path / "ws_policy_block"
+    runner, baseline_id, candidate_id = _seed_workspace(ws)
+    with _cwd(ws):
+        policy = write_policy(ws, max_cost_per_run_usd=0.0001)
+        assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
+
+        with TestClient(create_app()) as client:
+            res = client.post(
+                "/v1/promote",
+                json={
+                    "release_id": candidate_id,
+                    "environment": "local",
+                    "window": "7d",
+                    "reason": "too expensive",
+                    "actor": "http-test",
+                },
+            )
+
+        assert res.status_code == 409
+        detail = res.json()["detail"]
+        assert detail["message"] == "Promotion blocked by policy."
+        outcome = detail["outcome"]
+        assert outcome["promoted_pointer_changed"] is False
+        assert outcome["policy"]["passed"] is False
+
+        storage = Storage(load_config().db_path)
+        storage.migrate()
+        assert storage.get_promoted_release_id("agent_support", "local") == baseline_id
+        last = storage.list_release_actions(agent_id="agent_support", environment="local")[0]
+        assert last.release_id == candidate_id
+        assert last.policy_result.passed is False
+
+
 def test_ui_root_serves_vite_index(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     assert CliRunner().invoke(cli, ["init"]).exit_code == 0

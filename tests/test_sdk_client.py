@@ -101,6 +101,37 @@ def test_flightdeck_client_list_releases_get() -> None:
         assert client.list_releases() == {"releases": []}
 
 
+def test_flightdeck_client_promote_raises_on_policy_block() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/v1/promote"
+        return httpx.Response(
+            409,
+            json={
+                "detail": {
+                    "message": "Promotion blocked by policy.",
+                    "outcome": {
+                        "promoted_pointer_changed": False,
+                        "policy": {"passed": False, "reasons": ["candidate cost exceeds max"]},
+                    },
+                }
+            },
+        )
+
+    transport = httpx.MockTransport(handler)
+    with httpx.Client(transport=transport, base_url="http://flightdeck.test") as http:
+        client = FlightdeckClient("http://flightdeck.test", client=http)
+        with pytest.raises(httpx.HTTPStatusError) as excinfo:
+            client.post_promote(
+                release_id="rel_blocked",
+                environment="local",
+                window="7d",
+                reason="policy check",
+            )
+
+    assert excinfo.value.response.status_code == 409
+
+
 def test_flightdeck_client_ingest_batch_chunks_payload() -> None:
     seen_lengths: list[int] = []
 

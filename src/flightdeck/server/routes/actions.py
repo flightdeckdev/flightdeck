@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from flightdeck.operations import OperationError, compute_diff, promote_release, rollback_release
+from flightdeck.operations import ActionOutcome, OperationError, compute_diff, promote_release, rollback_release
 from flightdeck.server.routes.common import ensure_app_state
 
 router = APIRouter()
@@ -30,6 +30,29 @@ class ActionRequest(BaseModel):
 
 def _raise_bad_request(exc: OperationError) -> HTTPException:
     return HTTPException(status_code=400, detail=str(exc))
+
+
+def _action_body(outcome: ActionOutcome) -> dict[str, object]:
+    return {
+        "action_id": outcome.action_id,
+        "action": outcome.action,
+        "release_id": outcome.release_id,
+        "agent_id": outcome.agent_id,
+        "environment": outcome.environment,
+        "baseline_release_id": outcome.baseline_release_id,
+        "promoted_pointer_changed": outcome.promoted_pointer_changed,
+        "policy": outcome.policy.model_dump(mode="json"),
+    }
+
+
+def _raise_policy_blocked(action: str, outcome: ActionOutcome) -> HTTPException:
+    return HTTPException(
+        status_code=409,
+        detail={
+            "message": f"{action.capitalize()} blocked by policy.",
+            "outcome": _action_body(outcome),
+        },
+    )
 
 
 def _require_mutation_access(request: Request) -> None:
@@ -123,16 +146,10 @@ def post_promote(request: Request, req: ActionRequest) -> dict[str, object]:
     except OperationError as exc:
         raise _raise_bad_request(exc) from exc
 
-    return {
-        "action_id": outcome.action_id,
-        "action": outcome.action,
-        "release_id": outcome.release_id,
-        "agent_id": outcome.agent_id,
-        "environment": outcome.environment,
-        "baseline_release_id": outcome.baseline_release_id,
-        "promoted_pointer_changed": outcome.promoted_pointer_changed,
-        "policy": outcome.policy.model_dump(mode="json"),
-    }
+    if not outcome.policy.passed:
+        raise _raise_policy_blocked("promotion", outcome)
+
+    return _action_body(outcome)
 
 
 @router.post("/v1/rollback")
@@ -152,13 +169,7 @@ def post_rollback(request: Request, req: ActionRequest) -> dict[str, object]:
     except OperationError as exc:
         raise _raise_bad_request(exc) from exc
 
-    return {
-        "action_id": outcome.action_id,
-        "action": outcome.action,
-        "release_id": outcome.release_id,
-        "agent_id": outcome.agent_id,
-        "environment": outcome.environment,
-        "baseline_release_id": outcome.baseline_release_id,
-        "promoted_pointer_changed": outcome.promoted_pointer_changed,
-        "policy": outcome.policy.model_dump(mode="json"),
-    }
+    if not outcome.policy.passed:
+        raise _raise_policy_blocked("rollback", outcome)
+
+    return _action_body(outcome)
