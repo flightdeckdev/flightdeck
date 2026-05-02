@@ -85,6 +85,30 @@ Runs are averaged across all events in the window to produce `cost_per_run_usd`.
 spec *before* querying events. This is checked again inside `diff_releases` if run events
 from both sides are non-empty.
 
+### Rollup semantics
+
+`ledger.compute_rollup` aggregates a list of `RunEvent` objects into a `Rollup`:
+
+| Field | How it is computed |
+|-------|--------------------|
+| `runs` | Total number of events in the window |
+| `cost_per_run_usd` | Average of `estimate_cost_usd(event, pricing_table)` across all events |
+| `latency_ms_avg` | Average of `metrics.latency_ms` across events **where latency is present**; `None` when no event has latency data |
+| `error_rate` | Fraction of events where `metrics.success == False` |
+
+**All events in the query window count** — including `type: run_start` events. The
+`run_id` is the deduplicated key; if an agent emits both `run_start` and `run_end` for
+the same logical run, **both** are stored and counted unless they share the same `run_id`.
+Best practice is to ingest only `run_end` (the default `type`) when a single-event
+model is used, or use distinct `run_id` values when emitting both start and end events.
+
+`latency_ms_avg` is `None` (not zero) when the window has no events with latency data.
+Policy's `max_latency_ms` check is **skipped** when `latency_ms_avg` is `None`.
+
+`delta_cost_per_run_pct` in `DiffResult` is `None` when `baseline.cost_per_run_usd == 0`
+(division by zero guard). Similarly, `delta_latency_ms_avg` is `None` when either side
+has no latency data.
+
 ---
 
 ## `promote_release` / `rollback_release`
@@ -168,6 +192,12 @@ All `max_*` fields default to `None` (disabled). Set them to enable the constrai
 All `min_*` fields default to `None` (defer to `WorkspaceConfig.diff` defaults).
 
 ### Setting the active policy
+
+`active_policy` is a single-row table keyed on `policy_id`. `policy set` uses an
+`INSERT … ON CONFLICT(policy_id) DO UPDATE` upsert, so calling it repeatedly with
+the same `policy_id` always overwrites in place. Changing `policy_id` between calls
+creates a second row; `get_active_policy` resolves ambiguity by returning the row
+with the most recent `updated_at`.
 
 ```bash
 flightdeck policy set examples/quickstart/policy.yaml
@@ -291,12 +321,13 @@ endpoints (`GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions`) and intern
 
 ## SQLite storage schema
 
-The operations layer reads and writes five tables (via `src/flightdeck/storage.py`):
+The operations layer reads and writes seven tables (via `src/flightdeck/storage.py`):
 
 | Table | Purpose |
 |-------|---------|
 | `releases` | Immutable release records keyed by `release_id` |
 | `pricing_tables` | Pricing data keyed by `(provider, pricing_version)` |
+| `pricing_import_audit` | Append-only log of every `pricing import` operation (insert or replace) |
 | `run_events` | Ingested runtime evidence indexed by `(release_id, timestamp)` |
 | `active_policy` | Single-row table holding the active `Policy` JSON |
 | `promoted_releases` | Current promoted pointer per `(agent_id, environment)` |
@@ -305,6 +336,46 @@ The operations layer reads and writes five tables (via `src/flightdeck/storage.p
 `Storage.migrate()` runs forward-only numbered migrations. `flightdeck doctor` verifies
 that migrations are applied through `LATEST_SCHEMA_MIGRATION_VERSION` and that
 `audit_seq` has no gaps.
+
+### Storage connection settings
+
+Every connection is configured with four pragmas before any statement runs:
+
+| Pragma | Value | Effect |
+|--------|-------|--------|
+| `foreign_keys` | `ON` | Referential integrity enforcement |
+| `journal_mode` | `WAL` | Write-ahead logging; multiple readers can co-exist with a writer |
+| `synchronous` | `NORMAL` | Durable enough for power-loss safety without `FULL` fsync overhead |
+| `busy_timeout` | `5000` | Wait up to 5 s for a lock before returning `SQLITE_BUSY` |
+
+Write operations that must be atomic (promote/rollback, pricing import) use
+`BEGIN IMMEDIATE` transactions, which acquire the write lock upfront and prevent
+`SQLITE_BUSY` races between concurrent writers.
+
+### Idempotent run event ingestion
+
+`insert_run_events` inserts rows one at a time and **silently ignores**
+`sqlite3.IntegrityError` on `run_id` PRIMARY KEY conflicts. This means:
+
+- Re-ingesting a JSONL file is safe; duplicate events are skipped.
+- The return value is the number of **newly inserted** rows (not the total count
+  in the input).
+- Events are not batched in a single transaction, so a partial failure leaves
+  already-inserted rows in place. Re-running the ingest picks up where it left
+  off because duplicates are skipped.
+
+### Schema migrations
+
+Migrations are numbered and forward-only; they are never reversed.
+
+| Version | Change |
+|---------|--------|
+| 1 | Initial schema (all base tables via `CREATE TABLE IF NOT EXISTS`) |
+| 2 | `CREATE INDEX … ON run_events(release_id, timestamp)` — speeds up diff/query |
+| 3 | `ALTER TABLE release_actions ADD COLUMN audit_seq INTEGER`; backfill existing rows; add unique index |
+
+New migrations must increment `LATEST_SCHEMA_MIGRATION_VERSION` in `storage.py` and add a
+corresponding check in `test_schemas.py` (or `test_doctor.py`).
 
 ---
 
