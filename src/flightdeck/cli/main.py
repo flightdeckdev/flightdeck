@@ -323,7 +323,10 @@ def runs() -> None:
 @click.option("--tenant", "tenant_id", default=None)
 @click.option("--task", "task_id", default=None)
 @click.option("--trace-id", "trace_id", default=None, help="Filter to events whose request.trace_id matches (exact).")
-@click.option("--limit", default=100, show_default=True, type=int)
+@click.option("--session-id", "session_id", default=None, help="Filter to request.session_id (exact).")
+@click.option("--span-id", "span_id", default=None, help="Filter to request.span_id (exact).")
+@click.option("--offset", default=0, show_default=True, type=click.IntRange(0, 500_000))
+@click.option("--limit", default=100, show_default=True, type=click.IntRange(1, 500))
 @click.option(
     "--output",
     "output_format",
@@ -338,6 +341,9 @@ def runs_list(
     tenant_id: str | None,
     task_id: str | None,
     trace_id: str | None,
+    session_id: str | None,
+    span_id: str | None,
+    offset: int,
     limit: int,
     output_format: str,
 ) -> None:
@@ -355,6 +361,9 @@ def runs_list(
             tenant_id=tenant_id,
             task_id=task_id,
             trace_id=trace_id,
+            session_id=session_id,
+            span_id=span_id,
+            offset=offset,
             limit=limit,
         )
     except OperationError as e:
@@ -377,6 +386,9 @@ def runs_list(
 @click.option("--tenant", "tenant_id", default=None)
 @click.option("--task", "task_id", default=None)
 @click.option("--trace-id", "trace_id", default=None, help="Filter to events whose request.trace_id matches (exact).")
+@click.option("--session-id", "session_id", default=None, help="Filter to request.session_id (exact).")
+@click.option("--span-id", "span_id", default=None, help="Filter to request.span_id (exact).")
+@click.option("--offset", default=0, show_default=True, type=click.IntRange(0, 500_000))
 @click.option("--limit", default=500, show_default=True, type=click.IntRange(1, 500))
 @click.option(
     "-o",
@@ -393,6 +405,9 @@ def runs_export(
     tenant_id: str | None,
     task_id: str | None,
     trace_id: str | None,
+    session_id: str | None,
+    span_id: str | None,
+    offset: int,
     limit: int,
     output_path: Path | None,
 ) -> None:
@@ -410,6 +425,9 @@ def runs_export(
             tenant_id=tenant_id,
             task_id=task_id,
             trace_id=trace_id,
+            session_id=session_id,
+            span_id=span_id,
+            offset=offset,
             limit=limit,
         )
     except OperationError as e:
@@ -425,7 +443,7 @@ def runs_export(
     if payload["truncated"]:
         click.echo(
             f"WARNING: exported {payload['returned']} of {payload['matched_total']} matching events "
-            f"(cap --limit {limit}).",
+            f"(offset={payload['offset']}, --limit {limit}).",
             err=True,
         )
 

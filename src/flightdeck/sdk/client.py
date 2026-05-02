@@ -185,12 +185,16 @@ class FlightdeckClient:
         tenant_id: str | None = None,
         task_id: str | None = None,
         trace_id: str | None = None,
+        session_id: str | None = None,
+        span_id: str | None = None,
+        offset: int = 0,
         limit: int = 100,
     ) -> dict[str, Any]:
         params: dict[str, str | int] = {
             "release_id": release_id,
             "window": window,
             "limit": limit,
+            "offset": offset,
         }
         if environment is not None:
             params["environment"] = environment
@@ -200,6 +204,10 @@ class FlightdeckClient:
             params["task_id"] = task_id
         if trace_id is not None:
             params["trace_id"] = trace_id
+        if session_id is not None:
+            params["session_id"] = session_id
+        if span_id is not None:
+            params["span_id"] = span_id
         resp = self._request_with_retry(
             "GET",
             "/v1/runs",
@@ -208,6 +216,58 @@ class FlightdeckClient:
         )
         resp.raise_for_status()
         return resp.json()
+
+    def fetch_runs_export_ndjson(
+        self,
+        *,
+        release_id: str,
+        window: str,
+        environment: str | None = None,
+        tenant_id: str | None = None,
+        task_id: str | None = None,
+        trace_id: str | None = None,
+        session_id: str | None = None,
+        span_id: str | None = None,
+        offset: int = 0,
+        limit: int = 500,
+    ) -> tuple[bytes, dict[str, str]]:
+        """GET /v1/runs/export — returns raw NDJSON body and selected response headers."""
+        params: dict[str, str | int] = {
+            "release_id": release_id,
+            "window": window,
+            "limit": limit,
+            "offset": offset,
+        }
+        if environment is not None:
+            params["environment"] = environment
+        if tenant_id is not None:
+            params["tenant_id"] = tenant_id
+        if task_id is not None:
+            params["task_id"] = task_id
+        if trace_id is not None:
+            params["trace_id"] = trace_id
+        if session_id is not None:
+            params["session_id"] = session_id
+        if span_id is not None:
+            params["span_id"] = span_id
+        resp = self._request_with_retry(
+            "GET",
+            "/v1/runs/export",
+            params=params,
+            headers=self._auth_headers() or None,
+        )
+        resp.raise_for_status()
+        hdrs = {
+            k: resp.headers[k]
+            for k in (
+                "X-Flightdeck-Matched-Total",
+                "X-Flightdeck-Returned",
+                "X-Flightdeck-Offset",
+                "X-Flightdeck-Truncated",
+            )
+            if k in resp.headers
+        }
+        return (resp.content, hdrs)
 
     def post_rollback(
         self,
@@ -442,12 +502,16 @@ class AsyncFlightdeckClient:
         tenant_id: str | None = None,
         task_id: str | None = None,
         trace_id: str | None = None,
+        session_id: str | None = None,
+        span_id: str | None = None,
+        offset: int = 0,
         limit: int = 100,
     ) -> dict[str, Any]:
         params: dict[str, str | int] = {
             "release_id": release_id,
             "window": window,
             "limit": limit,
+            "offset": offset,
         }
         if environment is not None:
             params["environment"] = environment
@@ -457,6 +521,10 @@ class AsyncFlightdeckClient:
             params["task_id"] = task_id
         if trace_id is not None:
             params["trace_id"] = trace_id
+        if session_id is not None:
+            params["session_id"] = session_id
+        if span_id is not None:
+            params["span_id"] = span_id
         resp = await self._request_with_retry(
             "GET",
             "/v1/runs",
@@ -465,6 +533,57 @@ class AsyncFlightdeckClient:
         )
         resp.raise_for_status()
         return resp.json()
+
+    async def fetch_runs_export_ndjson(
+        self,
+        *,
+        release_id: str,
+        window: str,
+        environment: str | None = None,
+        tenant_id: str | None = None,
+        task_id: str | None = None,
+        trace_id: str | None = None,
+        session_id: str | None = None,
+        span_id: str | None = None,
+        offset: int = 0,
+        limit: int = 500,
+    ) -> tuple[bytes, dict[str, str]]:
+        params: dict[str, str | int] = {
+            "release_id": release_id,
+            "window": window,
+            "limit": limit,
+            "offset": offset,
+        }
+        if environment is not None:
+            params["environment"] = environment
+        if tenant_id is not None:
+            params["tenant_id"] = tenant_id
+        if task_id is not None:
+            params["task_id"] = task_id
+        if trace_id is not None:
+            params["trace_id"] = trace_id
+        if session_id is not None:
+            params["session_id"] = session_id
+        if span_id is not None:
+            params["span_id"] = span_id
+        resp = await self._request_with_retry(
+            "GET",
+            "/v1/runs/export",
+            params=params,
+            headers=self._auth_headers() or None,
+        )
+        resp.raise_for_status()
+        hdrs = {
+            k: resp.headers[k]
+            for k in (
+                "X-Flightdeck-Matched-Total",
+                "X-Flightdeck-Returned",
+                "X-Flightdeck-Offset",
+                "X-Flightdeck-Truncated",
+            )
+            if k in resp.headers
+        }
+        return (resp.content, hdrs)
 
     async def post_rollback(
         self,

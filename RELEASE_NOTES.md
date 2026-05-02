@@ -4,7 +4,7 @@ High-level notes for **shipping FlightDeck**. Detailed history: **[CHANGELOG.md]
 
 Narrative docs (including the CLI reference) are maintained on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** `main`; this file and **`schemas/`** ship in minimal clones.
 
-## v1.1.2 — Forensics filters, JSONL export, Phase 1 closure slice
+## v1.1.2 — Forensics filters, JSONL export, productization closure slice
 
 Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): optional **`trace_id`** filter on **`GET /v1/runs`**, **`flightdeck runs list --trace-id`**, and SDK **`list_runs(trace_id=…)`** (exact match on **`RunEvent.request.trace_id`**); **`flightdeck runs export`** writes the same filtered slice as JSONL (stdout or **`-o`**, **`--limit`** up to **500**, stderr warning when truncated). **Stable contracts:** additive HTTP query param and CLI command only.
 
@@ -12,13 +12,13 @@ Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): optional **`trace_id`** fi
 
 Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): **`GET /v1/workspace`** exposes non-secret workspace flags (**`promotion_requires_approval`**, **`pricing_catalog_configured`**, **`server_version`**) for scripting and the **Actions** page; web **Promote** follows the two-step request/confirm path when approval is required; expanded operator docs and **`examples/ci/promote_with_approval.sh`** + README workflow snippet. **Stable contracts:** additive HTTP and JSON Schema only.
 
-## v1.1.0 — Phase 1 first slice (catalog, approval, runs, Helm, fleet)
+## v1.1.0 — Catalog, approval, runs, Helm, fleet (first v1.1 slice)
 
 Minor release (see **[CHANGELOG.md](CHANGELOG.md)**): optional **`pricing_catalog_path`** + **`PricingCatalog`** YAML for cross-vendor comparable **`pricing.catalog`** lines on diffs; **`pricing.hints`** for multi-version and model-name diagnostics; **`promotion_requires_approval`** with **`POST /v1/promote/request`** / **`POST /v1/promote/confirm`** / **`GET /v1/promotion-requests`** and matching CLI; **`GET /v1/runs`** and **`flightdeck runs list`**; SQLite migration **v4** (`promotion_requests`); reference **Helm** chart and **fleet** docs under **`examples/`**. **Stable contracts:** additive HTTP and CLI surfaces; existing **`v1`** event and release payloads unchanged.
 
 ## v1.0.6 — Phase 0 closure (backup, cross-language emitters, roadmap)
 
-Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): **`flightdeck doctor --backup PATH`** performs a SQLite online backup of the workspace DB; **[examples/integration/](examples/integration/README.md)** gains **`curl`** and a **Node** **`emit_sample_events.node.mjs`** path for **`POST /v1/events`**; **[examples/deploy/README.md](examples/deploy/README.md)** documents the Compose **`/health`** healthcheck and backup scheduling. **ROADMAP:** **Phase 0** is **closed**; **catalog-level** multi-provider pricing normalization is an explicit **Phase 1** build item. **Stable contracts:** additive CLI flag and HTTP field **`pricing.warnings`** (from **v1.0.5**) remain backward-compatible.
+Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): **`flightdeck doctor --backup PATH`** performs a SQLite online backup of the workspace DB; **[examples/integration/](examples/integration/README.md)** gains **`curl`** and a **Node** **`emit_sample_events.node.mjs`** path for **`POST /v1/events`**; **[examples/deploy/README.md](examples/deploy/README.md)** documents the Compose **`/health`** healthcheck and backup scheduling. **ROADMAP:** **Phase 0** is **closed**; **catalog-level** multi-provider pricing normalization is an explicit **mid-term** build item. **Stable contracts:** additive CLI flag and HTTP field **`pricing.warnings`** (from **v1.0.5**) remain backward-compatible.
 
 ## v1.0.5 — Diff JSON output, pricing warnings, metrics in Overview
 

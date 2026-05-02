@@ -4,6 +4,14 @@ All notable changes to FlightDeck will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**, documented CLI behavior (**[README.md](https://github.com/flightdeckdev/flightdeck/blob/main/README.md)** on the canonical **`main`** branch), committed **`schemas/v1/`**, and **`POST /v1/events`** payloads with **`api_version` `v1`** are treated as stable public contracts unless a release notes a semver-major bump.
 
+## Unreleased
+
+### Added
+
+- **`GET /v1/runs/export`** — NDJSON stream of the same filtered slice as **`GET /v1/runs`** (optional response headers when truncated).
+- **`session_id`** / **`span_id`** query filters on **`GET /v1/runs`**, matching CLI/SDK, and **`offset`** pagination on run listings (with **`runs list`** / **`runs export`**).
+- **Web Runs** page — query **`GET /v1/runs`** from the bundled UI.
+
 ## 1.1.2 - 2026-05-03
 
 ### Added
@@ -21,7 +29,7 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 - **`GET /v1/workspace`:** read-only JSON for operators and the web UI — **`promotion_requires_approval`**, **`pricing_catalog_configured`**, **`server_version`** (normative schema + Python SDK helper).
 - **Web Actions:** Promote flow uses workspace flags — direct **`POST /v1/promote`** when approval is off; **request → list pending → confirm** when **`promotion_requires_approval`** is on, with clearer errors.
-- **Docs:** README / **release-artifact** / **examples** / **web-ui** / **http-api** / **sdk** updates for Phase 1 remainder; optional **`docs/pricing-catalog.md`**; **`examples/ci/promote_with_approval.sh`** and CI README **GitHub Actions** pattern for approval-gated promote.
+- **Docs:** README / **release-artifact** / **examples** / **web-ui** / **http-api** / **sdk** updates for the **v1.1.x** remainder; optional **`docs/pricing-catalog.md`**; **`examples/ci/promote_with_approval.sh`** and CI README **GitHub Actions** pattern for approval-gated promote.
 
 ### Changed
 
@@ -50,7 +58,7 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 - **CLI `flightdeck doctor --backup PATH`:** SQLite online backup of the workspace database to **`PATH`** (parent directories created; file overwritten if present), then the usual doctor checks.
 - **Examples:** **[examples/integration/emit_sample_events.node.mjs](examples/integration/emit_sample_events.node.mjs)** — **`POST /v1/events`** sample using built-in **`fetch`** (Node 18+); **[examples/integration/README.md](examples/integration/README.md)** adds **`curl`** + **`jq`** example.
 - **Docs:** **[examples/deploy/README.md](examples/deploy/README.md)** — Compose **`/health`** healthcheck and **`doctor --backup`** / cron scheduling notes.
-- **Roadmap:** **Phase 0** declared **closed**; **catalog-level** multi-provider pricing normalization called out under **Phase 1** build items.
+- **Roadmap:** **Phase 0** declared **closed**; **catalog-level** multi-provider pricing normalization called out under **mid-term productization** build items.
 - **Tests:** **`test_doctor_backup_writes_valid_sqlite`** in **`tests/test_cli.py`**.
 
 ### Changed

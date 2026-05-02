@@ -14,7 +14,7 @@ This roadmap is meant to be clear from **what is already shipped** to **near-ter
 - **Economic + operational governance:** immutable pricing imports, trusted `release diff`, policy-gated `promote` and `rollback`.
 - **Audit trail:** promotion/rollback history with stable sequencing (`audit_seq`) and integrity checks via `doctor`.
 - **Evidence ingestion:** `runs ingest` from JSONL/JSON arrays plus stable `POST /v1/events` contracts (`schemas/v1/`); **`GET /v1/runs`**, **`runs list`**, optional **`trace_id`** filter, and **`runs export`** (JSONL) for operator forensics.
-- **Local API + UI:** `flightdeck serve` routes and web UI (Overview with ledger metrics, Diff, Promote) in `src/flightdeck/server/static/`.
+- **Local API + UI:** `flightdeck serve` routes and web UI (Overview with ledger metrics, Diff, Runs, Promote) in `src/flightdeck/server/static/`.
 - **SDK and tooling:** Python sync/async clients with retries/batching and `flightdeck-quickstart-verify`.
 
 ---
@@ -23,13 +23,13 @@ This roadmap is meant to be clear from **what is already shipped** to **near-ter
 
 Further work after **v1.1.2** — **OTLP-oriented** telemetry, **replay-style web** forensics, deeper **catalog lifecycle** governance, and **cross-workspace / fleet** product surfaces stay on **Phase 2 / mid-term** (see gaps table below). Track **[CHANGELOG.md](CHANGELOG.md)**.
 
-**v1.1.2** (patch, shipped): **`trace_id`** filter on **`GET /v1/runs`**, **`flightdeck runs list --trace-id`**, and SDK **`list_runs`**, plus **`flightdeck runs export`** (JSONL, stderr warning when truncated); **[examples/README.md](examples/README.md)** adds a **Phase 1 readiness checklist**; **Phase 1 status** (this document) records closure of the scoped productization tranche. See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**.
+**v1.1.2** (patch, shipped): **`trace_id`** filter on **`GET /v1/runs`**, **`flightdeck runs list --trace-id`**, and SDK **`list_runs`**, plus **`flightdeck runs export`** (JSONL, stderr warning when truncated); **[examples/README.md](examples/README.md)** adds a **readiness checklist**; **productization tranche status** (this document) records closure of the scoped local-first slice. See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**.
 
 **v1.1.1** (patch, shipped): **`GET /v1/workspace`** (read-only flags + **`server_version`**); web **Actions** page uses it for **direct promote** vs **request / pending list / confirm**; operator docs refresh (**README**, **release-artifact**, **examples**, **web-ui**, **http-api**, **sdk**, **`docs/pricing-catalog.md`**, **SECURITY**); **`examples/ci/promote_with_approval.sh`** and **`github-actions/promote-approval-twostep.yml`**; CI runs a second Playwright pass with **`FD_E2E_FORCE_APPROVAL`**. See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**.
 
-**v1.1.0** (minor, shipped): Phase 1 first slice — **`pricing_catalog_path`** + **`pricing.catalog`** / **`pricing.hints`** on diffs; **`promotion_requires_approval`** + promote **request/confirm** (HTTP + CLI) + **`GET /v1/promotion-requests`**; **`GET /v1/runs`** / **`runs list`**; **Helm** reference chart; **`examples/fleet/`**; SQLite migration **v4**. See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**.
+**v1.1.0** (minor, shipped): **`pricing_catalog_path`** + **`pricing.catalog`** / **`pricing.hints`** on diffs; **`promotion_requires_approval`** + promote **request/confirm** (HTTP + CLI) + **`GET /v1/promotion-requests`**; **`GET /v1/runs`** / **`runs list`**; **Helm** reference chart; **`examples/fleet/`**; SQLite migration **v4**. See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**.
 
-**v1.0.6** (patch, shipped): Phase 0 closure — **`flightdeck release diff --output json`** (same shape as **`POST /v1/diff`**); **`pricing.warnings`** when a release model has no row in its pricing table (CLI **`WARNING:`** lines + web Diff); **Overview** ledger metrics card (**`GET /v1/metrics`**); **`curl`** + **Node** samples under **[examples/integration/](examples/integration/README.md)**; **`flightdeck doctor --backup PATH`** (SQLite online backup); **[examples/deploy/](examples/deploy/README.md)** documents Compose **`/health`** healthcheck and backup scheduling. **Phase 0** is declared **closed**; **catalog-level** multi-provider normalization moves to **Phase 1**. See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**. No breaking changes to stable CLI, HTTP, or **`api_version` `v1`** contracts.
+**v1.0.6** (patch, shipped): Phase 0 closure — **`flightdeck release diff --output json`** (same shape as **`POST /v1/diff`**); **`pricing.warnings`** when a release model has no row in its pricing table (CLI **`WARNING:`** lines + web Diff); **Overview** ledger metrics card (**`GET /v1/metrics`**); **`curl`** + **Node** samples under **[examples/integration/](examples/integration/README.md)**; **`flightdeck doctor --backup PATH`** (SQLite online backup); **[examples/deploy/](examples/deploy/README.md)** documents Compose **`/health`** healthcheck and backup scheduling. **Phase 0** is declared **closed**; **catalog-level** multi-provider normalization moves to **mid-term productization** (the **v1.1.x** track). See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**. No breaking changes to stable CLI, HTTP, or **`api_version` `v1`** contracts.
 
 ---
 
@@ -79,7 +79,7 @@ Shipped on **`main`**:
 
 **Phase 0 is closed** as of **v1.0.6** for the local-first wedge (immutable releases, evidence ingest, diff + policy gate, promote/rollback, audit, CI/deploy/integration references, metrics, diagnostics, and operator backup ergonomics).
 
-**Carried forward to Phase 1** (see gaps table): **catalog-level** multi-provider pricing normalization (single comparable unit across vendors), deeper **fleet** ergonomics, and **OTLP-oriented** telemetry — not blocking further patch releases on the Phase 0 spine.
+**Carried forward** (see gaps table): **catalog-level** multi-provider pricing normalization (single comparable unit across vendors), deeper **fleet** ergonomics, and **OTLP-oriented** telemetry — not blocking further patch releases on the Phase 0 spine.
 
 ### Phase-0 success signals
 
@@ -90,19 +90,19 @@ Shipped on **`main`**:
 
 ---
 
-## Phase 1: Productization (mid term, roughly quarters)
+## Mid term: Productization (v1.1.x tranche, roughly quarters)
 
 Goal: move from solid local tooling to repeatable production usage patterns.
 
-**v1.1.0** ships the first tranche: catalog + hints on diffs, approval-gated promote (HTTP + CLI), read-only runs listing, Helm + fleet reference docs, and migration **v4**. **v1.1.1** closes the **web + discovery** gap for approval (**`GET /v1/workspace`**, Actions UX) and refreshes team docs / CI examples. **v1.1.2** adds **CLI/HTTP forensics** filters and **JSONL export**; see **Phase 1 status** below.
+**v1.1.0** ships the first tranche: catalog + hints on diffs, approval-gated promote (HTTP + CLI), read-only runs listing, Helm + fleet reference docs, and migration **v4**. **v1.1.1** closes the **web + discovery** gap for approval (**`GET /v1/workspace`**, Actions UX) and refreshes team docs / CI examples. **v1.1.2** adds **CLI/HTTP forensics** filters and **JSONL export**; see **tranche status** below.
 
-### Phase 1 progress (post–v1.1.0 / v1.1.1)
+### Productization progress (post–v1.1.0 / v1.1.1)
 
 - **Approval workflow:** **v1.1.0** added HTTP + CLI + **`GET /v1/promotion-requests`**. **v1.1.1** adds **`GET /v1/workspace`** and a first-class **web** path (request → pending table → confirm) keyed off `promotion_requires_approval`, plus **`examples/ci/promote_with_approval.sh`** and a **`workflow_dispatch`** sample workflow.
 - **Operator narrative:** README / **examples** index / **web-ui** / **release-artifact** / **http-api** / **sdk** / optional **`docs/pricing-catalog.md`** describe catalog fields, runs listing, and the two promote modes.
 - **Forensics (v1.1.2):** **`trace_id`** filter and **`runs export`** (JSONL). **Still open** for replay-style **web** views and richer export semantics if needed; **OTLP** and **catalog lifecycle** depth remain mid-term (gaps table).
 
-### Build in this phase
+### Build targets
 
 - Human-in-the-loop approval workflow on top of policy gates (without requiring a hosted control plane).
 - **Catalog-level multi-provider pricing normalization** — single comparable tariff unit across vendors; additive to today's per-provider **`pricing import`** tables and **`pricing.prices`** / **`pricing.warnings`** diagnostics.
@@ -111,15 +111,15 @@ Goal: move from solid local tooling to repeatable production usage patterns.
 - Deployment hardening artifacts (for example Helm or equivalent) if a blessed server topology is chosen.
 - Multi-workspace operator ergonomics (naming, templates, reproducible setup patterns).
 
-### Phase-1 readiness signals
+### Readiness signals
 
 - Approval-gated promotion is used in at least one end-to-end production pipeline.
 - At least two provider pricing sources compare cleanly in one diff workflow.
 - Teams can stand up and operate `flightdeck serve` with documented deployment guidance.
 
-### Phase 1 status
+### Productization tranche status
 
-**Phase 1 is closed** as of **v1.1.2** for the **scoped local-first productization tranche** shipped across **v1.1.0–v1.1.2**: catalog-aware diffs + hints, approval-gated promote (HTTP + CLI + web), read-only runs forensics (**`GET /v1/runs`**, **`runs list`**, **`trace_id`**, **`runs export`**), reference **Helm** / **Compose** / **fleet** examples, SQLite migration **v4**, **`GET /v1/workspace`**, and a discoverability **checklist** for the Phase-1 **readiness signals** in **[examples/README.md](examples/README.md)**.
+**The scoped v1.1.0–v1.1.2 tranche is closed** as of **v1.1.2**: catalog-aware diffs + hints, approval-gated promote (HTTP + CLI + web), read-only runs forensics (**`GET /v1/runs`**, **`runs list`**, **`trace_id`**, **`runs export`**), reference **Helm** / **Compose** / **fleet** examples, SQLite migration **v4**, **`GET /v1/workspace`**, and a discoverability **checklist** for the **readiness signals** in **[examples/README.md](examples/README.md)**.
 
 **Carried forward to Phase 2 / mid-term** (explicitly not claimed by this closure): **OTLP-oriented** correlated telemetry; **cross-workspace / fleet** governance products; **replay-style** forensics UI beyond CLI/HTTP listing; **enterprise-grade** identity beyond documented bearer + loopback patterns; deeper **catalog lifecycle** governance (for example version skew hints).
 

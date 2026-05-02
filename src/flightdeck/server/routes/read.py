@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 
 from flightdeck import __version__ as flightdeck_version
 from flightdeck.models import PromotionRequestRecord, WorkspacePublic
@@ -81,6 +84,9 @@ def get_runs(
     tenant_id: str | None = Query(default=None),
     task_id: str | None = Query(default=None),
     trace_id: str | None = Query(default=None),
+    session_id: str | None = Query(default=None),
+    span_id: str | None = Query(default=None),
+    offset: int = Query(default=0, ge=0, le=500_000),
     limit: int = Query(default=100, ge=1, le=500),
 ) -> dict[str, object]:
     cfg, storage = ensure_app_state(request)
@@ -94,7 +100,61 @@ def get_runs(
             tenant_id=tenant_id,
             task_id=task_id,
             trace_id=trace_id,
+            session_id=session_id,
+            span_id=span_id,
+            offset=offset,
             limit=limit,
         )
     except OperationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/v1/runs/export")
+def get_runs_export(
+    request: Request,
+    release_id: str = Query(..., min_length=1),
+    window: str = Query(..., min_length=1),
+    environment: str | None = Query(default=None),
+    tenant_id: str | None = Query(default=None),
+    task_id: str | None = Query(default=None),
+    trace_id: str | None = Query(default=None),
+    session_id: str | None = Query(default=None),
+    span_id: str | None = Query(default=None),
+    offset: int = Query(default=0, ge=0, le=500_000),
+    limit: int = Query(default=500, ge=1, le=500),
+) -> StreamingResponse:
+    """NDJSON stream of the same filtered slice as ``GET /v1/runs`` (read tier)."""
+    cfg, storage = ensure_app_state(request)
+    try:
+        payload = query_run_events_page(
+            cfg=cfg,
+            storage=storage,
+            release_id=release_id,
+            window=window,
+            environment=environment,
+            tenant_id=tenant_id,
+            task_id=task_id,
+            trace_id=trace_id,
+            session_id=session_id,
+            span_id=span_id,
+            offset=offset,
+            limit=limit,
+        )
+    except OperationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    def body_iter():
+        for ev in payload["events"]:
+            yield json.dumps(ev, sort_keys=True) + "\n"
+
+    headers: dict[str, str] = {
+        "X-Flightdeck-Matched-Total": str(payload["matched_total"]),
+        "X-Flightdeck-Returned": str(payload["returned"]),
+        "X-Flightdeck-Offset": str(payload["offset"]),
+        "X-Flightdeck-Truncated": "true" if payload["truncated"] else "false",
+    }
+    return StreamingResponse(
+        body_iter(),
+        media_type="application/x-ndjson",
+        headers=headers,
+    )

@@ -188,6 +188,90 @@ export async function fetchMetrics(): Promise<MetricsPayload> {
   return fetchJson<MetricsPayload>("/v1/metrics");
 }
 
+/** Response shape for `GET /v1/runs` (see `query_run_events_page` on the server). */
+export type RunsListPayload = {
+  release_id: string;
+  since: string;
+  until: string;
+  filters: Record<string, unknown>;
+  offset: number;
+  limit: number;
+  matched_total: number;
+  returned: number;
+  truncated: boolean;
+  events: Record<string, unknown>[];
+};
+
+export async function fetchRuns(params: {
+  release_id: string;
+  window: string;
+  environment?: string;
+  tenant_id?: string;
+  task_id?: string;
+  trace_id?: string;
+  session_id?: string;
+  span_id?: string;
+  offset?: number;
+  limit?: number;
+}): Promise<RunsListPayload> {
+  const sp = new URLSearchParams();
+  sp.set("release_id", params.release_id);
+  sp.set("window", params.window);
+  if (params.environment != null && params.environment !== "") sp.set("environment", params.environment);
+  if (params.tenant_id != null && params.tenant_id !== "") sp.set("tenant_id", params.tenant_id);
+  if (params.task_id != null && params.task_id !== "") sp.set("task_id", params.task_id);
+  if (params.trace_id != null && params.trace_id !== "") sp.set("trace_id", params.trace_id);
+  if (params.session_id != null && params.session_id !== "") sp.set("session_id", params.session_id);
+  if (params.span_id != null && params.span_id !== "") sp.set("span_id", params.span_id);
+  if (params.offset != null) sp.set("offset", String(params.offset));
+  sp.set("limit", String(params.limit ?? 100));
+  return fetchJson<RunsListPayload>(`/v1/runs?${sp.toString()}`);
+}
+
+/** `GET /v1/runs/export` — NDJSON body (read tier; same query params as `fetchRuns`). */
+export async function fetchRunsExportBlob(params: {
+  release_id: string;
+  window: string;
+  environment?: string;
+  tenant_id?: string;
+  task_id?: string;
+  trace_id?: string;
+  session_id?: string;
+  span_id?: string;
+  offset?: number;
+  limit?: number;
+}): Promise<{ blob: Blob }> {
+  const sp = new URLSearchParams();
+  sp.set("release_id", params.release_id);
+  sp.set("window", params.window);
+  if (params.environment != null && params.environment !== "") sp.set("environment", params.environment);
+  if (params.tenant_id != null && params.tenant_id !== "") sp.set("tenant_id", params.tenant_id);
+  if (params.task_id != null && params.task_id !== "") sp.set("task_id", params.task_id);
+  if (params.trace_id != null && params.trace_id !== "") sp.set("trace_id", params.trace_id);
+  if (params.session_id != null && params.session_id !== "") sp.set("session_id", params.session_id);
+  if (params.span_id != null && params.span_id !== "") sp.set("span_id", params.span_id);
+  if (params.offset != null) sp.set("offset", String(params.offset));
+  sp.set("limit", String(params.limit ?? 500));
+  const headers = new Headers();
+  const token = import.meta.env.VITE_FLIGHTDECK_LOCAL_API_TOKEN;
+  if (typeof token === "string" && token.trim().length > 0 && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token.trim()}`);
+  }
+  const res = await fetch(`/v1/runs/export?${sp.toString()}`, { headers });
+  const text = await res.text();
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try {
+      const j = JSON.parse(text) as { detail?: unknown };
+      if (typeof j.detail === "string") msg = j.detail;
+    } catch {
+      if (text.trim()) msg = text.slice(0, 500);
+    }
+    throw new Error(msg);
+  }
+  return { blob: new Blob([text], { type: "application/x-ndjson" }) };
+}
+
 export async function loadTimeline(): Promise<TimelinePayload> {
   const [releases, promoted, actions] = await Promise.all([
     fetchJson<{ releases: ReleaseRow[] }>("/v1/releases"),

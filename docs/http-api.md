@@ -22,7 +22,7 @@ Two access tiers:
 | Route | No token configured | `FLIGHTDECK_LOCAL_API_TOKEN` set |
 |-------|--------------------|---------------------------------|
 | `GET /health` | open | open |
-| `GET /v1/*` (reads, including `GET /v1/workspace`, `GET /v1/metrics`, `GET /v1/runs`, `GET /v1/promotion-requests`) | open | open |
+| `GET /v1/*` (reads, including `GET /v1/workspace`, `GET /v1/metrics`, `GET /v1/runs`, `GET /v1/runs/export`, `GET /v1/promotion-requests`) | open | open |
 | `POST /v1/events` | open† | open (no Bearer required) |
 | `POST /v1/diff` | open | open |
 | `POST /v1/promote` | loopback only | `Authorization: Bearer <token>` required |
@@ -201,7 +201,7 @@ doctor` checks that the sequence has no gaps.
 
 ## `GET /v1/promotion-requests`
 
-List promotion approval requests (Phase 1). Newest first.
+List promotion approval requests. Newest first.
 
 **Query parameters**
 
@@ -250,6 +250,9 @@ Read-only forensics: return a slice of ingested run events for one release (newe
 | `tenant_id` | string | — | Optional filter |
 | `task_id` | string | — | Optional filter |
 | `trace_id` | string | — | Optional filter: exact match on `RunEvent.request.trace_id` (ingested JSON path `request.trace_id`) |
+| `session_id` | string | — | Optional filter: exact match on `request.session_id` |
+| `span_id` | string | — | Optional filter: exact match on `request.span_id` |
+| `offset` | integer | 0 | Skip this many newest-matching events before returning the page (0–500000) |
 | `limit` | integer | 100 | Max events returned (1–500) |
 
 **Response**
@@ -259,7 +262,9 @@ Read-only forensics: return a slice of ingested run events for one release (newe
   "release_id": "rel_abc",
   "since": "2026-04-25T12:00:00+00:00",
   "until": "2026-05-02T12:00:00+00:00",
-  "filters": { "environment": "local", "tenant_id": null, "task_id": null, "trace_id": null },
+  "filters": { "environment": "local", "tenant_id": null, "task_id": null, "trace_id": null, "session_id": null, "span_id": null },
+  "offset": 0,
+  "limit": 10,
   "matched_total": 42,
   "returned": 10,
   "truncated": true,
@@ -268,6 +273,21 @@ Read-only forensics: return a slice of ingested run events for one release (newe
 ```
 
 Each element of `events` is a `RunEvent` object (`schemas/v1/run_event.schema.json`).
+
+---
+
+## `GET /v1/runs/export`
+
+Same **query parameters** and filter semantics as **`GET /v1/runs`** (defaults: **`offset`** `0`, **`limit`** `500`). Response body is **NDJSON**: one JSON object per line, each a `RunEvent` (`schemas/v1/run_event.schema.json`). **`Content-Type`:** `application/x-ndjson`.
+
+Response headers (non-secret hints for clients):
+
+| Header | Meaning |
+|--------|---------|
+| `X-Flightdeck-Matched-Total` | Count of events matching filters in the window |
+| `X-Flightdeck-Returned` | Lines in this response body |
+| `X-Flightdeck-Offset` | `offset` query value used |
+| `X-Flightdeck-Truncated` | `true` if more matching events exist after this page |
 
 ---
 

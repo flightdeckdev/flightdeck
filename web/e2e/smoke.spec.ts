@@ -11,9 +11,11 @@ test("home loads FlightDeck shell and overview tables", async ({ page }) => {
   await expect(page.getByText("No releases yet.")).toBeVisible();
 });
 
-test("hash routes reach diff and promote pages", async ({ page }) => {
+test("hash routes reach diff, runs, and promote pages", async ({ page }) => {
   await page.goto("/#/diff");
   await expect(page.getByRole("heading", { name: "Run diff", level: 2 })).toBeVisible();
+  await page.goto("/#/runs");
+  await expect(page.getByRole("heading", { name: "Run events", level: 2 })).toBeVisible();
   await page.goto("/#/actions");
   await expect(page.getByRole("heading", { name: "Promote & rollback", level: 2 })).toBeVisible();
 });

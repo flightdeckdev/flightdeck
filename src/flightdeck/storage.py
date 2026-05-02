@@ -802,6 +802,8 @@ class Storage:
         task_id: str | None = None,
         environment: str | None = None,
         trace_id: str | None = None,
+        session_id: str | None = None,
+        span_id: str | None = None,
     ) -> list[RunEvent]:
         clauses: list[str] = ["release_id = ?", "timestamp >= ?", "timestamp < ?"]
         params: list[Any] = [release_id, since.isoformat(), until.isoformat()]
@@ -818,6 +820,12 @@ class Storage:
         if trace_id:
             clauses.append("json_extract(event_json, '$.request.trace_id') = ?")
             params.append(trace_id)
+        if session_id:
+            clauses.append("json_extract(event_json, '$.request.session_id') = ?")
+            params.append(session_id)
+        if span_id:
+            clauses.append("json_extract(event_json, '$.request.span_id') = ?")
+            params.append(span_id)
 
         where = " AND ".join(clauses)
 

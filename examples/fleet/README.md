@@ -1,4 +1,4 @@
-# Multi-workspace operator patterns (Phase 1)
+# Multi-workspace operator patterns
 
 FlightDeck is **local-first**: one `flightdeck.yaml` + SQLite database per working directory. “Fleet” ergonomics here means **repeatable layouts** and naming—not a hosted control plane.
 
@@ -19,3 +19,11 @@ Set `promotion_requires_approval: true` in `flightdeck.yaml` to require `release
 ## Template
 
 See `workspace-staging.example.yaml` for a copy-paste starting point; copy to your repo root as `flightdeck.yaml` and edit paths.
+
+## Multi-workspace aggregation (read-model)
+
+Prefer **per-workspace** ledgers and **pull**-based joins in your own tooling:
+
+- **`flightdeck runs export`** / **`GET /v1/runs`** (and **`GET /v1/runs/export`** when using `flightdeck serve`) — JSONL or JSON per workspace.
+- **`GET /v1/metrics`** — coarse counters per workspace.
+- **CI** — one job per workspace directory (see [examples/ci/README.md](../ci/README.md)).

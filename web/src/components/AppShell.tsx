@@ -22,6 +22,9 @@ export function AppShell() {
             <NavLink to="/diff" className={navCls}>
               Diff
             </NavLink>
+            <NavLink to="/runs" className={navCls}>
+              Runs
+            </NavLink>
             {UI_READ_ONLY ? null : (
               <NavLink to="/actions" className={navCls}>
                 Promote
