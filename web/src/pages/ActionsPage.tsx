@@ -58,9 +58,11 @@ type Busy = null | "promote" | "rollback" | "request" | "confirm";
 export function ActionsPage() {
   const { notifyTimelineMutated } = useTimelineRefresh();
   const [workspace, setWorkspace] = useState<WorkspacePublicPayload | null>(null);
+  const [workspaceLoading, setWorkspaceLoading] = useState(true);
   const [workspaceErr, setWorkspaceErr] = useState<string | null>(null);
   const [pendingList, setPendingList] = useState<PromotionRequestListItem[]>([]);
   const [pendingErr, setPendingErr] = useState<string | null>(null);
+  const [pendingRefreshing, setPendingRefreshing] = useState(false);
   const [listNonce, setListNonce] = useState(0);
 
   const [actRelease, setActRelease] = useState("");
@@ -79,23 +81,32 @@ export function ActionsPage() {
   const refreshPending = useCallback(async () => {
     if (!workspace?.promotion_requires_approval) return;
     setPendingErr(null);
+    setPendingRefreshing(true);
     try {
       const r = await fetchPromotionRequests({ status: "pending", limit: 50 });
       setPendingList(r.requests);
     } catch (e) {
       setPendingErr(String(e));
+    } finally {
+      setPendingRefreshing(false);
     }
   }, [workspace?.promotion_requires_approval]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      setWorkspaceLoading(true);
       setWorkspaceErr(null);
       try {
         const w = await fetchWorkspace();
         if (!cancelled) setWorkspace(w);
       } catch (e) {
-        if (!cancelled) setWorkspaceErr(String(e));
+        if (!cancelled) {
+          setWorkspaceErr(String(e));
+          setWorkspace(null);
+        }
+      } finally {
+        if (!cancelled) setWorkspaceLoading(false);
       }
     })();
     return () => {
@@ -117,8 +128,14 @@ export function ActionsPage() {
       setActErr("Reason is required.");
       return;
     }
-    const label = path === "/v1/promote" ? "promote" : "rollback";
-    if (!window.confirm(`Confirm ${label} for this release?`)) {
+    const label = path === "/v1/promote" ? "promotion" : "rollback";
+    const rid = actRelease.trim();
+    const env = actEnv.trim();
+    if (
+      !window.confirm(
+        `Run ${label} for release ${rid} in ${env}? The server evaluates policy on this window before changing the ledger.`,
+      )
+    ) {
       return;
     }
     setBusy(path === "/v1/promote" ? "promote" : "rollback");
@@ -197,7 +214,11 @@ export function ActionsPage() {
       setActErr("Approval reason is required.");
       return;
     }
-    if (!window.confirm("Confirm this promotion request and apply the promote if policy passes?")) {
+    if (
+      !window.confirm(
+        `Approve request ${shortId(rid, 12, 6)} and run promote if policy passes? The promoted pointer updates only when the server reports policy PASS.`,
+      )
+    ) {
       return;
     }
     setBusy("confirm");
@@ -223,6 +244,7 @@ export function ActionsPage() {
   };
 
   const approvalOn = workspace?.promotion_requires_approval === true;
+  const canMutate = !workspaceLoading && workspace !== null;
 
   return (
     <>
@@ -238,6 +260,17 @@ export function ActionsPage() {
       </div>
 
       {workspaceErr ? <p className="fd-alert fd-alert--error">{workspaceErr}</p> : null}
+
+      {workspaceLoading && !workspaceErr ? (
+        <section className="fd-card" aria-busy="true" aria-label="Workspace status">
+          <div className="fd-loading-panel">
+            <span className="fd-sr-only">Loading workspace</span>
+            <span className="fd-skeleton fd-skeleton--w60" />
+            <span className="fd-skeleton fd-skeleton--w75 fd-skeleton--mt" />
+            <span className="fd-skeleton fd-skeleton--w40 fd-skeleton--mt" />
+          </div>
+        </section>
+      ) : null}
 
       {workspace ? (
         <section className="fd-card">
@@ -272,31 +305,70 @@ export function ActionsPage() {
         </section>
       ) : null}
 
-      <section className="fd-card">
+      <section className="fd-card" aria-busy={!canMutate}>
+        {approvalOn ? (
+          <div className="fd-card__head">
+            <h3 className="fd-card__subtitle">1. Request a promotion</h3>
+            <p className="fd-card__desc">
+              Submit a reason and request; promotion stays pending until step 3. Rollback below still runs immediately when
+              policy allows.
+            </p>
+          </div>
+        ) : (
+          <div className="fd-card__head">
+            <h3 className="fd-card__subtitle">Promote or rollback</h3>
+            <p className="fd-card__desc">Policy is evaluated on the server for the window you set.</p>
+          </div>
+        )}
         <div className="fd-form-grid">
           <label className="fd-field">
             <span className="fd-field__label">Release ID</span>
-            <input className="fd-input" value={actRelease} onChange={(e) => setActRelease(e.target.value)} />
+            <input
+              className="fd-input"
+              value={actRelease}
+              onChange={(e) => setActRelease(e.target.value)}
+              disabled={!canMutate}
+            />
           </label>
           <label className="fd-field">
             <span className="fd-field__label">Environment</span>
-            <input className="fd-input" value={actEnv} onChange={(e) => setActEnv(e.target.value)} />
+            <input
+              className="fd-input"
+              value={actEnv}
+              onChange={(e) => setActEnv(e.target.value)}
+              disabled={!canMutate}
+            />
           </label>
           <label className="fd-field">
             <span className="fd-field__label">Window</span>
-            <input className="fd-input" value={actWindow} onChange={(e) => setActWindow(e.target.value)} />
+            <input
+              className="fd-input"
+              value={actWindow}
+              onChange={(e) => setActWindow(e.target.value)}
+              disabled={!canMutate}
+            />
           </label>
           <label className="fd-field fd-field--full">
             <span className="fd-field__label">Reason (required)</span>
-            <input className="fd-input" value={actReason} onChange={(e) => setActReason(e.target.value)} />
+            <input
+              className="fd-input"
+              value={actReason}
+              onChange={(e) => setActReason(e.target.value)}
+              disabled={!canMutate}
+            />
           </label>
         </div>
+        {!canMutate ? (
+          <p className="fd-muted fd-samples" aria-live="polite">
+            Loading workspace mode…
+          </p>
+        ) : null}
         <div className="fd-actions">
           {approvalOn ? (
             <button
               type="button"
               className="fd-btn fd-btn--primary"
-              disabled={busy !== null}
+              disabled={!canMutate || busy !== null}
               onClick={() => void runRequestPromotion()}
             >
               {busy === "request" ? "Requesting…" : "Request promotion"}
@@ -305,7 +377,7 @@ export function ActionsPage() {
             <button
               type="button"
               className="fd-btn fd-btn--primary"
-              disabled={busy !== null}
+              disabled={!canMutate || busy !== null}
               onClick={() => void runAction("/v1/promote")}
             >
               {busy === "promote" ? "Promoting…" : "Promote"}
@@ -314,7 +386,7 @@ export function ActionsPage() {
           <button
             type="button"
             className="fd-btn fd-btn--ghost"
-            disabled={busy !== null}
+            disabled={!canMutate || busy !== null}
             onClick={() => void runAction("/v1/rollback")}
           >
             {busy === "rollback" ? "Rolling back…" : "Rollback"}
@@ -324,22 +396,36 @@ export function ActionsPage() {
 
       {approvalOn ? (
         <>
-          <section className="fd-card">
-            <div className="fd-card__head">
-              <h3 className="fd-card__subtitle">Pending promotion requests</h3>
+          <section className="fd-card" aria-busy={pendingRefreshing}>
+            <div className="fd-card__head fd-card__head--row">
+              <div>
+                <h3 className="fd-card__subtitle">2. Pending promotion requests</h3>
+                <p className="fd-card__desc">
+                  Open requests waiting for an approver. Use <strong>Use for confirm</strong> to copy an ID into step 3.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="fd-btn fd-btn--ghost"
+                disabled={pendingRefreshing || busy !== null}
+                onClick={() => void refreshPending()}
+              >
+                {pendingRefreshing ? "Refreshing…" : "Refresh list"}
+              </button>
             </div>
             {pendingErr ? <p className="fd-alert fd-alert--error">{pendingErr}</p> : null}
             {pendingList.length === 0 ? (
-              <p className="fd-muted">No pending requests.</p>
+              <p className="fd-muted">No pending requests. After you request a promotion, it appears here.</p>
             ) : (
               <div className="fd-table-wrap">
                 <table className="fd-table">
                   <thead>
                     <tr>
-                      <th>Request ID</th>
-                      <th>Release</th>
-                      <th>Env</th>
-                      <th>Created</th>
+                      <th scope="col">Request ID</th>
+                      <th scope="col">Release</th>
+                      <th scope="col">Env</th>
+                      <th scope="col">Created</th>
+                      <th scope="col">Confirm</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -355,6 +441,17 @@ export function ActionsPage() {
                         </td>
                         <td>{row.environment}</td>
                         <td className="fd-muted">{row.created_at}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="fd-btn fd-btn--ghost fd-btn--sm"
+                            disabled={busy !== null}
+                            aria-label={`Use request ${shortId(row.request_id, 14, 8)} for confirm step`}
+                            onClick={() => setConfirmRequestId(row.request_id)}
+                          >
+                            Use for confirm
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -365,7 +462,11 @@ export function ActionsPage() {
 
           <section className="fd-card">
             <div className="fd-card__head">
-              <h3 className="fd-card__subtitle">Confirm promotion</h3>
+              <h3 className="fd-card__subtitle">3. Confirm a request</h3>
+              <p className="fd-card__desc">
+                Paste the full request ID (or pick from the table), add an approval reason, then confirm. This runs the same
+                policy gate as direct promote.
+              </p>
             </div>
             <div className="fd-form-grid">
               <label className="fd-field fd-field--full">
@@ -383,6 +484,7 @@ export function ActionsPage() {
                   className="fd-input"
                   value={confirmReason}
                   onChange={(e) => setConfirmReason(e.target.value)}
+                  placeholder="Why you are approving this promotion"
                 />
               </label>
             </div>
