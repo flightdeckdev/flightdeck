@@ -3,6 +3,7 @@ import { AppShell } from "./components/AppShell";
 import { ActionsPage } from "./pages/ActionsPage";
 import { DiffPage } from "./pages/DiffPage";
 import { OverviewPage } from "./pages/OverviewPage";
+import { RunsPage } from "./pages/RunsPage";
 import { UI_READ_ONLY } from "./uiConfig";
 
 export function App() {
@@ -12,6 +13,7 @@ export function App() {
         <Route element={<AppShell />}>
           <Route index element={<OverviewPage />} />
           <Route path="diff" element={<DiffPage />} />
+          <Route path="runs" element={<RunsPage />} />
           <Route path="actions" element={UI_READ_ONLY ? <Navigate to="/" replace /> : <ActionsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

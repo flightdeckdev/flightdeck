@@ -68,7 +68,7 @@ Small prompt or model changes can silently move **cost**, **latency**, and **err
 FlightDeck is **local-first** and ships as a Python CLI backed by SQLite.
 
 **v1.0.0** froze **SemVer-stable public contracts** for the documented CLI, committed **`schemas/v1/`**,
-and **`POST /v1/events`** with **`api_version` `v1`**. **v1.1.x** adds Phase 1 slices (optional pricing catalog on diffs,
+and **`POST /v1/events`** with **`api_version` `v1`**. **v1.1.x** adds catalog-aware diffs, approval flows, and forensics slices (optional pricing catalog on diffs,
 promotion request/confirm, read-only runs listing, **`GET /v1/workspace`** for UI and automation, Helm/fleet examples)
 without breaking those v1.0 shapes. See **[RELEASE_NOTES.md](RELEASE_NOTES.md)** and **[CHANGELOG.md](CHANGELOG.md)**.
 The product scope is still intentionally narrow (release governance, not a hosted agent platform).

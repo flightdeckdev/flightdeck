@@ -6,6 +6,6 @@ diff:
   min_candidate_runs: 500
   min_baseline_runs: 500
   min_low_runs: 50
-# Optional Phase 1 fields (uncomment and adjust paths):
+# Optional catalog / pricing fields (uncomment and adjust paths):
 # pricing_catalog_path: examples/pricing/catalog.sample.yaml
 # promotion_requires_approval: true

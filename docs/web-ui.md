@@ -18,6 +18,7 @@ The app uses **HashRouter** (`react-router-dom`) so all navigation stays within 
 |-----------|-----------|-----------|-------|
 | `#/` | `OverviewPage` | `GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions`, `GET /v1/metrics` (parallel where applicable) | Ledger metrics card is read-only counters |
 | `#/diff` | `DiffPage` | `POST /v1/diff` | Renders `pricing.warnings`, optional **`pricing.catalog`** / **`pricing.hints`**, per-1k prices when present |
+| `#/runs` | `RunsPage` | `GET /v1/releases` (for datalist), `GET /v1/runs`, `GET /v1/runs/export` | Forensics: filters, table, NDJSON download |
 | `#/actions` | `ActionsPage` | `GET /v1/workspace`, `GET /v1/promotion-requests` (when `promotion_requires_approval`), `POST /v1/promote` **or** `POST /v1/promote/request` + `POST /v1/promote/confirm`, `POST /v1/rollback` | Workspace strip shows server version + mode; see **ActionsPage** below |
 | `#/*` (any other) | — | Redirects to `#/` | |
 
@@ -39,6 +40,7 @@ App (HashRouter)
         ├── SecurityStatusBar (below header, above main content)
         ├── OverviewPage  (route: #/)
         ├── DiffPage      (route: #/diff)
+        ├── RunsPage      (route: #/runs)
         └── ActionsPage   (route: #/actions; redirects → #/ when UI_READ_ONLY)
 ```
 

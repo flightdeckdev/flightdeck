@@ -721,6 +721,9 @@ def query_run_events_page(
     tenant_id: str | None,
     task_id: str | None,
     trace_id: str | None = None,
+    session_id: str | None = None,
+    span_id: str | None = None,
+    offset: int = 0,
     limit: int,
 ) -> dict[str, object]:
     """Read-only slice of run events for forensics (newest-first truncation)."""
@@ -728,6 +731,9 @@ def query_run_events_page(
         raise OperationError(f"Unknown release: {release_id}")
     env = environment or cfg.default_environment
     tid = (trace_id or "").strip() or None
+    sid = (session_id or "").strip() or None
+    spid = (span_id or "").strip() or None
+    off = max(0, int(offset))
     try:
         delta = parse_window(window)
     except ValueError as e:
@@ -742,10 +748,12 @@ def query_run_events_page(
         task_id=task_id,
         environment=env,
         trace_id=tid,
+        session_id=sid,
+        span_id=spid,
     )
     events_sorted = sorted(events, key=lambda e: e.timestamp, reverse=True)
     lim = max(1, min(500, limit))
-    page = events_sorted[:lim]
+    page = events_sorted[off : off + lim]
     return {
         "release_id": release_id,
         "since": since.isoformat(),
@@ -755,10 +763,14 @@ def query_run_events_page(
             "tenant_id": tenant_id,
             "task_id": task_id,
             "trace_id": tid,
+            "session_id": sid,
+            "span_id": spid,
         },
+        "offset": off,
+        "limit": lim,
         "matched_total": len(events),
         "returned": len(page),
-        "truncated": len(events) > len(page),
+        "truncated": off + len(page) < len(events),
         "events": [e.model_dump(mode="json") for e in page],
     }
 

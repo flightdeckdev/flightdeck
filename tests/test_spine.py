@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import yaml
@@ -76,16 +76,26 @@ def write_events(
     model: str = "gpt-4.1-mini",
     trace_id: str | None = None,
     trace_ids: list[str | None] | None = None,
+    session_id: str | None = None,
+    session_ids: list[str | None] | None = None,
+    span_id: str | None = None,
+    span_ids: list[str | None] | None = None,
+    stagger_ts: bool = False,
 ) -> Path:
     if trace_ids is not None and len(trace_ids) != n:
         raise ValueError("trace_ids length must equal n")
+    if session_ids is not None and len(session_ids) != n:
+        raise ValueError("session_ids length must equal n")
+    if span_ids is not None and len(span_ids) != n:
+        raise ValueError("span_ids length must equal n")
     p = tmp_path / f"events_{release_id}.jsonl"
     lines = []
     for i in range(n):
+        ts_i = ts + timedelta(seconds=i) if stagger_ts else ts
         e = {
             "api_version": "v1",
             "type": "run_end",
-            "timestamp": ts.isoformat(),
+            "timestamp": ts_i.isoformat(),
             "workspace_id": "ws_local",
             "agent_id": agent_id,
             "release_id": release_id,
@@ -112,8 +122,30 @@ def write_events(
             tid = trace_id
         else:
             tid = None
+
+        if session_ids is not None:
+            sid_i = session_ids[i]
+        elif session_id is not None:
+            sid_i = session_id
+        else:
+            sid_i = None
+
+        if span_ids is not None:
+            sp_i = span_ids[i]
+        elif span_id is not None:
+            sp_i = span_id
+        else:
+            sp_i = None
+
+        req: dict[str, str] = {}
         if tid is not None:
-            e["request"] = {"trace_id": tid}
+            req["trace_id"] = tid
+        if sid_i is not None:
+            req["session_id"] = sid_i
+        if sp_i is not None:
+            req["span_id"] = sp_i
+        if req:
+            e["request"] = req
         lines.append(json.dumps(e))
     p.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return p

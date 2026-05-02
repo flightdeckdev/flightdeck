@@ -177,9 +177,13 @@ as `post_promote`.
 
 `GET /v1/promotion-requests`.
 
-### `list_runs(*, release_id, window, environment=None, tenant_id=None, task_id=None, trace_id=None, limit=100) -> dict`
+### `list_runs(*, release_id, window, environment=None, tenant_id=None, task_id=None, trace_id=None, session_id=None, span_id=None, offset=0, limit=100) -> dict`
 
-`GET /v1/runs` — read-only event slice for forensics. When `trace_id` is set, only events whose `request.trace_id` matches are returned.
+`GET /v1/runs` — read-only event slice for forensics. Optional `trace_id`, `session_id`, and `span_id` filter on `request.*` (exact match). `offset` skips the newest matching events before returning up to `limit` rows.
+
+### `fetch_runs_export_ndjson(*, release_id, window, …) -> tuple[bytes, dict[str, str]]`
+
+`GET /v1/runs/export` — same filters as `list_runs`; returns the raw **NDJSON** body and selected `X-Flightdeck-*` response headers.
 
 ## Async usage
 

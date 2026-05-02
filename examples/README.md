@@ -12,9 +12,9 @@ This folder holds **copy-pasteable** references for wiring FlightDeck into a rea
 6. **Run the server** in a container or compose stack — see [deploy/](deploy/README.md). The bundled UI calls **`GET /v1/workspace`** to choose direct promote vs request/confirm.
 7. **Triage runs** with **`flightdeck runs list`** / **`runs export`** or **`GET /v1/runs`**, and **observe** aggregate ledger size with **`GET /v1/metrics`** (JSON counters; read-only, same access tier as other `GET /v1/*` routes).
 
-## Phase 1 readiness (quick checklist)
+## Readiness checklist (quick pass)
 
-Use this as a **discoverability** pass for the **[ROADMAP.md](../ROADMAP.md)** Phase-1 readiness signals (not a product guarantee):
+Use this as a **discoverability** pass for the **[ROADMAP.md](../ROADMAP.md)** readiness signals (not a product guarantee):
 
 | Signal | Where to start |
 |--------|----------------|

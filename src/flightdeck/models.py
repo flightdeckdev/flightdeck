@@ -262,7 +262,7 @@ class PromotionRecord(BaseModel):
 
 
 class PromotionRequestRecord(BaseModel):
-    """Pending human approval before ``commit_promotion`` (Phase 1)."""
+    """Pending human approval before ``commit_promotion``."""
 
     request_id: str
     status: Literal["pending", "completed", "cancelled"] = "pending"
