@@ -56,6 +56,31 @@ Match **CI**’s CLI smoke: **`flightdeck --help`** must run successfully after 
 
 Full command flags and exit codes: [README.md](https://github.com/flightdeckdev/flightdeck/blob/main/README.md). Cross-platform quickstart parity: **`flightdeck-quickstart-verify`** / **`python -m flightdeck.quickstart_smoke`** (also run in CI). HTTP API reference: **[docs/http-api.md](docs/http-api.md)**. Python SDK: **[docs/sdk.md](docs/sdk.md)**.
 
+### What `flightdeck-quickstart-verify` does
+
+`flightdeck-quickstart-verify` (entry point for `src/flightdeck/quickstart_smoke.py`) runs the full
+quickstart workflow end-to-end in an isolated temp directory:
+
+1. `flightdeck init`
+2. Import both pricing tables from `examples/quickstart/`
+3. `flightdeck policy set`
+4. Register baseline and candidate releases — capture the `release_id` printed to stdout
+5. Substitute `__BASELINE_RELEASE_ID__` / `__CANDIDATE_RELEASE_ID__` placeholders in the
+   quickstart JSONL event files and write them to the temp directory
+6. `flightdeck runs ingest` for both event files
+7. `flightdeck release diff` (7-day window)
+8. `flightdeck release promote` baseline → `local`
+9. `flightdeck release history`
+10. `flightdeck release verify` (checksum check against the on-disk bundle)
+11. `flightdeck doctor`
+
+All subprocesses use `subprocess.run(..., check=True)`. Any non-zero exit prints stderr and causes
+the verifier to exit non-zero. On success it prints `quickstart_smoke: OK`.
+
+**Executable resolution:** prefers `flightdeck` on `PATH` (`shutil.which`); falls back to
+`sys.executable -m flightdeck.cli.main` so it works inside a bare `uv run` context without a
+console-scripts install.
+
 **JSON Schemas:** when **`src/flightdeck/`** models or **`scripts/generate_schemas.py`** change wire contracts, regenerate and match CI:
 
 ```bash
