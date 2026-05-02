@@ -1,0 +1,46 @@
+# Example: workflow_dispatch runs promote-request and logs request_id= for a human follow-up.
+# Copy into your repo; point `working-directory` at a clone that contains flightdeck.yaml with
+# promotion_requires_approval: true and a populated ledger.
+#
+# Confirm step: run locally or in a second gated workflow:
+#   flightdeck release promote-confirm "<request_id>" --approval-reason "…"
+
+name: flightdeck-promote-approval-example
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_id:
+        description: Registered release ID to promote
+        required: true
+        type: string
+      environment:
+        description: Target environment
+        required: true
+        default: local
+        type: string
+      window:
+        description: Evidence window (e.g. 7d)
+        required: true
+        default: 7d
+        type: string
+      reason:
+        description: Rationale for the promotion request
+        required: true
+        type: string
+
+jobs:
+  request:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install FlightDeck
+        run: uv sync --frozen --extra dev
+      - name: Request promotion (capture request_id from log)
+        working-directory: ./path/to/your-flightdeck-workspace
+        run: |
+          uv run flightdeck release promote-request "${{ inputs.release_id }}" \
+            --env "${{ inputs.environment }}" \
+            --window "${{ inputs.window }}" \
+            --reason "${{ inputs.reason }}"
