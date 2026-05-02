@@ -21,7 +21,7 @@ This roadmap is meant to be clear from **what is already shipped** to **near-ter
 
 ## Next release
 
-**v1.0.3** (patch): Phase 0 hardening — expanded **pytest** coverage for diff confidence (MEDIUM/LOW, policy on latency and error rate), **runs ingest** edge cases (empty file, malformed JSONL, JSON array payload), and **multi-provider / cross-model** `release diff` paths; web UI structured **promote/rollback** outcome plus a **pricing/model changed** banner on **Run diff** when the API reports it. See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**. No breaking changes to stable CLI, HTTP, or **`api_version` `v1`** contracts.
+**v1.0.4** (patch): Phase 0 closing slice — **`GET /v1/metrics`** (JSON ledger counters); **`pricing.prices`** on **`POST /v1/diff`** plus CLI **Per-1k token prices** line and matching web diff detail when pricing/model changes; **[examples/README.md](examples/README.md)** end-to-end walkthrough linking **integration**, **CI**, and **deploy** examples. See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**. No breaking changes to stable CLI, HTTP, or **`api_version` `v1`** contracts.
 
 ---
 
@@ -53,16 +53,19 @@ Goal: prove the wedge with real teams using FlightDeck as release governance sou
 - Strengthen local security ergonomics: explicit token/env status in UI, mutation guardrails, optional read-only UX.
 - Continue UI productization for current scope (structured views over raw JSON where stable).
 
-### Phase 0 progress (toward v1.0.3)
+### Phase 0 progress (v1.0.3–v1.0.4)
 
-Shipped on **`main`** for the next patch:
+Shipped on **`main`**:
 
-- **Policy / diff tests:** `diff_releases` coverage for MEDIUM confidence vs `require_high_diff_confidence`, LOW sample floor boundaries, `max_latency_ms` (including skip when latency is absent), `max_error_rate`, and stacked policy failure reasons; CLI integration for MEDIUM blocking a second promotion after a baseline is established.
-- **Ingest tests:** empty JSONL (zero inserts), malformed line (non-zero exit), JSON array file accepted.
-- **Multi-provider pricing:** integration tests that diff baseline vs candidate releases with different **`pricing_reference`** providers (and same-provider different models), including parity checks on **`POST /v1/diff`** `pricing.pricing_or_model_changed`.
-- **Web UI:** structured outcome card after promote/rollback (policy, pointer, IDs) with raw JSON in a collapsible panel; Diff summary shows pricing/model change when the server marks it.
+- **Policy / diff tests (v1.0.3):** `diff_releases` coverage for MEDIUM confidence vs `require_high_diff_confidence`, LOW sample floor boundaries, `max_latency_ms` (including skip when latency is absent), `max_error_rate`, and stacked policy failure reasons; CLI integration for MEDIUM blocking a second promotion after a baseline is established.
+- **Ingest tests (v1.0.3):** empty JSONL (zero inserts), malformed line (non-zero exit), JSON array file accepted.
+- **Multi-provider pricing (v1.0.3):** integration tests that diff baseline vs candidate releases with different **`pricing_reference`** providers (and same-provider different models), including parity checks on **`POST /v1/diff`** `pricing.pricing_or_model_changed`.
+- **Web UI (v1.0.3):** structured outcome card after promote/rollback (policy, pointer, IDs) with raw JSON in a collapsible panel; Diff summary shows pricing/model change when the server marks it.
+- **Pricing diagnostics (v1.0.4):** **`pricing.prices`** on **`POST /v1/diff`** and matching CLI / web lines for per-1k input/output unit prices when pricing or model differs.
+- **Operating narrative (v1.0.4):** **[examples/README.md](examples/README.md)** index tying emit → ingest → verify → diff/gate → promote → serve.
+- **Observability foundation (v1.0.4):** **`GET /v1/metrics`** JSON counters over the local ledger (not Prometheus/OTel; longer arc stays mid term).
 
-**Still open in Phase 0** (see gaps table and Phase 1 for larger items): richer **pricing normalization** product semantics (beyond per-side tables + flags), broader **integration** and **deployment** narrative in docs, and **observability** paths remain roadmap-sized rather than single-patch work.
+**Still open in Phase 0** (see gaps table and Phase 1): **catalog-level** multi-provider normalization (single comparable unit across vendors), deeper **event pipeline** and **fleet** ergonomics, and **OTLP-oriented** telemetry remain beyond this patch.
 
 ### Phase-0 success signals
 

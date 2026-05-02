@@ -28,11 +28,32 @@ type PricingInfo = {
   candidateVersion: string;
   candidateModel: string;
   changed: boolean;
+  prices: PricingPrices | null;
 };
+
+type PricingPrices = {
+  baselineInput: number | null;
+  baselineOutput: number | null;
+  candidateInput: number | null;
+  candidateOutput: number | null;
+};
+
+function pickPrices(p: Record<string, unknown>): PricingPrices | null {
+  const block = p.prices;
+  if (!isRecord(block)) return null;
+  const numOrNull = (k: string): number | null =>
+    typeof block[k] === "number" && Number.isFinite(block[k]) ? (block[k] as number) : null;
+  return {
+    baselineInput: numOrNull("baseline_input_usd_per_1k_tokens"),
+    baselineOutput: numOrNull("baseline_output_usd_per_1k_tokens"),
+    candidateInput: numOrNull("candidate_input_usd_per_1k_tokens"),
+    candidateOutput: numOrNull("candidate_output_usd_per_1k_tokens"),
+  };
+}
 
 /**
  * Coerces the `pricing` block from `/v1/diff` into a typed view.  The contract
- * is set in `_diff_body()` in `src/flightdeck/server/routes/actions.py`.
+ * is set by the route in `src/flightdeck/server/routes/actions.py`.
  */
 function pickPricing(data: DiffJson): PricingInfo | null {
   const p = data.pricing;
@@ -46,6 +67,7 @@ function pickPricing(data: DiffJson): PricingInfo | null {
     candidateVersion: get("candidate_version"),
     candidateModel: get("candidate_model"),
     changed: p.pricing_or_model_changed === true,
+    prices: pickPrices(p),
   };
 }
 
@@ -214,6 +236,23 @@ export function DiffPage() {
                   {pricing.candidateProvider}/{pricing.candidateVersion} {pricing.candidateModel}
                 </code>
                 . Cost delta includes pricing and model assumption changes.
+                {pricing.prices &&
+                pricing.prices.baselineInput !== null &&
+                pricing.prices.candidateInput !== null &&
+                pricing.prices.baselineOutput !== null &&
+                pricing.prices.candidateOutput !== null ? (
+                  <>
+                    <br />
+                    Per-1k token prices: input{" "}
+                    <code className="fd-mono fd-mono--sm">
+                      {pricing.prices.baselineInput.toFixed(6)} → {pricing.prices.candidateInput.toFixed(6)}
+                    </code>
+                    , output{" "}
+                    <code className="fd-mono fd-mono--sm">
+                      {pricing.prices.baselineOutput.toFixed(6)} → {pricing.prices.candidateOutput.toFixed(6)}
+                    </code>
+                  </>
+                ) : null}
               </p>
             ) : null}
             {metrics ? (

@@ -6,6 +6,22 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ## Unreleased
 
+## 1.0.4 - 2026-05-03
+
+### Added
+
+- **HTTP `GET /v1/metrics`:** read-only JSON counters for the local ledger (`releases_total`, `pricing_tables_total`, `run_events_total`, `promoted_pointers_total`, `actions_total`, `actions_by_action`) plus `schema_version` and `generated_at`; backed by **`Storage.get_ledger_counters()`**.
+- **`POST /v1/diff`:** `pricing.prices` — per-side input/output/cached-input USD per 1k tokens for the resolved model (mirrors table entries; helps separate tariff changes from token volume).
+- **CLI `release diff`:** when pricing or model differs, prints **Per-1k token prices** after the existing NOTE line.
+- **Web UI (Run diff):** shows per-1k input/output price deltas under the pricing/model-change banner when those numbers are present.
+- **Docs:** [examples/README.md](examples/README.md) operating walkthrough; [docs/http-api.md](docs/http-api.md) documents **`GET /v1/metrics`** and **`pricing.prices`**; [docs/cli.md](docs/cli.md) documents the new diff output line.
+- **Tests:** **`test_v1_metrics_returns_counters`** in **`tests/test_server_health.py`**; **`POST /v1/diff`** `pricing.prices` assertions on cross-model diff in **`tests/test_spine.py`**.
+
+### Changed
+
+- **Roadmap:** **Next release** and **Phase 0 progress** updated for **v1.0.4** (pricing diagnostic, examples index, metrics endpoint).
+- **Examples / CI snippets:** **`flightdeck-ai>=1.0.4`** in Docker and PyPI gate samples.
+
 ## 1.0.3 - 2026-05-03
 
 ### Added
