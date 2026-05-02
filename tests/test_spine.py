@@ -74,7 +74,11 @@ def write_events(
     n: int,
     ts: datetime,
     model: str = "gpt-4.1-mini",
+    trace_id: str | None = None,
+    trace_ids: list[str | None] | None = None,
 ) -> Path:
+    if trace_ids is not None and len(trace_ids) != n:
+        raise ValueError("trace_ids length must equal n")
     p = tmp_path / f"events_{release_id}.jsonl"
     lines = []
     for i in range(n):
@@ -102,6 +106,14 @@ def write_events(
             },
             "labels": {},
         }
+        if trace_ids is not None:
+            tid = trace_ids[i]
+        elif trace_id is not None:
+            tid = trace_id
+        else:
+            tid = None
+        if tid is not None:
+            e["request"] = {"trace_id": tid}
         lines.append(json.dumps(e))
     p.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return p

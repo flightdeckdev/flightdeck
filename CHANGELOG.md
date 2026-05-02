@@ -6,6 +6,10 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ## Unreleased
 
+### Added
+
+- **`trace_id` filter** on `GET /v1/runs`, `flightdeck runs list --trace-id`, and SDK `list_runs(trace_id=…)` — exact match on ingested `RunEvent.request.trace_id`.
+
 ## 1.1.1 - 2026-05-02
 
 ### Added

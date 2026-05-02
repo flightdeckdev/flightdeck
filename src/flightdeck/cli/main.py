@@ -321,6 +321,7 @@ def runs() -> None:
 @click.option("--env", "environment", default=None)
 @click.option("--tenant", "tenant_id", default=None)
 @click.option("--task", "task_id", default=None)
+@click.option("--trace-id", "trace_id", default=None, help="Filter to events whose request.trace_id matches (exact).")
 @click.option("--limit", default=100, show_default=True, type=int)
 @click.option(
     "--output",
@@ -335,6 +336,7 @@ def runs_list(
     environment: str | None,
     tenant_id: str | None,
     task_id: str | None,
+    trace_id: str | None,
     limit: int,
     output_format: str,
 ) -> None:
@@ -351,6 +353,7 @@ def runs_list(
             environment=environment,
             tenant_id=tenant_id,
             task_id=task_id,
+            trace_id=trace_id,
             limit=limit,
         )
     except OperationError as e:

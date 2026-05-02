@@ -249,6 +249,7 @@ Read-only forensics: return a slice of ingested run events for one release (newe
 | `environment` | string | — | Defaults to workspace `default_environment` |
 | `tenant_id` | string | — | Optional filter |
 | `task_id` | string | — | Optional filter |
+| `trace_id` | string | — | Optional filter: exact match on `RunEvent.request.trace_id` (ingested JSON path `request.trace_id`) |
 | `limit` | integer | 100 | Max events returned (1–500) |
 
 **Response**
@@ -258,7 +259,7 @@ Read-only forensics: return a slice of ingested run events for one release (newe
   "release_id": "rel_abc",
   "since": "2026-04-25T12:00:00+00:00",
   "until": "2026-05-02T12:00:00+00:00",
-  "filters": { "environment": "local", "tenant_id": null, "task_id": null },
+  "filters": { "environment": "local", "tenant_id": null, "task_id": null, "trace_id": null },
   "matched_total": 42,
   "returned": 10,
   "truncated": true,

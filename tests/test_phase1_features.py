@@ -233,6 +233,56 @@ def test_get_v1_runs(tmp_path: Path) -> None:
             assert len(data["events"]) == 3
 
 
+def test_runs_trace_id_filter_http_and_cli(tmp_path: Path) -> None:
+    ws = tmp_path / "runs_trace"
+    ws.mkdir(parents=True, exist_ok=True)
+    runner = CliRunner()
+    with _cwd(ws):
+        assert runner.invoke(cli, ["init"]).exit_code == 0
+        policy = write_policy(ws, min_candidate_runs=0, min_baseline_runs=0, min_low_runs=0)
+        assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
+        pricing = write_pricing(ws, provider="openai", pricing_version="openai-2026-04-30")
+        assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0
+        rdir = write_release(ws, agent_id="ag", version="1", pricing_provider="openai", pricing_version="openai-2026-04-30")
+        rid = runner.invoke(cli, ["release", "register", str(rdir)]).output.strip()
+        now = datetime.now(tz=timezone.utc)
+        ev = write_events(
+            ws,
+            release_id=rid,
+            agent_id="ag",
+            n=3,
+            ts=now,
+            trace_ids=[None, "tid_alpha", "tid_beta"],
+        )
+        assert runner.invoke(cli, ["runs", "ingest", str(ev)]).exit_code == 0
+
+    with _cwd(ws):
+        with TestClient(create_app()) as client:
+            resp_all = client.get("/v1/runs", params={"release_id": rid, "window": "7d", "limit": 10})
+            assert resp_all.status_code == 200
+            assert resp_all.json()["matched_total"] == 3
+
+            resp_f = client.get(
+                "/v1/runs",
+                params={"release_id": rid, "window": "7d", "limit": 10, "trace_id": "tid_alpha"},
+            )
+            assert resp_f.status_code == 200
+            body = resp_f.json()
+            assert body["matched_total"] == 1
+            assert body["filters"]["trace_id"] == "tid_alpha"
+            assert len(body["events"]) == 1
+            assert body["events"][0]["request"]["trace_id"] == "tid_alpha"
+
+        cli_res = runner.invoke(
+            cli,
+            ["runs", "list", rid, "--window", "7d", "--trace-id", "tid_beta", "--output", "json"],
+        )
+        assert cli_res.exit_code == 0
+        payload = json.loads(cli_res.output)
+        assert payload["matched_total"] == 1
+        assert payload["events"][0]["request"]["trace_id"] == "tid_beta"
+
+
 def test_cli_runs_list_json(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()

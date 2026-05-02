@@ -184,6 +184,7 @@ class FlightdeckClient:
         environment: str | None = None,
         tenant_id: str | None = None,
         task_id: str | None = None,
+        trace_id: str | None = None,
         limit: int = 100,
     ) -> dict[str, Any]:
         params: dict[str, str | int] = {
@@ -197,6 +198,8 @@ class FlightdeckClient:
             params["tenant_id"] = tenant_id
         if task_id is not None:
             params["task_id"] = task_id
+        if trace_id is not None:
+            params["trace_id"] = trace_id
         resp = self._request_with_retry(
             "GET",
             "/v1/runs",
@@ -438,6 +441,7 @@ class AsyncFlightdeckClient:
         environment: str | None = None,
         tenant_id: str | None = None,
         task_id: str | None = None,
+        trace_id: str | None = None,
         limit: int = 100,
     ) -> dict[str, Any]:
         params: dict[str, str | int] = {
@@ -451,6 +455,8 @@ class AsyncFlightdeckClient:
             params["tenant_id"] = tenant_id
         if task_id is not None:
             params["task_id"] = task_id
+        if trace_id is not None:
+            params["trace_id"] = trace_id
         resp = await self._request_with_retry(
             "GET",
             "/v1/runs",
