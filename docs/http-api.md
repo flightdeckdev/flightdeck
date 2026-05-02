@@ -176,16 +176,29 @@ Ingest `RunEvent` records (runtime evidence for diff and policy evaluation).
 }
 ```
 
-`api_version` may be omitted (defaults to `"v1"`). Any other value returns HTTP 400.
+`api_version` may be omitted (defaults to `"v1"`). Any other value — including `""`,
+`null`, wrong case like `"V1"`, or unknown strings — returns HTTP 400 with a message of
+the form `"Unsupported api_version for POST /v1/events: <value> (only 'v1' is accepted)."`.
+
 `run_id` must be unique per workspace; duplicates are silently ignored by storage.
+
+The `events` array must contain **at least one event**. An empty array (`"events": []`)
+is rejected by Pydantic validation with HTTP **422** before any event processing occurs.
 
 **Response**
 ```json
 {"inserted": 1}
 ```
 
+`inserted` is the count of **newly written** rows. Events with a `run_id` that already
+exists in storage are silently skipped; they do not increment `inserted` and do not
+produce an error.
+
 **Errors**
-- HTTP 400 — unsupported `api_version` or malformed `RunEvent` field.
+- HTTP 400 — unsupported `api_version` value, or a field in a `RunEvent` fails type/range
+  validation after the per-event `api_version` check.
+- HTTP 422 — `events` array is empty or the request body does not match the expected shape
+  (Pydantic validation error; returned as an array under `detail`).
 
 Full field reference: [`schemas/v1/run_event.schema.json`](../schemas/v1/run_event.schema.json).
 
@@ -316,7 +329,8 @@ Default thresholds (from `WorkspaceConfig.diff`): `min_candidate_runs=500`,
 `min_baseline_runs=500`, `min_low_runs=50`. Override per-workspace or via the active policy.
 
 **Errors**
-- HTTP 400 — unknown release ID, missing pricing table, cross-agent diff, or invalid
+- HTTP 400 — unknown release ID, missing pricing table, cross-agent diff (releases have
+  different `agent_id`), inconsistent `agent_id` within one side's run events, or invalid
   `window` format. The `detail` field describes the specific problem.
 
 ---
