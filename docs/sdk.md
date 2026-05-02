@@ -18,6 +18,10 @@ pip install 'flightdeck-ai'
 uv add flightdeck-ai
 ```
 
+Optional **LangChain / Temporal / OpenAI Agents** mappers ship under **`flightdeck.integrations`**
+(experimental; separate extras). See **[sdk-integrations.md](sdk-integrations.md)** and
+**[examples/integration/adoption/](../examples/integration/adoption/README.md)**.
+
 ## Quick start
 
 ```python

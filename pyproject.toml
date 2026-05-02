@@ -52,6 +52,15 @@ dev = [
 postgres = [
     "psycopg[binary]>=3.2",
 ]
+# Optional adoption hooks (see docs/sdk-integrations.md). Not imported by core runtime.
+integrations-langchain = ["langchain-core>=0.3.0"]
+integrations-temporal = ["temporalio>=1.8.0"]
+integrations-openai-agents = ["openai-agents>=0.14.0"]
+integrations-ci = [
+    "langchain-core>=0.3.0",
+    "temporalio>=1.8.0",
+    "openai-agents>=0.14.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/flightdeckdev/flightdeck"

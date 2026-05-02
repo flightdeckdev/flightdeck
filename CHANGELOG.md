@@ -6,6 +6,10 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ## Unreleased
 
+### Added
+
+- **Experimental `flightdeck.integrations`:** optional extras **`integrations-langchain`**, **`integrations-temporal`**, **`integrations-openai-agents`**, and meta **`integrations-ci`** (CI job); thin mappers from OpenAI chat completions, Anthropic messages, OpenAI Agents–style results, LangChain callbacks, CrewAI-style manual totals, and Temporal-oriented **`labels`**. Docs: **`docs/sdk-integrations.md`**; examples: **`examples/integration/adoption/`**. Contributor policy updates in **`AGENTS.md`** / **`CLAUDE.md`**.
+
 ### Changed
 
 - **Web Runs:** forensics — empty / offset / truncation messaging, export copy, trace band rows or **Group by trace_id**, **View** drawer (structured fields + full JSON, **session_id** / **span_id**, focus trap + return focus, **`aria-haspopup="dialog"`**), trace/status columns; **run-query** failures show a typed error card with **Retry**.

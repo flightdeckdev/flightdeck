@@ -4,6 +4,15 @@ High-level notes for **shipping FlightDeck**. Detailed history: **[CHANGELOG.md]
 
 Narrative docs (including the CLI reference) are maintained on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** `main`; this file and **`schemas/`** ship in minimal clones.
 
+## Upcoming — Optional Python integrations (experimental)
+
+Patch-line documentation: optional **`flightdeck.integrations`** mappers behind **`integrations-*`**
+extras (see **`pyproject.toml`**, **`docs/sdk-integrations.md`**, **`examples/integration/adoption/`**).
+**Stable contracts unchanged:** **`RunEvent`** JSON / **`POST /v1/events`**. **`AGENTS.md`** clarifies
+that these adapters are adoption glue, not in-product orchestration or a plugin registry. CI adds
+an **`integrations`** job (**`uv sync --frozen --extra dev --extra integrations-ci`**) for LangChain
+callback coverage.
+
 ## v1.1.2 — Forensics filters, JSONL export, productization closure slice
 
 Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): optional **`trace_id`** filter on **`GET /v1/runs`**, **`flightdeck runs list --trace-id`**, and SDK **`list_runs(trace_id=…)`** (exact match on **`RunEvent.request.trace_id`**); **`flightdeck runs export`** writes the same filtered slice as JSONL (stdout or **`-o`**, **`--limit`** up to **500**, stderr warning when truncated). **Stable contracts:** additive HTTP query param and CLI command only.

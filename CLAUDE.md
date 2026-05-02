@@ -9,6 +9,7 @@ Canonical repository (full history and maintainer workflows): **[github.com/flig
 | Topic | Location |
 |--------|------|
 | Agent / contributor rules | `AGENTS.md` |
+| Runtime integrations / adoption hooks (optional `flightdeck.integrations`, extras, boundaries) | `AGENTS.md` (non-goals), [docs/sdk-integrations.md](docs/sdk-integrations.md), `src/flightdeck/integrations/`, [examples/integration/adoption/](examples/integration/adoption/) |
 | Cursor IDE rules (CI artifacts, web static) | `.cursor/rules/flightdeck-ci-artifacts.mdc` |
 | Setup and local demo | `DEVELOPMENT.md` |
 | CLI flags and exit codes | [README.md](https://github.com/flightdeckdev/flightdeck/blob/main/README.md) (canonical repo) |
@@ -35,6 +36,8 @@ If you changed **Pydantic / wire models** affecting **`schemas/`**: **`uv run py
 
 If you changed **`web/`** (React UI): from **`web/`**, run **`npm ci`** then **`npm run build`**, then from the repo root **`git diff --exit-code src/flightdeck/server/static/`** must be clean—commit all updates under that path (CI fails otherwise). When behavior changes, run **`npm run test:e2e`** from **`web/`**.
 
+If you changed **`pyproject.toml`** integration extras or **`src/flightdeck/integrations/`** tests: run **`uv lock`**, commit **`uv.lock`**, and **`uv sync --frozen --extra dev --extra integrations-ci`** (see **`DEVELOPMENT.md`**) to match the CI integrations job.
+
 Details: **`AGENTS.md`** (Verification), **`DEVELOPMENT.md`**, and **`.cursor/rules/flightdeck-ci-artifacts.mdc`**.
 
 With **pip** + venv: use **`python -m …`** equivalents in **`DEVELOPMENT.md`**.
@@ -43,4 +46,4 @@ With **pip** + venv: use **`python -m …`** equivalents in **`DEVELOPMENT.md`**
 
 ## Repo shape
 
-Python package under `src/flightdeck/`. Tests in `tests/`. Examples in `examples/quickstart/`. JSON Schemas under `schemas/` (regenerate with **`uv run python scripts/generate_schemas.py`** when models change). Browser UI source in **`web/`**; production bundle committed under **`src/flightdeck/server/static/`** (rebuild with **`npm run build`** in **`web/`**). After **`pyproject.toml`** dependency edits, run **`uv lock`** and commit **`uv.lock`**.
+Python package under `src/flightdeck/` (optional **`flightdeck.integrations`** under the same tree). Tests in `tests/`. Examples in `examples/quickstart/` and **`examples/integration/adoption/`**. JSON Schemas under `schemas/` (regenerate with **`uv run python scripts/generate_schemas.py`** when models change). Browser UI source in **`web/`**; production bundle committed under **`src/flightdeck/server/static/`** (rebuild with **`npm run build`** in **`web/`**). After **`pyproject.toml`** dependency edits, run **`uv lock`** and commit **`uv.lock`**.

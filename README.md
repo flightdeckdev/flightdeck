@@ -148,13 +148,14 @@ flightdeck release history --agent agent_support --env local
 The static event files in `examples/quickstart` use placeholder release IDs so the repo can ship stable examples.
 Substitute them before ingestion, or run **`uv run flightdeck-quickstart-verify`** / **`python -m flightdeck.quickstart_smoke`** (venv) or **`./scripts/smoke.sh`** from Git Bash/WSL on Windows.
 
-**Examples:** [examples/quickstart/](examples/quickstart/) · [examples/ci/](examples/ci/) (policy gate + Actions) · [examples/deploy/](examples/deploy/) (`serve` via Docker/Compose) · [examples/integration/](examples/integration/) (HTTP event emitter).
+**Examples:** [examples/quickstart/](examples/quickstart/) · [examples/ci/](examples/ci/) (policy gate + Actions) · [examples/deploy/](examples/deploy/) (`serve` via Docker/Compose) · [examples/integration/](examples/integration/) (HTTP event emitter) · [examples/integration/adoption/](examples/integration/adoption/) (framework hooks).
 
 ## Documentation
 
 - [CLI reference](docs/cli.md) — all commands, flags, arguments, and exit codes
 - [HTTP API reference](docs/http-api.md) — all `/v1/*` routes, request/response shapes, auth, `RunEvent` field reference
 - [Python SDK](docs/sdk.md) — `FlightdeckClient` / `AsyncFlightdeckClient` usage guide
+- [Runtime integrations (experimental)](docs/sdk-integrations.md) — optional `flightdeck.integrations` mappers (LangChain, OpenAI Agents, Temporal, etc.)
 - [Operations and policy](docs/operations-and-policy.md) — diff, promote, rollback internals; policy model and confidence tiers
 - [Release artifacts and pricing](docs/release-artifact.md) — `release.yaml` format, bundle layout, checksum algorithm, workspace config, pricing tables
 - [Pricing catalog](docs/pricing-catalog.md) — optional `pricing_catalog_path`, catalog vs imported tables, troubleshooting

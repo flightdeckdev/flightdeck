@@ -25,12 +25,14 @@ Economic and operational safety for AI releases.
 Do not add:
 
 - prompt IDEs
-- agent frameworks
+- in-product **agent orchestration frameworks** (FlightDeck does not execute LangGraph/CrewAI-style graphs as core product behavior or become the default runtime for user workflows)
 - dashboards before CLI workflow is proven
 - gateways/proxies by default
 - compliance scanners
 - fine-tuning ops
-- broad plugin systems
+- **broad plugin systems** (no dynamic plugin registry, no implicit third-party load-by-name in core)
+
+**Allowed (adoption glue):** optional, explicitly declared **`[project.optional-dependencies]`** extras that install thin **`flightdeck.integrations.*`** helpers. Those modules only map third-party telemetry into **`RunEvent`** / HTTP ingest and strengthen **developer onboarding** and **runtime evidence**; they do not replace the CLI ledger or ship an embedded orchestrator.
 
 ## Public contracts
 
@@ -40,6 +42,7 @@ Treat these as **stable API** unless a change explicitly marks an experimental p
 - **On-disk / wire:** `release.yaml`, run events, pricing imports, policy shape — **`schemas/`** (generated; drift caught in CI) plus compatibility notes in **`RELEASE_NOTES.md`**.
 - **v1 / GA direction** (migrations, checksums, trust boundaries, defaults): **`RELEASE_NOTES.md`** and shipped CLI/schema behavior.
 - **Backlog and milestone status:** **`ROADMAP.md`**.
+- **Optional Python `flightdeck.integrations`:** SemVer-tracked but **experimental** until **`RELEASE_NOTES.md`** / **`CHANGELOG.md`** state otherwise. Not the same stability bar as CLI + **`RunEvent`** wire JSON unless explicitly promoted; prefer **`POST /v1/events`** and **`schemas/v1/run_event.schema.json`** as the normative integration surface.
 
 ## Engineering rules
 
@@ -95,7 +98,7 @@ Fallback (activated **venv** or global tools): the same steps with **`python -m 
 
 On **Windows**, use `py -3` in place of `python` if that is how your environment is set up. If pytest temp dirs fail with permissions, see **`DEVELOPMENT.md`** / **`tests/conftest.py`**.
 
-**CI bar** (mirrors **`.github/workflows/ci.yml`** on **CPython 3.14**): see the workflow for the exact sequence; includes **`uv sync --frozen --extra dev`**, **`web/`** **`npm ci`** + **`npm run build`** + **`git diff --exit-code`** on **`static/`**, Playwright **`npm run test:e2e`**, **ruff**, **pytest**, schema drift check, **`flightdeck-quickstart-verify`**, **`flightdeck --help`**.
+**CI bar** (mirrors **`.github/workflows/ci.yml`** on **CPython 3.14**): see the workflow for the exact sequence; includes **`uv sync --frozen --extra dev`**, **`web/`** **`npm ci`** + **`npm run build`** + **`git diff --exit-code`** on **`static/`**, Playwright **`npm run test:e2e`**, **ruff**, **pytest**, schema drift check, **`flightdeck-quickstart-verify`**, **`flightdeck --help`**. When you change **`pyproject.toml`** optional extras (including **`flightdeck.integrations`** extras), run **`uv lock`** and commit **`uv.lock`**. The workflow may include a separate **integrations** job that **`uv sync`**s **`dev`** plus selected integration extras and runs targeted tests.
 
 Use a repo-local temp directory if the OS temp directory is restricted.
 
