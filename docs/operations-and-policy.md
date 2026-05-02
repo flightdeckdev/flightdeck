@@ -4,6 +4,10 @@ This document explains the core release governance logic: how `flightdeck releas
 `promote`, and `rollback` work under the hood, how CLI / HTTP / SDK all converge on the
 same code, and how the policy system controls promotion gates.
 
+For the on-disk formats these operations consume — `release.yaml`, bundle layout, checksum
+algorithm, workspace config, and pricing table YAML — see
+[release-artifact.md](release-artifact.md).
+
 ## Architecture: single operations layer
 
 ```
@@ -229,6 +233,34 @@ When policy fails, the promotion/rollback attempt is **recorded in the audit led
 (the intent is captured) but the promoted pointer is **not** updated. The CLI exits with
 a non-zero code; the HTTP API returns the full response body with `promoted_pointer_changed:
 false` and `policy.passed: false`.
+
+---
+
+## `flightdeck doctor`
+
+`flightdeck doctor` runs three read-only integrity checks against the local ledger. It
+calls `Storage.migrate()` at start (idempotent), so it also applies any pending schema
+migrations.
+
+| Check name | What it verifies |
+|------------|-----------------|
+| `schema_migrations` | All migration versions 1..`LATEST_SCHEMA_MIGRATION_VERSION` are present in `schema_migrations` |
+| `promoted_pointer:<agent_id>:<environment>` | Every `release_id` in `promoted_releases` has a matching row in `releases` |
+| `audit_seq` | `release_actions.audit_seq` is contiguous from 1..max with no NULLs, gaps, or duplicates |
+
+Exit behavior: all checks pass → `0`; any failure → prints the failed check to stderr and
+exits non-zero (`click.ClickException`).
+
+```
+ok    schema_migrations: applied=[1, 2, 3] expected 1..3
+ok    promoted_pointer:agent_support:production: release_id=rel_abc123 ok
+ok    audit_seq: contiguous 1..4 (4 row(s))
+Doctor: 3 check(s), all passed.
+```
+
+`audit_seq` is the append-only ledger's tamper-detection signal: every promote/rollback
+increments it by 1 inside a `BEGIN IMMEDIATE` transaction. A gap in the sequence indicates
+either a manual database edit or a partial write that was rolled back without cleanup.
 
 ---
 
