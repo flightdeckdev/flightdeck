@@ -187,3 +187,14 @@ virtual environment's Python executable directly:
 ```
 
 Use **`uv run python -m pytest`** from the repo root so imports like **`from tests.test_spine import …`** resolve the same way as in CI.
+
+## Environment variables
+
+| Variable | Component | Description |
+|----------|-----------|-------------|
+| `FLIGHTDECK_LOCAL_API_TOKEN` | Server | When set, `POST /v1/promote` and `POST /v1/rollback` require `Authorization: Bearer <token>`. Read endpoints and `POST /v1/events` are unaffected. See [docs/http-api.md](docs/http-api.md) and [SECURITY.md](SECURITY.md). |
+| `FLIGHTDECK_USE_SYSTEM_TEMP` | Tests | Set to `1` to force pytest to use the OS default temp directory instead of the repo-local `.tmp/` directory. Useful on developer machines where `%TEMP%` works correctly (see *Troubleshooting* above). |
+| `USER` / `USERNAME` | CLI | Used to populate the `actor` field on promote, rollback, and pricing import audit records. `USER` is checked first (Unix/macOS), then `USERNAME` (Windows); falls back to `"unknown"`. |
+| `VITE_FLIGHTDECK_LOCAL_API_TOKEN` | Web dev server | Build-time variable for the React UI dev server (Vite). Copy `web/.env.example` → `web/.env.local` to set it when testing mutations through `npm run dev` against a token-protected server. |
+| `VITE_DEV_PROXY_TARGET` | Web dev server | Overrides the Vite proxy target for `/v1` (default: `http://127.0.0.1:8765`). |
+| `TMPDIR` / `TEMP` / `TMP` | Tests / OS | Standard temp directory environment variables. Set any of these to a repo-local `.tmp/` path if the OS default is restricted or permissions cause pytest failures. |
