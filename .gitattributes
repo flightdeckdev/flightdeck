@@ -9,3 +9,4 @@ web/scripts/** text eol=lf
 
 # Shell entrypoints used by Docker (Linux images expect LF shebang lines).
 examples/deploy/*.sh text eol=lf
+examples/ci/*.sh text eol=lf

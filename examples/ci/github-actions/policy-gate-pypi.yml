@@ -38,4 +38,4 @@ jobs:
         env:
           WORKSPACE: ${{ runner.temp }}/fd-ledger-gate-${{ github.run_id }}-${{ github.run_attempt }}
           QUICKSTART_ROOT: ${{ github.workspace }}/_flightdeck_fixtures/examples/quickstart
-        run: bash "${GITHUB_WORKSPACE}/_flightdeck_fixtures/examples/ci/ledger-gate.sh"
+        run: python "${GITHUB_WORKSPACE}/_flightdeck_fixtures/examples/ci/ledger_gate.py"

@@ -61,13 +61,12 @@ jobs:
       - name: Quickstart smoke (cross-platform)
         run: uv run flightdeck-quickstart-verify
 
-      - name: Example CI ledger gate (bash)
-        shell: bash
+      - name: Example CI ledger gate
         env:
           FD_PROJECT: ${{ github.workspace }}
           WORKSPACE: ${{ runner.temp }}/fd-ledger-gate-${{ github.run_id }}-${{ github.run_attempt }}
           QUICKSTART_ROOT: ${{ github.workspace }}/examples/quickstart
-        run: bash examples/ci/ledger-gate.sh
+        run: uv run python examples/ci/ledger_gate.py
 
       - name: CLI smoke
         run: uv run flightdeck --help
@@ -129,13 +128,12 @@ jobs:
       - name: Quickstart smoke (cross-platform)
         run: uv run flightdeck-quickstart-verify
 
-      - name: Example CI ledger gate (bash)
-        shell: bash
+      - name: Example CI ledger gate
         env:
           FD_PROJECT: ${{ github.workspace }}
           WORKSPACE: ${{ runner.temp }}/fd-ledger-gate-${{ github.run_id }}-${{ github.run_attempt }}
           QUICKSTART_ROOT: ${{ github.workspace }}/examples/quickstart
-        run: bash examples/ci/ledger-gate.sh
+        run: uv run python examples/ci/ledger_gate.py
 
       - name: CLI smoke
         run: uv run flightdeck --help

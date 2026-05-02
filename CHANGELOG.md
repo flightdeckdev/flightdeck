@@ -6,10 +6,6 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ## Unreleased
 
-### Fixed
-
-- **examples/ci `ledger-gate.sh`:** remove and recreate **`WORKSPACE`** before **`flightdeck init`** so GitHub Actions reruns and warm **`RUNNER_TEMP`** paths do not hit “**flightdeck.yaml already exists**”. **`.github/workflows/ci.yml`** uses a unique **`WORKSPACE`** per workflow run (**`run_id`** + **`run_attempt`**).
-
 ## 1.0.2 - 2026-05-02
 
 ### Added
@@ -17,7 +13,7 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 - **CLI:** **`flightdeck release diff --fail-on-policy`** exits **1** when the active policy does not pass (after printing the diff), for CI gates without calling **`release promote`**.
 - **HTTP `GET /health`:** response includes **`mutation_auth`** (`loopback` or `bearer`) — safe hint for whether **`FLIGHTDECK_LOCAL_API_TOKEN`** is configured (no secret material).
 - **Web UI:** security status strip (server mode + whether **`VITE_FLIGHTDECK_LOCAL_API_TOKEN`** is set); optional read-only mode via **`VITE_FLIGHTDECK_UI_READ_ONLY=true`** (hides Promote nav and **`#/actions`**).
-- **examples/ci:** **`ledger-gate.sh`**, **`github-actions/policy-gate-*.yml`**, **[examples/ci/README.md](examples/ci/README.md)**; **`.github/workflows/ci.yml`** runs the gate script on **Ubuntu** and **Windows** (bash).
+- **examples/ci:** **`ledger_gate.py`**, **`ledger-gate-policy.yaml`**, **`ledger-gate.sh`** (wrapper), **`github-actions/policy-gate-*.yml`**, **[examples/ci/README.md](examples/ci/README.md)**; **`.github/workflows/ci.yml`** runs **`uv run python examples/ci/ledger_gate.py`** on **Ubuntu** and **Windows** (no bash-only gate).
 - **examples/deploy:** reference **`Dockerfile`**, **`docker-compose.yml`**, **`entrypoint.sh`**, **[examples/deploy/README.md](examples/deploy/README.md)**.
 - **examples/integration:** **`emit_sample_events.py`**, **[examples/integration/README.md](examples/integration/README.md)**.
 - **Tests:** **`tests/test_server_health.py`**; **`test_release_diff_fail_on_policy_exits_1`** in **`tests/test_cli_contract.py`**; Playwright smoke asserts **`/health`** includes **`mutation_auth`**.
@@ -25,11 +21,12 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 ### Fixed
 
 - **`diff_releases` zero policy sample thresholds:** `Policy.min_candidate_runs`, `Policy.min_baseline_runs`, and `Policy.min_low_runs` set to **`0`** now correctly override workspace config defaults to `0` instead of being silently ignored. Previously, `or`-based fallback treated `0` as falsy and fell back to the config value (typically `500` / `50`). Fixed by using explicit `is not None` checks. A policy can now unconditionally accept any sample size by setting thresholds to `0` — for example, to allow diffs over empty event windows without a confidence downgrade.
+- **examples/ci ledger gate:** **`ledger_gate.py`** invokes the CLI as **`python -m flightdeck.cli.main`** (avoids nested **`uv run`** / Windows **`flightdeck.exe`** locks); wipes **`WORKSPACE`** with **`shutil.rmtree`** before **`init`**; unique **`WORKSPACE`** per CI run (**`run_id`** + **`run_attempt`**). **`ledger-gate-policy.yaml`** caps cost high enough for quickstart candidate rollup (quickstart **`policy.yaml`** at \$4 rejects **~\$5/run** under **`--fail-on-policy`**).
 
 ### Changed
 
 - **Docs:** **`docs/cli.md`** documents **`--fail-on-policy`**; **`docs/http-api.md`** / **`docs/sdk.md`** document **`GET /health`** `mutation_auth`.
-- **`.gitattributes`:** LF for **`examples/deploy/*.sh`** (Docker entrypoint).
+- **`.gitattributes`:** LF for **`examples/deploy/*.sh`** (Docker entrypoint) and **`examples/ci/*.sh`** (CI shell wrappers).
 
 ## 1.0.1 - 2026-05-01
 

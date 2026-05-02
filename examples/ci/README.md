@@ -8,33 +8,39 @@ These files show a **register → ingest → diff (policy gate) → verify** loo
 
 Use this flag in CI so a red build means “unsafe to ship under current policy,” not only “CLI error.”
 
-## `ledger-gate.sh` (bash)
+## `ledger_gate.py` (recommended)
+
+Canonical cross-platform gate (used by **`.github/workflows/ci.yml`**). Runs the CLI as
+`python -m flightdeck.cli.main` from the **same interpreter** that executes the script (the
+`uv` devenv on CI, or `python` after `pip install flightdeck-ai`).
 
 Environment:
 
 | Variable | Required | Meaning |
 |----------|----------|---------|
-| `WORKSPACE` | yes | **Dedicated throwaway directory** for `flightdeck.yaml` and the SQLite DB (the script **deletes and recreates** it each run so CI reruns stay deterministic) |
+| `WORKSPACE` | yes | **Dedicated throwaway directory** for `flightdeck.yaml` + SQLite (**deleted and recreated** each run) |
 | `QUICKSTART_ROOT` | yes | Path to `examples/quickstart` (or your own copy of those fixtures) |
-| `FD_PROJECT` | no | If set, invokes `uv run --directory "$FD_PROJECT" flightdeck …` from `WORKSPACE` (FlightDeck monorepo / dev clone). If unset, uses `flightdeck` on `PATH` (for example after `pip install flightdeck-ai`). |
+| `FD_PROJECT` | — | **Ignored** by `ledger_gate.py` (kept on env in workflows for documentation only). |
 
-Example (monorepo / local clone with **uv**):
+Policy for the diff step is **`ledger-gate-policy.yaml`** next to this README (not `quickstart/policy.yaml`): quickstart candidate cost is **~\$5/run** while quickstart policy caps **\$4**, so `--fail-on-policy` would fail there by design.
+
+`ledger-gate.sh` is a thin **`exec …/ledger_gate.py`** wrapper for local bash users.
+
+Example (monorepo with **uv**):
 
 ```bash
-export FD_PROJECT=/path/to/flightdeck
 export WORKSPACE="$(mktemp -d)"
-export QUICKSTART_ROOT="$FD_PROJECT/examples/quickstart"
-bash "$FD_PROJECT/examples/ci/ledger-gate.sh"
+export QUICKSTART_ROOT="$PWD/examples/quickstart"
+uv run python examples/ci/ledger_gate.py
 ```
 
-Example (**PyPI** install, fixtures from a checkout of this repo):
+Example (**PyPI** install):
 
 ```bash
-python -m venv .venv && . .venv/bin/activate
 pip install "flightdeck-ai>=1.0.2"
 export WORKSPACE="$(mktemp -d)"
 export QUICKSTART_ROOT=/path/to/flightdeck/examples/quickstart
-bash /path/to/flightdeck/examples/ci/ledger-gate.sh
+python /path/to/flightdeck/examples/ci/ledger_gate.py
 ```
 
 ## GitHub Actions
@@ -43,7 +49,7 @@ Copy a workflow from `github-actions/` into `.github/workflows/` in your reposit
 
 | File | Use when |
 |------|----------|
-| [`policy-gate-monorepo.yml`](github-actions/policy-gate-monorepo.yml) | This repository (or a fork): `uv sync` + `ledger-gate.sh` with `FD_PROJECT` pointing at the checkout. |
+| [`policy-gate-monorepo.yml`](github-actions/policy-gate-monorepo.yml) | This repository (or a fork): `uv sync` + `uv run python examples/ci/ledger_gate.py`. |
 | [`policy-gate-pypi.yml`](github-actions/policy-gate-pypi.yml) | Another repo: install **`flightdeck-ai`** from PyPI and sparse-checkout upstream `examples/quickstart` for fixtures (pin the checkout ref to match your installed version when possible). |
 
 ### Promoting from CI
