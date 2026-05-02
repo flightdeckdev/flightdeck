@@ -20,3 +20,5 @@ This folder holds **copy-pasteable** references for wiring FlightDeck into a rea
 | [ci/](ci/README.md) | Policy gate script, sample policy YAML, GitHub Actions job snippets. |
 | [deploy/](deploy/README.md) | Dockerfile and compose for `flightdeck serve`. |
 | [integration/](integration/README.md) | Sample event emitter for HTTP ingest. |
+| [fleet/](fleet/README.md) | Multi-workspace naming, optional catalog path, approval workflow notes. |
+| [pricing/catalog.sample.yaml](pricing/catalog.sample.yaml) | Sample `PricingCatalog` for cross-vendor comparable diff costs. |

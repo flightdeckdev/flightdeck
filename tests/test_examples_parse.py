@@ -21,6 +21,8 @@ def test_example_yaml_files_parse_as_releases_or_pricing_or_policy() -> None:
     for path in _iter_example_files():
         if path.suffix.lower() not in {".yaml", ".yml"}:
             continue
+        if "chart" in path.parts and "templates" in path.parts:
+            continue
         text = path.read_text(encoding="utf-8")
         data = yaml.safe_load(text)
         assert isinstance(data, dict)
@@ -29,8 +31,12 @@ def test_example_yaml_files_parse_as_releases_or_pricing_or_policy() -> None:
         if kind == "Release":
             ReleaseArtifact.model_validate(data)
         else:
-            # pricing/policy examples are validated elsewhere; ensure YAML loads cleanly.
-            assert kind in {None, "WorkspaceConfig"} or "provider" in data or "policy_id" in data
+            # pricing/policy/catalog examples are validated elsewhere; ensure YAML loads cleanly.
+            assert (
+                kind in {None, "WorkspaceConfig", "PricingCatalog"}
+                or "provider" in data
+                or "policy_id" in data
+            )
 
 
 def test_example_jsonl_lines_parse_as_json() -> None:

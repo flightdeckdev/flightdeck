@@ -163,6 +163,20 @@ audit log). Requires the mutation token if one is configured.
 
 `POST /v1/rollback` — same contract as promote; rolls back to the specified release.
 
+### `post_promote_request(…)` / `post_promote_confirm(…)`
+
+`POST /v1/promote/request` and `POST /v1/promote/confirm` — two-step promotion when
+`promotion_requires_approval` is enabled in `flightdeck.yaml`. Same mutation token rules
+as `post_promote`.
+
+### `list_promotion_requests(*, status=None, limit=50) -> dict`
+
+`GET /v1/promotion-requests`.
+
+### `list_runs(*, release_id, window, environment=None, tenant_id=None, task_id=None, limit=100) -> dict`
+
+`GET /v1/runs` — read-only event slice for forensics.
+
 ## Async usage
 
 ```python

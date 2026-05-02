@@ -26,8 +26,12 @@ from flightdeck.models import (
 from flightdeck.operations import (
     OperationError,
     compute_diff,
+    confirm_promotion_request,
     default_policy,
+    diff_outcome_to_public_dict,
     promote_release,
+    query_run_events_page,
+    request_promotion,
     rollback_release,
 )
 from flightdeck.storage import Storage
@@ -311,6 +315,57 @@ def runs() -> None:
     """Ingest run events."""
 
 
+@runs.command("list")
+@click.argument("release_id")
+@click.option("--window", required=True, help="Time window like 7d, 24h, 30m.")
+@click.option("--env", "environment", default=None)
+@click.option("--tenant", "tenant_id", default=None)
+@click.option("--task", "task_id", default=None)
+@click.option("--limit", default=100, show_default=True, type=int)
+@click.option(
+    "--output",
+    "output_format",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    show_default=True,
+)
+def runs_list(
+    release_id: str,
+    window: str,
+    environment: str | None,
+    tenant_id: str | None,
+    task_id: str | None,
+    limit: int,
+    output_format: str,
+) -> None:
+    """List ingested run events for a release (newest first; truncated to --limit)."""
+    cfg = load_config()
+    storage = Storage(cfg.db_path)
+    storage.migrate()
+    try:
+        payload = query_run_events_page(
+            cfg=cfg,
+            storage=storage,
+            release_id=release_id,
+            window=window,
+            environment=environment,
+            tenant_id=tenant_id,
+            task_id=task_id,
+            limit=limit,
+        )
+    except OperationError as e:
+        raise click.ClickException(str(e)) from e
+    if output_format == "json":
+        click.echo(json.dumps(payload, indent=2, sort_keys=True))
+        return
+    click.echo(
+        f"release={payload['release_id']} matched_total={payload['matched_total']} "
+        f"returned={payload['returned']} truncated={payload['truncated']}"
+    )
+    for ev in payload["events"]:
+        click.echo(json.dumps(ev, sort_keys=True))
+
+
 @runs.command("ingest")
 @click.argument("path", type=click.Path(exists=True, path_type=Path))
 def runs_ingest(path: Path) -> None:
@@ -374,53 +429,7 @@ def release_diff(
         raise click.ClickException(str(e)) from e
 
     if output_format == "json":
-        body = {
-            "window": result.window,
-            "since": result.since.isoformat(),
-            "until": result.until.isoformat(),
-            "filters": {
-                "environment": result.environment,
-                "tenant_id": result.tenant_id,
-                "task_id": result.task_id,
-            },
-            "pricing": {
-                "baseline_provider": result.baseline_pricing_provider,
-                "baseline_version": result.baseline_pricing_version,
-                "baseline_model": result.baseline_model,
-                "candidate_provider": result.candidate_pricing_provider,
-                "candidate_version": result.candidate_pricing_version,
-                "candidate_model": result.candidate_model,
-                "pricing_or_model_changed": result.pricing_or_model_changed,
-                "prices": {
-                    "baseline_input_usd_per_1k_tokens": result.baseline_input_usd_per_1k_tokens,
-                    "baseline_output_usd_per_1k_tokens": result.baseline_output_usd_per_1k_tokens,
-                    "baseline_cached_input_usd_per_1k_tokens": result.baseline_cached_input_usd_per_1k_tokens,
-                    "candidate_input_usd_per_1k_tokens": result.candidate_input_usd_per_1k_tokens,
-                    "candidate_output_usd_per_1k_tokens": result.candidate_output_usd_per_1k_tokens,
-                    "candidate_cached_input_usd_per_1k_tokens": result.candidate_cached_input_usd_per_1k_tokens,
-                },
-                "warnings": list(result.pricing_warnings),
-            },
-            "samples": {
-                "baseline_runs": result.baseline_runs,
-                "candidate_runs": result.candidate_runs,
-                "confidence": result.confidence,
-                "confidence_reason": result.confidence_reason,
-            },
-            "metrics": {
-                "baseline_cost_per_run_usd": result.baseline_cost_per_run_usd,
-                "candidate_cost_per_run_usd": result.candidate_cost_per_run_usd,
-                "delta_cost_per_run_usd": result.delta_cost_per_run_usd,
-                "delta_cost_per_run_pct": result.delta_cost_per_run_pct,
-                "baseline_latency_ms_avg": result.baseline_latency_ms_avg,
-                "candidate_latency_ms_avg": result.candidate_latency_ms_avg,
-                "delta_latency_ms_avg": result.delta_latency_ms_avg,
-                "baseline_error_rate": result.baseline_error_rate,
-                "candidate_error_rate": result.candidate_error_rate,
-                "delta_error_rate": result.delta_error_rate,
-            },
-            "policy": result.policy.model_dump(mode="json"),
-        }
+        body = diff_outcome_to_public_dict(result)
         click.echo(json.dumps(body, indent=2, sort_keys=True))
         if fail_on_policy and not result.policy.passed:
             raise click.ClickException("Policy gate: diff blocked by active policy (see policy.reasons in JSON output).")
@@ -438,6 +447,25 @@ def release_diff(
     )
     for w in result.pricing_warnings:
         click.echo(f"WARNING: {w}")
+    for h in result.pricing_hints:
+        click.echo(f"HINT: {h}")
+    if result.catalog_enabled or result.catalog_warnings:
+        click.echo(
+            f"Catalog: enabled={result.catalog_enabled} version={result.catalog_version or '-'} "
+            f"slots baseline={result.baseline_catalog_slot_id or '-'} candidate={result.candidate_catalog_slot_id or '-'}"
+        )
+        if (
+            result.baseline_catalog_cost_per_run_usd is not None
+            and result.candidate_catalog_cost_per_run_usd is not None
+            and result.delta_catalog_cost_per_run_usd is not None
+        ):
+            click.echo(
+                f"Catalog-comparable cost/run (USD): {result.baseline_catalog_cost_per_run_usd:.6f} -> "
+                f"{result.candidate_catalog_cost_per_run_usd:.6f} "
+                f"(delta {result.delta_catalog_cost_per_run_usd:+.6f})"
+            )
+        for cw in result.catalog_warnings:
+            click.echo(f"WARNING (catalog): {cw}")
     if result.pricing_or_model_changed:
         click.echo("NOTE: cost delta includes pricing/model assumption changes (pricing reference and/or model differ).")
         if (
@@ -510,6 +538,64 @@ def release_promote(release_id: str, environment: str, window: str, reason: str)
         raise click.ClickException("Promotion blocked by policy")
 
     click.echo(f"Promoted {release_id} for {outcome.agent_id}/{environment}")
+    click.echo("Policy: PASS")
+    for r in outcome.policy.reasons:
+        click.echo(f"- {r}")
+
+
+@release.command("promote-request")
+@click.argument("release_id")
+@click.option("--env", "environment", required=True)
+@click.option("--window", required=True, help="Required. Time window like 7d, 24h, 30m.")
+@click.option("--reason", required=True, help="Rationale for requesting promotion (policy must pass).")
+def release_promote_request(release_id: str, environment: str, window: str, reason: str) -> None:
+    """Create a pending promotion request (requires promotion_requires_approval in flightdeck.yaml)."""
+    cfg = load_config()
+    storage = Storage(cfg.db_path)
+    storage.migrate()
+    try:
+        record = request_promotion(
+            cfg=cfg,
+            storage=storage,
+            release_id=release_id,
+            environment=environment,
+            window=window,
+            reason=reason,
+            actor=actor_name(),
+        )
+    except OperationError as e:
+        raise click.ClickException(str(e)) from e
+    click.echo(f"request_id={record.request_id}")
+    click.echo(json.dumps({"policy": record.policy_result.model_dump(mode="json")}, indent=2))
+
+
+@release.command("promote-confirm")
+@click.argument("request_id")
+@click.option("--approval-reason", required=True, help="Human approval rationale.")
+def release_promote_confirm(request_id: str, approval_reason: str) -> None:
+    """Confirm a pending promotion request and perform the promotion."""
+    cfg = load_config()
+    storage = Storage(cfg.db_path)
+    storage.migrate()
+    try:
+        outcome = confirm_promotion_request(
+            cfg=cfg,
+            storage=storage,
+            request_id=request_id,
+            approval_reason=approval_reason,
+            actor=actor_name(),
+        )
+    except OperationError as e:
+        raise click.ClickException(str(e)) from e
+
+    if not outcome.policy.passed:
+        click.echo("Policy: FAIL")
+        for r in outcome.policy.reasons:
+            click.echo(f"- {r}")
+        raise click.ClickException("Promotion blocked by policy")
+
+    click.echo(f"Promoted {outcome.release_id} for {outcome.agent_id}/{outcome.environment}")
+    click.echo(f"action_id={outcome.action_id}")
     click.echo("Policy: PASS")
     for r in outcome.policy.reasons:
         click.echo(f"- {r}")

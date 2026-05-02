@@ -4,6 +4,10 @@ High-level notes for **shipping FlightDeck**. Detailed history: **[CHANGELOG.md]
 
 Narrative docs (including the CLI reference) are maintained on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** `main`; this file and **`schemas/`** ship in minimal clones.
 
+## v1.1.0 — Phase 1 first slice (catalog, approval, runs, Helm, fleet)
+
+Minor release (see **[CHANGELOG.md](CHANGELOG.md)**): optional **`pricing_catalog_path`** + **`PricingCatalog`** YAML for cross-vendor comparable **`pricing.catalog`** lines on diffs; **`pricing.hints`** for multi-version and model-name diagnostics; **`promotion_requires_approval`** with **`POST /v1/promote/request`** / **`POST /v1/promote/confirm`** / **`GET /v1/promotion-requests`** and matching CLI; **`GET /v1/runs`** and **`flightdeck runs list`**; SQLite migration **v4** (`promotion_requests`); reference **Helm** chart and **fleet** docs under **`examples/`**. **Stable contracts:** additive HTTP and CLI surfaces; existing **`v1`** event and release payloads unchanged.
+
 ## v1.0.6 — Phase 0 closure (backup, cross-language emitters, roadmap)
 
 Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): **`flightdeck doctor --backup PATH`** performs a SQLite online backup of the workspace DB; **[examples/integration/](examples/integration/README.md)** gains **`curl`** and a **Node** **`emit_sample_events.node.mjs`** path for **`POST /v1/events`**; **[examples/deploy/README.md](examples/deploy/README.md)** documents the Compose **`/health`** healthcheck and backup scheduling. **ROADMAP:** **Phase 0** is **closed**; **catalog-level** multi-provider pricing normalization is an explicit **Phase 1** build item. **Stable contracts:** additive CLI flag and HTTP field **`pricing.warnings`** (from **v1.0.5**) remain backward-compatible.

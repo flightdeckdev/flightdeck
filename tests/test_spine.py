@@ -1125,6 +1125,9 @@ def test_release_diff_output_json_shape(tmp_path: Path, monkeypatch) -> None:
     assert body["window"] == "7d"
     assert set(body.keys()) >= {"filters", "metrics", "policy", "pricing", "samples", "since", "until"}
     assert body["pricing"]["warnings"] == []
+    assert body["pricing"]["hints"] == []
+    assert "catalog" in body["pricing"]
+    assert body["pricing"]["catalog"]["enabled"] is False
     assert body["policy"]["passed"] is True
 
 

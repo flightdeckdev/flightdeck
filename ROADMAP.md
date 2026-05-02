@@ -21,7 +21,11 @@ This roadmap is meant to be clear from **what is already shipped** to **near-ter
 
 ## Next release
 
-**v1.0.6** (patch): Phase 0 closure — **`flightdeck release diff --output json`** (same shape as **`POST /v1/diff`**); **`pricing.warnings`** when a release model has no row in its pricing table (CLI **`WARNING:`** lines + web Diff); **Overview** ledger metrics card (**`GET /v1/metrics`**); **`curl`** + **Node** samples under **[examples/integration/](examples/integration/README.md)**; **`flightdeck doctor --backup PATH`** (SQLite online backup); **[examples/deploy/](examples/deploy/README.md)** documents Compose **`/health`** healthcheck and backup scheduling. **Phase 0** is declared **closed**; **catalog-level** multi-provider normalization moves to **Phase 1**. See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**. No breaking changes to stable CLI, HTTP, or **`api_version` `v1`** contracts.
+Further **Phase 1** work after **v1.1.0** (deeper forensics / replay UX, richer approval UI if needed, OTLP-oriented telemetry per gaps table). Track **[CHANGELOG.md](CHANGELOG.md)**.
+
+**v1.1.0** (minor, shipped): Phase 1 first slice — **`pricing_catalog_path`** + **`pricing.catalog`** / **`pricing.hints`** on diffs; **`promotion_requires_approval`** + promote **request/confirm** (HTTP + CLI) + **`GET /v1/promotion-requests`**; **`GET /v1/runs`** / **`runs list`**; **Helm** reference chart; **`examples/fleet/`**; SQLite migration **v4**. See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**.
+
+**v1.0.6** (patch, shipped): Phase 0 closure — **`flightdeck release diff --output json`** (same shape as **`POST /v1/diff`**); **`pricing.warnings`** when a release model has no row in its pricing table (CLI **`WARNING:`** lines + web Diff); **Overview** ledger metrics card (**`GET /v1/metrics`**); **`curl`** + **Node** samples under **[examples/integration/](examples/integration/README.md)**; **`flightdeck doctor --backup PATH`** (SQLite online backup); **[examples/deploy/](examples/deploy/README.md)** documents Compose **`/health`** healthcheck and backup scheduling. **Phase 0** is declared **closed**; **catalog-level** multi-provider normalization moves to **Phase 1**. See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**. No breaking changes to stable CLI, HTTP, or **`api_version` `v1`** contracts.
 
 ---
 
@@ -49,7 +53,7 @@ Goal: prove the wedge with real teams using FlightDeck as release governance sou
 
 - Harden CLI/schema contracts and edge-case policy coverage (sample windows, sparse traffic, error paths).
 - Add concrete integration references: app runtime event emitters, CI pipeline examples, and deployment recipes for `flightdeck serve`.
-- **Catalog-level cross-vendor pricing normalization** — deferred to **Phase 1** (see Phase 1 build list). **v1.0.4–v1.0.6** ship per-side **`pricing.prices`** and **`pricing.warnings`** diagnostics only.
+- **Catalog-level cross-vendor pricing normalization** — first operator-driven slice in **v1.1.0** (`pricing_catalog_path`, **`pricing.catalog`** on diffs); **v1.0.4–v1.0.6** shipped per-side **`pricing.prices`** and **`pricing.warnings`** only.
 - Strengthen local security ergonomics: explicit token/env status in UI, mutation guardrails, optional read-only UX.
 - Continue UI productization for current scope (structured views over raw JSON where stable).
 
@@ -85,6 +89,8 @@ Shipped on **`main`**:
 ## Phase 1: Productization (mid term, roughly quarters)
 
 Goal: move from solid local tooling to repeatable production usage patterns.
+
+**v1.1.0** ships the first tranche: catalog + hints on diffs, approval-gated promote (HTTP + CLI), read-only runs listing, Helm + fleet reference docs, and migration **v4**. Remaining bullets below are still in scope for later minors/patches.
 
 ### Build in this phase
 

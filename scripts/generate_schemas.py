@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from flightdeck.catalog import PricingCatalog
 from flightdeck.models import Policy, PricingTable, ReleaseArtifact, RunEvent
 
 
@@ -17,6 +18,7 @@ def main() -> None:
     write_schema(root / "run_event.schema.json", RunEvent.model_json_schema())
     write_schema(root / "pricing_table.schema.json", PricingTable.model_json_schema())
     write_schema(root / "policy.schema.json", Policy.model_json_schema())
+    write_schema(root / "pricing_catalog.schema.json", PricingCatalog.model_json_schema())
 
 
 if __name__ == "__main__":

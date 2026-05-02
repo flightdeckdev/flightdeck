@@ -88,7 +88,7 @@ Without **`--backup`**, only the checks run. In both cases **`migrate()`** runs 
 
 Output format:
 ```
-ok    schema_migrations: applied=[1, 2, 3] expected 1..3
+ok    schema_migrations: applied=[1, 2, 3, 4] expected 1..4
 ok    promoted_pointer:agent_support:production: release_id=rel_abc123 ok
 ok    audit_seq: contiguous 1..4 (4 row(s))
 Doctor: 3 check(s), all passed.
@@ -296,6 +296,28 @@ Policy: FAIL
 Error: Promotion blocked by policy
 ```
 
+When **`promotion_requires_approval: true`** in `flightdeck.yaml`, use **`flightdeck release promote-request`**
+and **`flightdeck release promote-confirm`** instead of a direct `promote` (see [http-api.md](http-api.md)).
+
+### `flightdeck release promote-request`
+
+Create a pending promotion after policy evaluation (requires `promotion_requires_approval: true`).
+
+```bash
+flightdeck release promote-request RELEASE_ID --env ENV --window WINDOW --reason REASON
+```
+
+On success prints `request_id=…` and policy JSON. If policy would block promotion, exits 1
+and does **not** create a pending row.
+
+### `flightdeck release promote-confirm`
+
+Apply a pending request from `promote-request`.
+
+```bash
+flightdeck release promote-confirm REQUEST_ID --approval-reason REASON
+```
+
 ### `flightdeck release rollback`
 
 Roll back to a prior release. Same contract as `promote` but records `"rollback"` in
@@ -424,7 +446,15 @@ If no policy has been set, prints the default policy (all constraints `null`/dis
 
 ## `flightdeck runs`
 
-Subgroup for ingesting run events.
+Subgroup for ingesting and listing run events.
+
+### `flightdeck runs list`
+
+Print ingested events for a release (newest first), truncated to `--limit`.
+
+```bash
+flightdeck runs list RELEASE_ID --window WINDOW [--env ENV] [--tenant …] [--task …] [--limit N] [--output json]
+```
 
 ### `flightdeck runs ingest`
 

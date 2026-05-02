@@ -94,6 +94,8 @@ def test_http_routes_expose_read_and_diff(tmp_path: Path) -> None:
             assert body["samples"]["baseline_runs"] == 5
             assert body["samples"]["candidate_runs"] == 5
             assert body["pricing"]["warnings"] == []
+            assert body["pricing"]["hints"] == []
+            assert body["pricing"]["catalog"]["enabled"] is False
 
 
 def test_http_v1_diff_pricing_warnings_when_model_missing(tmp_path: Path) -> None:

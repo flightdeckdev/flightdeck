@@ -40,6 +40,17 @@ Inside the Compose stack, **`exec`** into the running container with **`/workspa
 
 Set **`FLIGHTDECK_LOCAL_API_TOKEN`** in your environment before `docker compose up` (or in an `.env` file beside `docker-compose.yml`). Clients must send **`Authorization: Bearer …`** for **`POST /v1/promote`** and **`POST /v1/rollback`**. Ingest and diff are **not** behind this Bearer gate by default—treat network placement accordingly.
 
+## Helm (optional single-replica chart)
+
+A minimal chart lives under **`chart/flightdeck/`**. It runs one replica of **`flightdeck serve`** with an **`emptyDir`** workspace (ephemeral); for a persistent ledger, replace the volume in **`templates/deployment.yaml`** with a PVC or mount your own image init.
+
+```bash
+docker build -t flightdeck-serve:local .
+helm install fd ./chart/flightdeck --namespace flightdeck --create-namespace
+```
+
+Tune **`values.yaml`** (`image`, `resources`, `service.type`) for your cluster.
+
 ### Bind-mounting a host workspace
 
 To reuse an existing directory that already contains **`flightdeck.yaml`** and **`.flightdeck/`**, replace the `volumes` entry with:

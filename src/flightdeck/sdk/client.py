@@ -117,6 +117,90 @@ class FlightdeckClient:
         resp.raise_for_status()
         return resp.json()
 
+    def post_promote_request(
+        self,
+        *,
+        release_id: str,
+        environment: str,
+        window: str,
+        reason: str,
+        actor: str = "sdk",
+    ) -> dict[str, Any]:
+        body = {
+            "release_id": release_id,
+            "environment": environment,
+            "window": window,
+            "reason": reason,
+            "actor": actor,
+        }
+        resp = self._request_with_retry("POST", "/v1/promote/request", json=body, headers=self._json_headers())
+        resp.raise_for_status()
+        return resp.json()
+
+    def post_promote_confirm(
+        self,
+        *,
+        request_id: str,
+        approval_reason: str,
+        actor: str = "sdk",
+    ) -> dict[str, Any]:
+        body = {
+            "request_id": request_id,
+            "approval_reason": approval_reason,
+            "actor": actor,
+        }
+        resp = self._request_with_retry("POST", "/v1/promote/confirm", json=body, headers=self._json_headers())
+        resp.raise_for_status()
+        return resp.json()
+
+    def list_promotion_requests(
+        self,
+        *,
+        status: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        params: dict[str, str | int] = {"limit": limit}
+        if status is not None:
+            params["status"] = status
+        resp = self._request_with_retry(
+            "GET",
+            "/v1/promotion-requests",
+            params=params,
+            headers=self._auth_headers() or None,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    def list_runs(
+        self,
+        *,
+        release_id: str,
+        window: str,
+        environment: str | None = None,
+        tenant_id: str | None = None,
+        task_id: str | None = None,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        params: dict[str, str | int] = {
+            "release_id": release_id,
+            "window": window,
+            "limit": limit,
+        }
+        if environment is not None:
+            params["environment"] = environment
+        if tenant_id is not None:
+            params["tenant_id"] = tenant_id
+        if task_id is not None:
+            params["task_id"] = task_id
+        resp = self._request_with_retry(
+            "GET",
+            "/v1/runs",
+            params=params,
+            headers=self._auth_headers() or None,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
     def post_rollback(
         self,
         *,
@@ -279,6 +363,90 @@ class AsyncFlightdeckClient:
             "actor": actor,
         }
         resp = await self._request_with_retry("POST", "/v1/promote", json=body, headers=self._json_headers())
+        resp.raise_for_status()
+        return resp.json()
+
+    async def post_promote_request(
+        self,
+        *,
+        release_id: str,
+        environment: str,
+        window: str,
+        reason: str,
+        actor: str = "sdk",
+    ) -> dict[str, Any]:
+        body = {
+            "release_id": release_id,
+            "environment": environment,
+            "window": window,
+            "reason": reason,
+            "actor": actor,
+        }
+        resp = await self._request_with_retry("POST", "/v1/promote/request", json=body, headers=self._json_headers())
+        resp.raise_for_status()
+        return resp.json()
+
+    async def post_promote_confirm(
+        self,
+        *,
+        request_id: str,
+        approval_reason: str,
+        actor: str = "sdk",
+    ) -> dict[str, Any]:
+        body = {
+            "request_id": request_id,
+            "approval_reason": approval_reason,
+            "actor": actor,
+        }
+        resp = await self._request_with_retry("POST", "/v1/promote/confirm", json=body, headers=self._json_headers())
+        resp.raise_for_status()
+        return resp.json()
+
+    async def list_promotion_requests(
+        self,
+        *,
+        status: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        params: dict[str, str | int] = {"limit": limit}
+        if status is not None:
+            params["status"] = status
+        resp = await self._request_with_retry(
+            "GET",
+            "/v1/promotion-requests",
+            params=params,
+            headers=self._auth_headers() or None,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    async def list_runs(
+        self,
+        *,
+        release_id: str,
+        window: str,
+        environment: str | None = None,
+        tenant_id: str | None = None,
+        task_id: str | None = None,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        params: dict[str, str | int] = {
+            "release_id": release_id,
+            "window": window,
+            "limit": limit,
+        }
+        if environment is not None:
+            params["environment"] = environment
+        if tenant_id is not None:
+            params["tenant_id"] = tenant_id
+        if task_id is not None:
+            params["task_id"] = task_id
+        resp = await self._request_with_retry(
+            "GET",
+            "/v1/runs",
+            params=params,
+            headers=self._auth_headers() or None,
+        )
         resp.raise_for_status()
         return resp.json()
 
