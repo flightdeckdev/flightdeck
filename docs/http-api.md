@@ -242,7 +242,7 @@ Full field reference: [`schemas/v1/run_event.schema.json`](../schemas/v1/run_eve
 | `api_version` | `"v1"` | no (defaults to `"v1"`) | Must be `"v1"` or omitted. Any other value returns HTTP 400. |
 | `type` | `"run_start"` \| `"run_end"` | no (defaults to `"run_end"`) | Event type. Only `"run_end"` events carry cost/latency data; `"run_start"` is accepted but contributes no usage. |
 | `timestamp` | ISO-8601 string | **yes** | Event timestamp. Used for time-window filtering in diff queries. |
-| `workspace_id` | string | no (defaults to `"ws_local"`) | Workspace identifier for multi-workspace setups. |
+| `workspace_id` | string | no (defaults to `"ws_local"`) | Workspace identifier. Stored with the event but **not used as a query filter** — diff queries filter on `release_id`, `tenant_id`, `task_id`, and `environment` only. |
 | `agent_id` | string | **yes** | Stable agent identifier (must match the `spec.agent.agent_id` in the registered release). |
 | `release_id` | string | **yes** | The `release_id` returned by `flightdeck release register`. Links the event to a release record. |
 | `run_id` | string | **yes** | Unique run identifier per workspace. Duplicate `run_id` values are silently skipped. |
