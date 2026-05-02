@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -76,6 +77,40 @@ def test_release_diff_fail_on_policy_exits_1(tmp_path: Path, monkeypatch) -> Non
     )
     assert res_gate.exit_code != 0
     assert "Policy gate: diff blocked by active policy" in res_gate.output
+
+    res_json_gate = runner.invoke(
+        cli,
+        [
+            "release",
+            "diff",
+            baseline_id,
+            candidate_id,
+            "--window",
+            "7d",
+            "--output",
+            "json",
+            "--fail-on-policy",
+        ],
+    )
+    assert res_json_gate.exit_code != 0
+    out = res_json_gate.output
+    start = out.find("{")
+    assert start != -1
+    depth = 0
+    end = -1
+    for i in range(start, len(out)):
+        c = out[i]
+        if c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+            if depth == 0:
+                end = i + 1
+                break
+    assert end != -1
+    body = json.loads(out[start:end])
+    assert body["policy"]["passed"] is False
+    assert "Policy gate: diff blocked by active policy" in out
 
 
 def test_release_diff_contract_invalid_window_is_nonzero(tmp_path: Path, monkeypatch) -> None:

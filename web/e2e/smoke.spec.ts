@@ -6,6 +6,7 @@ test("home loads FlightDeck shell and overview tables", async ({ page }) => {
   await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Overview" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Overview", level: 2 })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Ledger metrics" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("columnheader", { name: "Release ID" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("No releases yet.")).toBeVisible();
 });

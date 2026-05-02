@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useState, type ReactNode } from "react";
-import type { ActionRow, PromotedRow, ReleaseRow, TimelinePayload } from "../api";
-import { loadTimeline } from "../api";
+import type { ActionRow, MetricsPayload, PromotedRow, ReleaseRow, TimelinePayload } from "../api";
+import { fetchMetrics, loadTimeline } from "../api";
 import { useTimelineRefresh } from "../context/TimelineRefreshContext";
 import { Badge } from "../components/Badge";
 import { JsonPanel } from "../components/JsonPanel";
@@ -36,17 +36,29 @@ function TableShell({
 export function OverviewPage() {
   const { generation } = useTimelineRefresh();
   const [data, setData] = useState<TimelinePayload | null>(null);
+  const [metrics, setMetrics] = useState<MetricsPayload | null>(null);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setMetricsError(null);
     try {
-      setData(await loadTimeline());
-    } catch (e) {
-      setError(String(e));
-      setData(null);
+      const [timeline, m] = await Promise.allSettled([loadTimeline(), fetchMetrics()]);
+      if (timeline.status === "fulfilled") {
+        setData(timeline.value);
+      } else {
+        setError(String(timeline.reason));
+        setData(null);
+      }
+      if (m.status === "fulfilled") {
+        setMetrics(m.value);
+      } else {
+        setMetricsError(String(m.reason));
+        setMetrics(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -79,6 +91,62 @@ export function OverviewPage() {
 
       {error && !loading ? <p className="fd-alert fd-alert--error">{error}</p> : null}
       {loading ? <p className="fd-muted">Loading…</p> : null}
+
+      {metrics ? (
+        <section className="fd-card" aria-label="Ledger metrics">
+          <div className="fd-card__head">
+            <h2 className="fd-card__title">Ledger metrics</h2>
+            <p className="fd-card__desc">
+              Read-only counters from{" "}
+              <code className="fd-mono fd-mono--sm">GET /v1/metrics</code> (schema v
+              {metrics.schema_version}, generated{" "}
+              {new Date(metrics.generated_at).toLocaleString()}).
+            </p>
+          </div>
+          <div className="fd-metric-grid">
+            <div className="fd-metric">
+              <div className="fd-metric__label">Releases</div>
+              <div className="fd-metric__row">
+                <span className="fd-metric__bc">{metrics.counters.releases_total}</span>
+              </div>
+            </div>
+            <div className="fd-metric">
+              <div className="fd-metric__label">Pricing tables</div>
+              <div className="fd-metric__row">
+                <span className="fd-metric__bc">{metrics.counters.pricing_tables_total}</span>
+              </div>
+            </div>
+            <div className="fd-metric">
+              <div className="fd-metric__label">Run events</div>
+              <div className="fd-metric__row">
+                <span className="fd-metric__bc">{metrics.counters.run_events_total}</span>
+              </div>
+            </div>
+            <div className="fd-metric">
+              <div className="fd-metric__label">Promoted pointers</div>
+              <div className="fd-metric__row">
+                <span className="fd-metric__bc">{metrics.counters.promoted_pointers_total}</span>
+              </div>
+            </div>
+            <div className="fd-metric">
+              <div className="fd-metric__label">Actions</div>
+              <div className="fd-metric__row">
+                <span className="fd-metric__bc">{metrics.counters.actions_total}</span>
+              </div>
+              {Object.keys(metrics.counters.actions_by_action).length > 0 ? (
+                <div className="fd-metric__delta">
+                  {Object.entries(metrics.counters.actions_by_action)
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([k, v]) => `${k}=${v}`)
+                    .join(" · ")}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </section>
+      ) : metricsError && !loading ? (
+        <p className="fd-alert fd-alert--warn">Ledger metrics unavailable: {metricsError}</p>
+      ) : null}
 
       {data ? (
         <>

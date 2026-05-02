@@ -190,6 +190,11 @@ following differ between baseline and candidate:
 These fields are populated by `pricing_entry_for(table, model)` in `flightdeck.ledger` after
 `diff_releases` returns and before the `DiffOutcome` is constructed.
 
+`DiffOutcome.pricing_warnings` is a tuple of human-readable strings when the release artifact's
+`spec.runtime.model` has **no** matching row in that side's imported pricing table. Warnings are
+**diagnostic only** (they do not change `policy`). If ingested events reference a model that
+cannot be priced, `compute_rollup` still raises and `compute_diff` surfaces that as before.
+
 **CLI output** — when `pricing_or_model_changed` is `True`, the CLI prints:
 
 ```
@@ -200,8 +205,12 @@ Per-1k token prices: input 0.005000 -> 0.004500, output 0.015000 -> 0.013500
 The **Per-1k token prices** line is only printed when both input and output rates are present
 for both sides. If any rate is `None`, that line is omitted.
 
+When `pricing_warnings` is non-empty, the CLI also prints one **`WARNING:`** line per string
+before the `NOTE:` / per-1k lines.
+
 **HTTP API** — `/v1/diff` includes a `pricing.prices` object alongside the existing
-`pricing_or_model_changed` flag:
+`pricing_or_model_changed` flag and a `pricing.warnings` string array (empty when both models
+resolve to a table row):
 
 ```json
 "pricing": {
@@ -219,14 +228,16 @@ for both sides. If any rate is `None`, that line is omitted.
     "candidate_input_usd_per_1k_tokens": 0.0045,
     "candidate_output_usd_per_1k_tokens": 0.0135,
     "candidate_cached_input_usd_per_1k_tokens": null
-  }
+  },
+  "warnings": []
 }
 ```
 
 `pricing.prices` is always present in the response (not gated on `pricing_or_model_changed`).
 Fields are `null` when the rate is not set in the pricing table.
 
-**Web UI** — the `DiffPage` `fd-alert--warn` banner shows the per-1k input/output price deltas
+**Web UI** — the `DiffPage` shows `pricing.warnings` as a warning list when non-empty, then the
+`fd-alert--warn` banner for `pricing_or_model_changed` when applicable, and the per-1k input/output price deltas
 (baseline → candidate) when all four rates are present. See [web-ui.md § DiffPage](web-ui.md).
 
 This is an informational signal — the diff still computes and the policy still evaluates; cost

@@ -14,22 +14,14 @@ This roadmap is meant to be clear from **what is already shipped** to **near-ter
 - **Economic + operational governance:** immutable pricing imports, trusted `release diff`, policy-gated `promote` and `rollback`.
 - **Audit trail:** promotion/rollback history with stable sequencing (`audit_seq`) and integrity checks via `doctor`.
 - **Evidence ingestion:** `runs ingest` from JSONL/JSON arrays plus stable `POST /v1/events` contracts (`schemas/v1/`).
-- **Local API + UI:** `flightdeck serve` routes and web UI (Overview, Diff, Promote) in `src/flightdeck/server/static/`.
+- **Local API + UI:** `flightdeck serve` routes and web UI (Overview with ledger metrics, Diff, Promote) in `src/flightdeck/server/static/`.
 - **SDK and tooling:** Python sync/async clients with retries/batching and `flightdeck-quickstart-verify`.
 
 ---
 
 ## Next release
 
-**v1.0.4 is shipped.** See **[CHANGELOG.md](CHANGELOG.md)** for the full list of additions. The
-v1.0.4 slice delivered: `GET /v1/metrics` (JSON ledger counters), `pricing.prices` on
-`POST /v1/diff`, CLI **Per-1k token prices** output, matching web diff banner detail, and the
-**[examples/README.md](examples/README.md)** end-to-end walkthrough.
-
-**v1.0.5 / next patch:** candidates include documentation completeness improvements (time-window
-semantics, error message catalog, checksum format, tenant/task filter scope in UI), and
-continued Phase 0 hardening. No breaking changes expected to stable CLI, HTTP, or
-**`api_version` `v1`** contracts.
+**v1.0.6** (patch): Phase 0 closure — **`flightdeck release diff --output json`** (same shape as **`POST /v1/diff`**); **`pricing.warnings`** when a release model has no row in its pricing table (CLI **`WARNING:`** lines + web Diff); **Overview** ledger metrics card (**`GET /v1/metrics`**); **`curl`** + **Node** samples under **[examples/integration/](examples/integration/README.md)**; **`flightdeck doctor --backup PATH`** (SQLite online backup); **[examples/deploy/](examples/deploy/README.md)** documents Compose **`/health`** healthcheck and backup scheduling. **Phase 0** is declared **closed**; **catalog-level** multi-provider normalization moves to **Phase 1**. See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**. No breaking changes to stable CLI, HTTP, or **`api_version` `v1`** contracts.
 
 ---
 
@@ -57,11 +49,11 @@ Goal: prove the wedge with real teams using FlightDeck as release governance sou
 
 - Harden CLI/schema contracts and edge-case policy coverage (sample windows, sparse traffic, error paths).
 - Add concrete integration references: app runtime event emitters, CI pipeline examples, and deployment recipes for `flightdeck serve`.
-- Improve pricing normalization for multiple provider inputs while keeping diff semantics stable.
+- **Catalog-level cross-vendor pricing normalization** — deferred to **Phase 1** (see Phase 1 build list). **v1.0.4–v1.0.6** ship per-side **`pricing.prices`** and **`pricing.warnings`** diagnostics only.
 - Strengthen local security ergonomics: explicit token/env status in UI, mutation guardrails, optional read-only UX.
 - Continue UI productization for current scope (structured views over raw JSON where stable).
 
-### Phase 0 progress (v1.0.3–v1.0.4)
+### Phase 0 progress (v1.0.3–v1.0.6)
 
 Shipped on **`main`**:
 
@@ -72,8 +64,14 @@ Shipped on **`main`**:
 - **Pricing diagnostics (v1.0.4):** **`pricing.prices`** on **`POST /v1/diff`** and matching CLI / web lines for per-1k input/output unit prices when pricing or model differs.
 - **Operating narrative (v1.0.4):** **[examples/README.md](examples/README.md)** index tying emit → ingest → verify → diff/gate → promote → serve.
 - **Observability foundation (v1.0.4):** **`GET /v1/metrics`** JSON counters over the local ledger (not Prometheus/OTel; longer arc stays mid term).
+- **Diff ergonomics (v1.0.5):** **`flightdeck release diff --output json`**; **`pricing.warnings`** on **`POST /v1/diff`** / CLI / web when the release model is missing from the imported pricing table; **Overview** shows key **`GET /v1/metrics`** counters.
+- **Operator + pipeline breadth (v1.0.6):** **`curl`** and **Node** **`emit_sample_events.node.mjs`** under **[examples/integration/](examples/integration/README.md)**; **`flightdeck doctor --backup`**; deploy README covers healthcheck + backup scheduling.
 
-**Still open in Phase 0** (see gaps table and Phase 1): **catalog-level** multi-provider normalization (single comparable unit across vendors), deeper **event pipeline** and **fleet** ergonomics, and **OTLP-oriented** telemetry remain beyond this patch.
+### Phase 0 status
+
+**Phase 0 is closed** as of **v1.0.6** for the local-first wedge (immutable releases, evidence ingest, diff + policy gate, promote/rollback, audit, CI/deploy/integration references, metrics, diagnostics, and operator backup ergonomics).
+
+**Carried forward to Phase 1** (see gaps table): **catalog-level** multi-provider pricing normalization (single comparable unit across vendors), deeper **fleet** ergonomics, and **OTLP-oriented** telemetry — not blocking further patch releases on the Phase 0 spine.
 
 ### Phase-0 success signals
 
@@ -91,7 +89,8 @@ Goal: move from solid local tooling to repeatable production usage patterns.
 ### Build in this phase
 
 - Human-in-the-loop approval workflow on top of policy gates (without requiring a hosted control plane).
-- Stronger multi-provider pricing normalization and clearer mismatch diagnostics.
+- **Catalog-level multi-provider pricing normalization** — single comparable tariff unit across vendors; additive to today's per-provider **`pricing import`** tables and **`pricing.prices`** / **`pricing.warnings`** diagnostics.
+- Stronger mismatch diagnostics beyond table row presence (for example version skew hints) as needed for the catalog work.
 - Incident forensics improvements (replay/trace-style analysis over ingested evidence) as governance support tooling.
 - Deployment hardening artifacts (for example Helm or equivalent) if a blessed server topology is chosen.
 - Multi-workspace operator ergonomics (naming, templates, reproducible setup patterns).

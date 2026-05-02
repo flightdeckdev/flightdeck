@@ -16,7 +16,7 @@ The app uses **HashRouter** (`react-router-dom`) so all navigation stays within 
 
 | Hash path | Component | HTTP calls | Notes |
 |-----------|-----------|-----------|-------|
-| `#/` | `OverviewPage` | `GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions` (parallel) | |
+| `#/` | `OverviewPage` | `GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions`, `GET /v1/metrics` (parallel where applicable) | Ledger metrics card is read-only counters |
 | `#/diff` | `DiffPage` | `POST /v1/diff` | |
 | `#/actions` | `ActionsPage` | `POST /v1/promote` or `POST /v1/rollback` | Redirects to `#/` when `VITE_FLIGHTDECK_UI_READ_ONLY=true` |
 | `#/*` (any other) | — | Redirects to `#/` | |
@@ -121,10 +121,11 @@ fail. This is a configuration hint only — the server enforces the actual gate.
 
 ## `OverviewPage` (`web/src/pages/OverviewPage.tsx`)
 
-Read-only dashboard. Renders three tables from `loadTimeline()` output:
+Read-only dashboard. Renders a **Ledger metrics** card from `fetchMetrics()` plus three tables from `loadTimeline()` output:
 
-| Table | Source | Columns |
+| Block | Source | Content |
 |-------|--------|---------|
+| Ledger metrics | `GET /v1/metrics` | Releases, pricing tables, run events, promoted pointers, and actions totals (plus `actions_by_action` breakdown), `schema_version`, `generated_at` |
 | Releases | `GET /v1/releases` | Release ID, Agent, Version, Environment, Checksum, Created |
 | Promoted | `GET /v1/promoted` | Agent, Environment, Active release |
 | Recent actions | `GET /v1/actions` | When, Action, Policy (PASS/FAIL badge), Release, Environment, Reason |
@@ -160,6 +161,8 @@ On submit, the raw diff response is parsed and rendered as:
 
 - **Summary card:** policy badge (PASS / FAIL), failure reasons list, sample counts and
   confidence label (including `confidence_reason` when present).
+- **Pricing table warnings:** when `pricing.warnings` is a non-empty string array, a
+  `fd-alert--warn` list is shown above the pricing/model-change banner (diagnostic only).
 - **Pricing change warning:** when the diff response includes a `pricing` block with
   `pricing_or_model_changed: true`, a `fd-alert--warn` banner is shown in the summary
   card. It names the baseline and candidate provider/version/model so the user knows the

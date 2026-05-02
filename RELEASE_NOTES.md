@@ -4,6 +4,14 @@ High-level notes for **shipping FlightDeck**. Detailed history: **[CHANGELOG.md]
 
 Narrative docs (including the CLI reference) are maintained on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** `main`; this file and **`schemas/`** ship in minimal clones.
 
+## v1.0.6 — Phase 0 closure (backup, cross-language emitters, roadmap)
+
+Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): **`flightdeck doctor --backup PATH`** performs a SQLite online backup of the workspace DB; **[examples/integration/](examples/integration/README.md)** gains **`curl`** and a **Node** **`emit_sample_events.node.mjs`** path for **`POST /v1/events`**; **[examples/deploy/README.md](examples/deploy/README.md)** documents the Compose **`/health`** healthcheck and backup scheduling. **ROADMAP:** **Phase 0** is **closed**; **catalog-level** multi-provider pricing normalization is an explicit **Phase 1** build item. **Stable contracts:** additive CLI flag and HTTP field **`pricing.warnings`** (from **v1.0.5**) remain backward-compatible.
+
+## v1.0.5 — Diff JSON output, pricing warnings, metrics in Overview
+
+Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): **`flightdeck release diff --output json`** matches **`POST /v1/diff`** for machine consumers; **`pricing.warnings`** surfaces missing pricing-table rows for a release's resolved model (CLI **`WARNING:`** lines + web); **Overview** shows **`GET /v1/metrics`** counters. **Stable contracts:** additive only.
+
 ## v1.0.4 — Phase 0 closing slice (pricing diagnostic, examples index, metrics)
 
 Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): **`GET /v1/metrics`** exposes additive JSON counters for operators; **`POST /v1/diff`** and **`flightdeck release diff`** add **`pricing.prices`** / a **Per-1k token prices** line when pricing or model differs, so cost deltas are easier to interpret; **[examples/README.md](examples/README.md)** ties **integration**, **CI**, and **deploy** examples into one loop; web **Run diff** shows the same unit-price deltas when present. **Stable contracts:** additive HTTP and CLI output only; no **`v1`** payload or schema removals.

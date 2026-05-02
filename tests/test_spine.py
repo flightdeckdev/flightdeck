@@ -112,11 +112,20 @@ def write_policy(
     *,
     max_cost_per_run_usd: float | None = None,
     require_high_diff_confidence: bool = False,
+    min_candidate_runs: int | None = None,
+    min_baseline_runs: int | None = None,
+    min_low_runs: int | None = None,
 ) -> Path:
     p = tmp_path / "policy.yaml"
     data: dict[str, object] = {"policy_id": "test-policy", "require_high_diff_confidence": require_high_diff_confidence}
     if max_cost_per_run_usd is not None:
         data["max_cost_per_run_usd"] = max_cost_per_run_usd
+    if min_candidate_runs is not None:
+        data["min_candidate_runs"] = min_candidate_runs
+    if min_baseline_runs is not None:
+        data["min_baseline_runs"] = min_baseline_runs
+    if min_low_runs is not None:
+        data["min_low_runs"] = min_low_runs
     p.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
     return p
 
@@ -1086,3 +1095,84 @@ def test_diff_cross_model_same_provider(tmp_path: Path, monkeypatch) -> None:
         assert prices["candidate_input_usd_per_1k_tokens"] == 5.0
         assert prices["baseline_output_usd_per_1k_tokens"] == 2.0
         assert prices["candidate_output_usd_per_1k_tokens"] == 10.0
+
+
+def test_release_diff_output_json_shape(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    assert runner.invoke(cli, ["init"]).exit_code == 0
+    policy = write_policy(
+        tmp_path,
+        min_candidate_runs=0,
+        min_baseline_runs=0,
+        min_low_runs=0,
+        require_high_diff_confidence=False,
+    )
+    assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
+    pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
+    assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0
+    r1 = write_release(tmp_path, agent_id="agent_support", version="1", pricing_provider="openai", pricing_version="openai-2026-04-30")
+    r2 = write_release(tmp_path, agent_id="agent_support", version="2", pricing_provider="openai", pricing_version="openai-2026-04-30")
+    rel1 = runner.invoke(cli, ["release", "register", str(r1)]).output.strip()
+    rel2 = runner.invoke(cli, ["release", "register", str(r2)]).output.strip()
+
+    res = runner.invoke(
+        cli,
+        ["release", "diff", rel1, rel2, "--window", "7d", "--output", "json"],
+    )
+    assert res.exit_code == 0
+    body = json.loads(res.output)
+    assert body["window"] == "7d"
+    assert set(body.keys()) >= {"filters", "metrics", "policy", "pricing", "samples", "since", "until"}
+    assert body["pricing"]["warnings"] == []
+    assert body["policy"]["passed"] is True
+
+
+def test_release_diff_pricing_warnings_when_model_not_in_table(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    assert runner.invoke(cli, ["init"]).exit_code == 0
+    policy = write_policy(
+        tmp_path,
+        min_candidate_runs=0,
+        min_baseline_runs=0,
+        min_low_runs=0,
+        require_high_diff_confidence=False,
+    )
+    assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
+    pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30", model="gpt-4.1-mini")
+    assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0
+    r1 = write_release(
+        tmp_path,
+        agent_id="agent_support",
+        version="1",
+        pricing_provider="openai",
+        pricing_version="openai-2026-04-30",
+        model="gpt-4.99-unknown",
+    )
+    r2 = write_release(
+        tmp_path,
+        agent_id="agent_support",
+        version="2",
+        pricing_provider="openai",
+        pricing_version="openai-2026-04-30",
+        model="gpt-4.99-unknown",
+    )
+    rel1 = runner.invoke(cli, ["release", "register", str(r1)]).output.strip()
+    rel2 = runner.invoke(cli, ["release", "register", str(r2)]).output.strip()
+
+    res_text = runner.invoke(cli, ["release", "diff", rel1, rel2, "--window", "7d"])
+    assert res_text.exit_code == 0
+    assert "WARNING: baseline pricing table" in res_text.output
+    assert "WARNING: candidate pricing table" in res_text.output
+    assert "gpt-4.99-unknown" in res_text.output
+
+    res_json = runner.invoke(
+        cli,
+        ["release", "diff", rel1, rel2, "--window", "7d", "--output", "json"],
+    )
+    assert res_json.exit_code == 0
+    body = json.loads(res_json.output)
+    w = body["pricing"]["warnings"]
+    assert len(w) == 2
+    assert all("gpt-4.99-unknown" in x for x in w)
