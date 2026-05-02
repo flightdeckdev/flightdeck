@@ -21,7 +21,15 @@ This roadmap is meant to be clear from **what is already shipped** to **near-ter
 
 ## Next release
 
-**v1.0.4** (patch): Phase 0 closing slice — **`GET /v1/metrics`** (JSON ledger counters); **`pricing.prices`** on **`POST /v1/diff`** plus CLI **Per-1k token prices** line and matching web diff detail when pricing/model changes; **[examples/README.md](examples/README.md)** end-to-end walkthrough linking **integration**, **CI**, and **deploy** examples. See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**. No breaking changes to stable CLI, HTTP, or **`api_version` `v1`** contracts.
+**v1.0.4 is shipped.** See **[CHANGELOG.md](CHANGELOG.md)** for the full list of additions. The
+v1.0.4 slice delivered: `GET /v1/metrics` (JSON ledger counters), `pricing.prices` on
+`POST /v1/diff`, CLI **Per-1k token prices** output, matching web diff banner detail, and the
+**[examples/README.md](examples/README.md)** end-to-end walkthrough.
+
+**v1.0.5 / next patch:** candidates include documentation completeness improvements (time-window
+semantics, error message catalog, checksum format, tenant/task filter scope in UI), and
+continued Phase 0 hardening. No breaking changes expected to stable CLI, HTTP, or
+**`api_version` `v1`** contracts.
 
 ---
 

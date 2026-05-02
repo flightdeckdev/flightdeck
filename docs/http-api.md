@@ -105,12 +105,17 @@ List all registered releases.
       "agent_id": "agent_support",
       "version": "1.2.0",
       "environment": "production",
-      "checksum": "sha256:...",
+      "checksum": "a3f1c2e4b5d6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
       "created_at": "2026-05-01T12:00:00+00:00"
     }
   ]
 }
 ```
+
+`checksum` is a **64-character lowercase hex string** (raw SHA-256; no `sha256:` prefix). The
+same value is printed with a `sha256=` label by `flightdeck release show` and
+`flightdeck release verify` for human readability, but the stored and returned value is the
+bare hex.
 
 ---
 
@@ -137,13 +142,16 @@ List the currently promoted release for each `agent_id` / `environment` pair.
 
 List promotion and rollback actions from the audit ledger.
 
+Results are returned **newest first** (`ORDER BY created_at DESC`), so the most recent action
+is always the first element in the array.
+
 **Query parameters**
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `agent` | string | — | Filter by `agent_id` |
 | `env` | string | — | Filter by environment |
-| `limit` | integer | 50 | Max records returned (1–500) |
+| `limit` | integer | 50 | Max records returned (1–500); server enforces a minimum of 1 and a maximum of 500 |
 
 **Response**
 ```json
@@ -229,7 +237,11 @@ produce an error.
 
 **Errors**
 - HTTP 400 — unsupported `api_version` value, or a field in a `RunEvent` fails type/range
-  validation after the per-event `api_version` check.
+  validation after the per-event `api_version` check. Field validation errors include
+  the prefix `"Invalid RunEvent: "` in the `detail` string, e.g.
+  `"Invalid RunEvent: 1 validation error for RunEvent …"`. Client code that parses
+  error messages can key off this prefix to distinguish per-event validation failures
+  from `api_version` rejections.
 - HTTP 422 — `events` array is empty or the request body does not match the expected shape
   (Pydantic validation error; returned as an array under `detail`).
 
@@ -301,8 +313,17 @@ the audit ledger.
 }
 ```
 
-`window` format: `{N}d` (days), `{N}h` (hours), `{N}m` (minutes). Required.
+`window` format: `{N}d` (days), `{N}h` (hours), `{N}m` (minutes). Required. `N` must be
+a positive integer. Seconds and weeks are not supported. Examples: `"7d"`, `"24h"`,
+`"30m"`. Invalid formats return HTTP 400.
+
 `environment` defaults to `WorkspaceConfig.default_environment` when `null`.
+
+**Time-window semantics:** run events are queried with `timestamp >= since AND timestamp <
+until`. The interval is **half-open**: `since` is inclusive, `until` is exclusive. Both
+boundaries are in UTC. `until` is set to the server's clock at the moment the request is
+processed; `since` is `until - window_delta`. An event exactly at `until` is **not**
+included.
 
 **Response**
 ```json
