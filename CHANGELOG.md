@@ -2,16 +2,17 @@
 
 All notable changes to FlightDeck will be documented in this file.
 
-This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**, documented CLI behavior (**[docs/cli.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/cli.md)** on the canonical **`main`** branch), committed **`schemas/v1/`**, and **`POST /v1/events`** payloads with **`api_version` `v1`** are treated as stable public contracts unless a release notes a semver-major bump.
+This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**, documented CLI behavior (**[README.md](https://github.com/flightdeckdev/flightdeck/blob/main/README.md)** on the canonical **`main`** branch), committed **`schemas/v1/`**, and **`POST /v1/events`** payloads with **`api_version` `v1`** are treated as stable public contracts unless a release notes a semver-major bump.
 
 ## Unreleased
 
 ### Added
 
-- **`uv.lock`** and **[uv](https://docs.astral.sh/uv/)**-based workflow: **`uv sync --extra dev`** / **`uv sync --frozen --extra dev`** for reproducible installs; **`uv run …`** for commands (see **`DEVELOPMENT.md`**).
-- **CI:** **`astral-sh/setup-uv`** with **`uv sync --frozen --extra dev`** and **`uv run python -m …`** (avoids **`uv run pytest`** path quirks with **`from tests.…`** imports).
-- **`.github/workflows/release-pypi.yml`:** on push of **`vMAJOR.MINOR.PATCH`**, verify tag matches **`pyproject.toml`** and **`src/flightdeck/__init__.py`**, run **ruff** / **pytest** / schema drift, **`uv build`**, publish to **PyPI** via **OIDC** trusted publishing (**publish attestations**), and create a **GitHub Release** with **`dist/*`** assets (**`softprops/action-gh-release`**).
-- **`tests/test_version_consistency.py`:** assert **`pyproject.toml`** **`version`** matches **`flightdeck.__version__`** (same invariant as the release workflow).
+- **Quickstart:** **`flightdeck-quickstart-verify`**, **`flightdeck.quickstart_smoke`**, **`scripts/quickstart_smoke.py`**; **CI** and **PyPI release** run **`uv run flightdeck-quickstart-verify`** (release: after schema drift check).
+- **HTTP SDK:** **`FlightdeckClient`** / **`AsyncFlightdeckClient`** — optional **`api_token`**, **`health`**, **`list_releases`** / **`list_promoted`** / **`list_actions`**, **`post_diff`** / **`post_promote`** / **`post_rollback`**, plus ingest batching and retries.
+- **Web + E2E:** React/Vite **`web/`**, committed **`src/flightdeck/server/static/`**, FastAPI **`/assets`**; Vite dev proxy **`/v1`** / **`/health`**, optional **`VITE_FLIGHTDECK_LOCAL_API_TOKEN`**; **`.gitattributes`** LF on **`static/`**; **`web/e2e/`**, **`web/playwright.config.ts`**, **`web/scripts/e2e-server.mjs`**, **`@playwright/test`**; **CI** / **PyPI release**: **`npm ci`**, **`npm run build`**, **`git diff --exit-code static/`**, **`npx playwright install chromium`**, **`npm run test:e2e`**.
+- **Tests:** CLI contracts (**`release verify`**, **`diff`**, **`history`**, **`rollback`**); invalid JSON fixtures (**`PricingTable`**, **`RunEvent`**, **`ReleaseArtifact`**).
+- **Tooling:** **`uv.lock`** / **`uv sync --frozen --extra dev`** / **`astral-sh/setup-uv`**; **`.github/workflows/release-pypi.yml`** (tag ↔ **`pyproject.toml`** / **`__init__.py`**, ruff, pytest, schemas, **`uv build`**, OIDC **PyPI**, GitHub Release); **`tests/test_version_consistency.py`**.
 
 ### Fixed
 
@@ -19,6 +20,7 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ### Changed
 
+- **Docs:** README deduplicates **RELEASE_NOTES** links; **CHANGELOG** historic bullets use canonical **`https://github.com/flightdeckdev/flightdeck/...`** URLs for **`docs/*`** and **RESEARCH.md** (this slim tree does not ship those files).
 - **`tests/conftest.py`:** create repo **`.tmp/`** at import time so **`pytest --basetemp=.tmp/pytest`** works on fresh checkouts and **Linux** CI (parent dir is no longer Windows-only).
 - **`pyproject.toml` `[project] name`:** **`flightdeck-ai`** to match the **PyPI** trusted-publisher project; install with **`pip install flightdeck-ai`** / **`uv add flightdeck-ai`** (CLI remains **`flightdeck`**, imports **`flightdeck.*`**).
 - **Contributor docs** (**`README.md`**, **`DEVELOPMENT.md`**, **`CONTRIBUTING.md`**, **`AGENTS.md`**, **`CLAUDE.md`**, **`.cursorrules`**): prefer **uv**; keep **pip** / **`python -m venv`** as fallback.
@@ -75,16 +77,16 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ### Added
 
-- **[docs/cli.md](docs/cli.md)**: CLI reference (synopsis, flags, exit codes, pointers to quickstart examples).
+- **[docs/cli.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/cli.md)**: CLI reference (synopsis, flags, exit codes, pointers to quickstart examples).
 - **`scripts/quickstart_smoke.py`**: cross-platform quickstart smoke (**no bash**): temp workspace, Python placeholder substitution, **`release verify`**, **`doctor`**.
 - **CI:** run quickstart smoke on **Ubuntu** and **Windows** matrix jobs (alongside pytest and schema drift).
 - **Tests:** `tests/test_quickstart_smoke.py` exercises the smoke script.
-- **0.8 milestone planning** (CLI + CI): archived under **`docs/reviews/`** in development clones; shipped artifacts are **`docs/cli.md`** and **`scripts/quickstart_smoke.py`** above.
+- **0.8 milestone planning** (CLI + CI): archived under **`docs/reviews/`** in development clones; shipped CLI narrative is **[docs/cli.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/cli.md)** on the canonical repo; this tree ships **`scripts/quickstart_smoke.py`** / **`flightdeck-quickstart-verify`** (see **Unreleased**).
 
 ### Changed
 
-- **[docs/quickstart.md](docs/quickstart.md)**: recommend **`python scripts/quickstart_smoke.py`** on Windows; bash flow kept as optional.
-- **[docs/architecture.md](docs/architecture.md)**: deferred section updated for shipped SDK / rollback / serve / doctor / verify.
+- **[docs/quickstart.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/quickstart.md)**: recommend **`python scripts/quickstart_smoke.py`** on Windows; bash flow kept as optional.
+- **[docs/architecture.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/architecture.md)**: deferred section updated for shipped SDK / rollback / serve / doctor / verify.
 - **`scripts/verify-repo-standards.sh`** / **`.ps1`**: run **`quickstart_smoke.py`** after pytest (same bar as CI).
 
 ## 0.7.0 - 2026-04-30
@@ -112,7 +114,7 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ### Changed
 
-- **README** / **[docs/github-organization.md](docs/github-organization.md)** / **[docs/git-remotes.md](docs/git-remotes.md):** point at **`https://github.com/flightdeckdev/flightdeck`**.
+- **README** / **[docs/github-organization.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/github-organization.md)** / **[docs/git-remotes.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/git-remotes.md):** point at **`https://github.com/flightdeckdev/flightdeck`**.
 
 ## 0.5.1 - 2026-04-30
 
@@ -125,7 +127,7 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ### Added
 
-- **[docs/v1-next-steps.md](docs/v1-next-steps.md)**: Maintainer v1 gap analysis (P0/P1/P2), milestone sequencing (0.5–1.0), and risk callouts; tracks implementation status as work lands.
+- **[docs/v1-next-steps.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/v1-next-steps.md)**: Maintainer v1 gap analysis (P0/P1/P2), milestone sequencing (0.5–1.0), and risk callouts; tracks implementation status as work lands.
 - **`flightdeck serve`**: warns when `--host` is not loopback (trust boundary; see forward spec §4).
 - **`POST /v1/events`**: rejects unsupported `api_version` before Pydantic with a clear 400 detail.
 - **Ledger tests** (`tests/test_ledger.py`): `diff_releases` rejects cross-agent and mixed-agent run batches.
@@ -141,17 +143,17 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ### Added
 
-- **[docs/git-remotes.md](docs/git-remotes.md)**: configure **`origin`** (personal research) vs **`org`** ([flightdeckdev](https://github.com/flightdeckdev) canonical), with everyday `git push` examples.
+- **[docs/git-remotes.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/git-remotes.md)**: configure **`origin`** (personal research) vs **`org`** ([flightdeckdev](https://github.com/flightdeckdev) canonical), with everyday `git push` examples.
 
 ### Changed
 
-- **Research workflow docs** ([docs/research-workflow.md](docs/research-workflow.md), [RESEARCH.md](RESEARCH.md), [AGENTS.md](AGENTS.md), [.cursorrules](.cursorrules), [docs/github-organization.md](docs/github-organization.md)) now state explicitly: **personal account** = research clone; **org** = user-facing canonical.
+- **Research workflow docs** ([docs/research-workflow.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/research-workflow.md), [RESEARCH.md](https://github.com/flightdeckdev/flightdeck/blob/main/RESEARCH.md), [AGENTS.md](AGENTS.md), [.cursorrules](.cursorrules), [docs/github-organization.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/github-organization.md)) now state explicitly: **personal account** = research clone; **org** = user-facing canonical.
 
 ## 0.4.1 - 2026-04-30
 
 ### Added
 
-- **[docs/github-organization.md](docs/github-organization.md)** for the **[flightdeckdev](https://github.com/flightdeckdev)** org: when to add repos, pre-push checklist, private-file policy.
+- **[docs/github-organization.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/github-organization.md)** for the **[flightdeckdev](https://github.com/flightdeckdev)** org: when to add repos, pre-push checklist, private-file policy.
 - **`scripts/verify-repo-standards.sh`** / **`.ps1`**: run ruff + pytest before pushing.
 
 ### Changed
@@ -168,7 +170,7 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ### Added
 
-- **Forward v1 specification** (`docs/spec-v1-forward.md`): normative direction for v1 GA (versioning, migrations, bundle checksum canonicalization, trust boundaries, diff/policy defaults, SDK testing discipline). `docs/spec.md` remains the frozen 0.x implementation narrative; new guarantees land here first.
+- **Forward v1 specification** ([docs/spec-v1-forward.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/spec-v1-forward.md)): normative direction for v1 GA (versioning, migrations, bundle checksum canonicalization, trust boundaries, diff/policy defaults, SDK testing discipline). [`docs/spec.md`](https://github.com/flightdeckdev/flightdeck/blob/main/docs/spec.md) remains the frozen 0.x implementation narrative; new guarantees land here first.
 - **SDK unit test** using `httpx.MockTransport` so the Python client is covered without relying on sync ASGI transport quirks.
 
 ### Changed

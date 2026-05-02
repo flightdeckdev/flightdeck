@@ -1,6 +1,6 @@
 # Release notes (maintainer)
 
-High-level notes for **shipping FlightDeck**. Detailed history: **[CHANGELOG.md](CHANGELOG.md)**. Contract direction: **[docs/spec-v1-forward.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/spec-v1-forward.md)**. Backlog and milestone status: **[docs/v1-next-steps.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/v1-next-steps.md)**.
+High-level notes for **shipping FlightDeck**. Detailed history: **[CHANGELOG.md](CHANGELOG.md)**. Backlog and milestone status: **[ROADMAP.md](ROADMAP.md)**.
 
 Narrative docs (including the CLI reference) are maintained on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** `main`; this file and **`schemas/`** ship in minimal clones.
 
@@ -21,7 +21,7 @@ Details: **`DEVELOPMENT.md`** (PyPI release section).
 
 **v1.0.0** freezes the following unless a future **major** release says otherwise:
 
-- **CLI** — commands, flags, and exit codes as documented in **[docs/cli.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/cli.md)** (including **`release verify`** exit **2** on checksum mismatch).
+- **CLI** — commands, flags, and exit codes as documented in **[README.md](https://github.com/flightdeckdev/flightdeck/blob/main/README.md)** (including **`release verify`** exit **2** on checksum mismatch).
 - **JSON Schemas** — committed **`schemas/v1/`** for **`api_version` `v1`** payloads; regenerate via **`python scripts/generate_schemas.py`**; CI guards drift.
 - **HTTP** — **`POST /v1/events`**, envelope **`{ "events": [ … ] }`**, per-event **`api_version`** omitted or **`"v1"`**; rejects other values with **HTTP 400** and the stable **`detail`** format covered by tests.
 - **SQLite** — forward-only numbered migrations; **`flightdeck doctor`** checks migrations and **`audit_seq`** continuity as shipped.

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import datetime, timezone
 
 import httpx
+import pytest
 
 from flightdeck.models import RunEvent, RunEventModelUsage, RunEventUsage
-from flightdeck.sdk.client import FlightdeckClient
+from flightdeck.sdk.client import AsyncFlightdeckClient, FlightdeckClient
 
 
 def test_flightdeck_client_ingest_uses_post_v1_events() -> None:
@@ -50,3 +52,117 @@ def test_flightdeck_client_ingest_uses_post_v1_events() -> None:
     assert len(events_out) == 1
     assert events_out[0]["run_id"] == "run_sdk_mock"
     assert events_out[0]["api_version"] == "v1"
+
+
+def _event(run_id: str) -> RunEvent:
+    now = datetime.now(tz=timezone.utc)
+    return RunEvent(
+        timestamp=now,
+        agent_id="agent_support",
+        release_id="rel_test",
+        run_id=run_id,
+        tenant_id="tenant_acme",
+        task_id="task_1",
+        environment="local",
+        usage=RunEventUsage(
+            model=RunEventModelUsage(
+                provider="openai",
+                model="gpt-4.1-mini",
+                input_tokens=10,
+                output_tokens=5,
+            )
+        ),
+    )
+
+
+def test_flightdeck_client_sends_bearer_when_api_token_set() -> None:
+    seen_auth: list[str | None] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen_auth.append(request.headers.get("authorization"))
+        return httpx.Response(200, json={"inserted": 1})
+
+    transport = httpx.MockTransport(handler)
+    with httpx.Client(transport=transport, base_url="http://flightdeck.test") as http:
+        client = FlightdeckClient("http://flightdeck.test", client=http, api_token="secret")
+        client.ingest_run_events([_event("tok-run")])
+    assert seen_auth == ["Bearer secret"]
+
+
+def test_flightdeck_client_list_releases_get() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert request.url.path == "/v1/releases"
+        return httpx.Response(200, json={"releases": []})
+
+    transport = httpx.MockTransport(handler)
+    with httpx.Client(transport=transport, base_url="http://flightdeck.test") as http:
+        client = FlightdeckClient("http://flightdeck.test", client=http)
+        assert client.list_releases() == {"releases": []}
+
+
+def test_flightdeck_client_ingest_batch_chunks_payload() -> None:
+    seen_lengths: list[int] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content.decode("utf-8"))
+        seen_lengths.append(len(body["events"]))
+        return httpx.Response(200, json={"inserted": len(body["events"])})
+
+    transport = httpx.MockTransport(handler)
+    with httpx.Client(transport=transport, base_url="http://flightdeck.test") as http:
+        client = FlightdeckClient("http://flightdeck.test", client=http)
+        inserted = client.ingest_run_events_batch([_event("r1"), _event("r2"), _event("r3")], chunk_size=2)
+        assert inserted == 3
+    assert seen_lengths == [2, 1]
+
+
+def test_flightdeck_client_retries_request_error() -> None:
+    attempts = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise httpx.ConnectError("temporary", request=request)
+        return httpx.Response(200, json={"inserted": 1})
+
+    transport = httpx.MockTransport(handler)
+    with httpx.Client(transport=transport, base_url="http://flightdeck.test") as http:
+        client = FlightdeckClient(
+            "http://flightdeck.test",
+            client=http,
+            max_retries=1,
+            retry_backoff_s=0.0,
+        )
+        assert client.ingest_run_events([_event("retry-run")]) == 1
+    assert attempts == 2
+
+
+def test_flightdeck_client_invalid_chunk_size() -> None:
+    client = FlightdeckClient("http://flightdeck.test")
+    try:
+        with pytest.raises(ValueError, match="chunk_size must be > 0"):
+            client.ingest_run_events_batch([], chunk_size=0)
+    finally:
+        client.close()
+
+
+def test_async_flightdeck_client_ingest_batch() -> None:
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        body = json.loads(request.content.decode("utf-8"))
+        return httpx.Response(200, json={"inserted": len(body["events"])})
+
+    async def _run() -> int:
+        transport = httpx.MockTransport(handler)
+        async with httpx.AsyncClient(transport=transport, base_url="http://flightdeck.test") as http:
+            client = AsyncFlightdeckClient("http://flightdeck.test", client=http)
+            return await client.ingest_run_events_batch([_event("a1"), _event("a2"), _event("a3")], chunk_size=2)
+
+    inserted = asyncio.run(_run())
+    assert inserted == 3
+    assert calls == 2

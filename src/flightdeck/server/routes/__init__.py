@@ -1,0 +1,13 @@
+from __future__ import annotations
+
+from fastapi import FastAPI
+
+from flightdeck.server.routes.actions import router as actions_router
+from flightdeck.server.routes.ingest import router as ingest_router
+from flightdeck.server.routes.read import router as read_router
+
+
+def include_routes(app: FastAPI) -> None:
+    app.include_router(ingest_router)
+    app.include_router(read_router)
+    app.include_router(actions_router)

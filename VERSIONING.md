@@ -6,7 +6,7 @@ FlightDeck uses package versions and schema versions separately.
 
 Package releases use [Semantic Versioning](https://semver.org/).
 
-From **`v1.0.0`**, documented CLI behavior (**[docs/cli.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/cli.md)**), committed **`schemas/v1/`**, and
+From **`v1.0.0`**, documented CLI behavior (**[README.md](https://github.com/flightdeckdev/flightdeck/blob/main/README.md)**), committed **`schemas/v1/`**, and
 **`POST /v1/events`** **`api_version` `v1`** payloads are **stable public contracts** except when a
 **major** release explicitly documents a break. Breaking changes must appear in
 **[CHANGELOG.md](CHANGELOG.md)** and, when user-visible, **[RELEASE_NOTES.md](RELEASE_NOTES.md)**.
@@ -31,7 +31,7 @@ are still the mechanism for evolving the on-disk schema safely.
 
 ## Stable contracts (v1.0.0)
 
-The **v1.0.0** freeze is summarized in **[RELEASE_NOTES.md](RELEASE_NOTES.md)** and **[docs/spec-v1-forward.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/spec-v1-forward.md)**; milestone status lives in **[docs/v1-next-steps.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/v1-next-steps.md)**.
+The **v1.0.0** freeze is summarized in **[RELEASE_NOTES.md](RELEASE_NOTES.md)**; milestone status lives in **[ROADMAP.md](ROADMAP.md)**.
 
 ## PyPI packages
 

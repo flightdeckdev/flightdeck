@@ -1,2 +1,8 @@
 # Golden bundle checksum is sensitive to line endings on checkout (see CHANGELOG 0.7.0).
 tests/fixtures/golden_bundle/** text eol=lf
+
+# Vite build output must stay LF so `git diff --exit-code` matches on Windows CI/workstations.
+src/flightdeck/server/static/** text eol=lf
+
+# Post-build Node scripts committed under web/ (avoid CRLF churn on Windows checkouts).
+web/scripts/** text eol=lf

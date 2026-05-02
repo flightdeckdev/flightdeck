@@ -15,16 +15,20 @@ from flightdeck import __version__
 from flightdeck.bundle import bundle_checksum
 from flightdeck.config import DEFAULT_CONFIG_FILENAME, load_config, write_default_config
 from flightdeck.doctor import run_doctor
-from flightdeck.ledger import diff_releases, parse_window
 from flightdeck.models import (
     Policy,
-    PolicyResult,
     PricingTable,
-    PromotionRecord,
     ReleaseArtifact,
     ReleaseRecord,
     RunEvent,
     utc_now,
+)
+from flightdeck.operations import (
+    OperationError,
+    compute_diff,
+    default_policy,
+    promote_release,
+    rollback_release,
 )
 from flightdeck.storage import Storage
 
@@ -33,16 +37,6 @@ def read_release_artifact(path: Path) -> ReleaseArtifact:
     content = path.read_text(encoding="utf-8")
     data = yaml.safe_load(content)
     return ReleaseArtifact.model_validate(data)
-
-
-def default_policy() -> Policy:
-    # When no policy file is set, match Policy model defaults (strict diff confidence for v1 track).
-    # Demos and tests set an explicit policy YAML (e.g. require_high_diff_confidence: false) where needed.
-    return Policy(
-        max_cost_per_run_usd=None,
-        max_latency_ms=None,
-        max_error_rate=None,
-    )
 
 
 def actor_name() -> str:
@@ -109,14 +103,14 @@ def doctor_cmd() -> None:
 @click.option("--port", default=8765, show_default=True)
 @click.option("--reload", is_flag=True, default=False)
 def serve(host: str, port: int, reload: bool) -> None:
-    """Start the local FlightDeck HTTP service (event ingestion)."""
+    """Start the local FlightDeck HTTP service (ingest + local release operations)."""
     import uvicorn
 
     loopback_hosts = {"127.0.0.1", "::1", "localhost"}
     if host.strip() not in loopback_hosts:
         click.echo(
-            f"Warning: binding to {host!r} exposes HTTP ingest without authentication; "
-            "use only on trusted networks (see https://github.com/flightdeckdev/flightdeck/blob/main/docs/spec-v1-forward.md §4).",
+            f"Warning: binding to {host!r} may expose local ingest/action endpoints; "
+            "use trusted networks and set a local API token when needed.",
             err=True,
         )
 
@@ -339,124 +333,49 @@ def release_diff(
     cfg = load_config()
     storage = Storage(cfg.db_path)
     storage.migrate()
-
-    base = storage.get_release(baseline_release_id)
-    cand = storage.get_release(candidate_release_id)
-    if not base:
-        raise click.ClickException(f"Unknown baseline release: {baseline_release_id}")
-    if not cand:
-        raise click.ClickException(f"Unknown candidate release: {candidate_release_id}")
-
-    env = environment or cfg.default_environment
-
-    # Load artifacts and enforce same agent_id unless an explicit escape hatch exists later.
-    base_artifact = ReleaseArtifact.model_validate(base.artifact_json)
-    cand_artifact = ReleaseArtifact.model_validate(cand.artifact_json)
-    if base_artifact.spec.agent.agent_id != cand_artifact.spec.agent.agent_id:
-        raise click.ClickException(
-            "Cross-agent diff is not allowed. "
-            f"Baseline agent_id={base_artifact.spec.agent.agent_id}, "
-            f"candidate agent_id={cand_artifact.spec.agent.agent_id}."
-        )
-
-    base_pricing_ref = base_artifact.spec.pricing_reference
-    cand_pricing_ref = cand_artifact.spec.pricing_reference
-
-    base_table = storage.get_pricing_table(base_pricing_ref.provider, base_pricing_ref.pricing_version)
-    if not base_table:
-        raise click.ClickException(
-            f"Missing pricing table for baseline {base_pricing_ref.provider}/{base_pricing_ref.pricing_version}. "
-            f"Run `flightdeck pricing import ...`."
-        )
-
-    cand_table = storage.get_pricing_table(cand_pricing_ref.provider, cand_pricing_ref.pricing_version)
-    if not cand_table:
-        raise click.ClickException(
-            f"Missing pricing table for candidate {cand_pricing_ref.provider}/{cand_pricing_ref.pricing_version}. "
-            f"Run `flightdeck pricing import ...`."
-        )
-
     try:
-        delta = parse_window(window)
-    except ValueError as e:
-        raise click.ClickException(str(e)) from e
-    until = utc_now()
-    since = until - delta
-
-    baseline_events = storage.query_runs(
-        baseline_release_id,
-        since,
-        until,
-        tenant_id=tenant_id,
-        task_id=task_id,
-        environment=env,
-    )
-    candidate_events = storage.query_runs(
-        candidate_release_id,
-        since,
-        until,
-        tenant_id=tenant_id,
-        task_id=task_id,
-        environment=env,
-    )
-
-    policy = storage.get_active_policy() or default_policy()
-    try:
-        result = diff_releases(
+        result = compute_diff(
             cfg=cfg,
-            policy=policy,
-            baseline_events=baseline_events,
-            candidate_events=candidate_events,
-            baseline_pricing_table=base_table,
-            candidate_pricing_table=cand_table,
+            storage=storage,
+            baseline_release_id=baseline_release_id,
+            candidate_release_id=candidate_release_id,
             window=window,
+            environment=environment,
+            tenant_id=tenant_id,
+            task_id=task_id,
         )
-    except KeyError as e:
-        # Make missing-model pricing failures explicit and actionable.
-        raise click.ClickException(
-            f"Pricing table missing model entry. "
-            f"baseline_model={base_artifact.spec.runtime.model} "
-            f"candidate_model={cand_artifact.spec.runtime.model}. "
-            f"Check pricing tables: "
-            f"{base_pricing_ref.provider}/{base_pricing_ref.pricing_version} and "
-            f"{cand_pricing_ref.provider}/{cand_pricing_ref.pricing_version}."
-        ) from e
-    except ValueError as e:
+    except OperationError as e:
         raise click.ClickException(str(e)) from e
 
-    click.echo(f"Window: {window} ({since.isoformat()} .. {until.isoformat()})")
-    click.echo(f"Filters: env={env} tenant={tenant_id or '*'} task={task_id or '*'}")
+    click.echo(f"Window: {window} ({result.since.isoformat()} .. {result.until.isoformat()})")
+    click.echo(f"Filters: env={result.environment} tenant={tenant_id or '*'} task={task_id or '*'}")
     click.echo(
-        f"Baseline pricing: {base_pricing_ref.provider}/{base_pricing_ref.pricing_version} "
-        f"(model={base_artifact.spec.runtime.model})"
+        f"Baseline pricing: {result.baseline_pricing_provider}/{result.baseline_pricing_version} "
+        f"(model={result.baseline_model})"
     )
     click.echo(
-        f"Candidate pricing: {cand_pricing_ref.provider}/{cand_pricing_ref.pricing_version} "
-        f"(model={cand_artifact.spec.runtime.model})"
+        f"Candidate pricing: {result.candidate_pricing_provider}/{result.candidate_pricing_version} "
+        f"(model={result.candidate_model})"
     )
-    if (
-        base_pricing_ref.provider != cand_pricing_ref.provider
-        or base_pricing_ref.pricing_version != cand_pricing_ref.pricing_version
-        or base_artifact.spec.runtime.model != cand_artifact.spec.runtime.model
-    ):
-        click.echo(
-            "NOTE: cost delta includes pricing/model assumption changes (pricing reference and/or model differ)."
-        )
+    if result.pricing_or_model_changed:
+        click.echo("NOTE: cost delta includes pricing/model assumption changes (pricing reference and/or model differ).")
     click.echo(f"Samples: baseline={result.baseline_runs} candidate={result.candidate_runs}")
-    click.echo(f"Confidence: {result.confidence}" + (f" ({result.confidence_reason})" if result.confidence_reason else ""))
+    click.echo(
+        f"Confidence: {result.confidence}" + (f" ({result.confidence_reason})" if result.confidence_reason else "")
+    )
     click.echo("")
     click.echo(
-        f"Estimated model token cost/run (USD): {result.baseline.cost_per_run_usd:.6f} -> {result.candidate.cost_per_run_usd:.6f} "
-        f"(delta {result.delta_cost_per_run_usd:+.6f}"
+        f"Estimated model token cost/run (USD): {result.baseline_cost_per_run_usd:.6f} -> "
+        f"{result.candidate_cost_per_run_usd:.6f} (delta {result.delta_cost_per_run_usd:+.6f}"
         + (f", {result.delta_cost_per_run_pct:+.2%})" if result.delta_cost_per_run_pct is not None else ")")
     )
-    if result.baseline.latency_ms_avg is not None and result.candidate.latency_ms_avg is not None:
+    if result.baseline_latency_ms_avg is not None and result.candidate_latency_ms_avg is not None:
         click.echo(
-            f"Latency avg (ms): {result.baseline.latency_ms_avg:.2f} -> {result.candidate.latency_ms_avg:.2f} "
+            f"Latency avg (ms): {result.baseline_latency_ms_avg:.2f} -> {result.candidate_latency_ms_avg:.2f} "
             f"(delta {result.delta_latency_ms_avg:+.2f})"
         )
     click.echo(
-        f"Error rate: {result.baseline.error_rate:.4f} -> {result.candidate.error_rate:.4f} "
+        f"Error rate: {result.baseline_error_rate:.4f} -> {result.candidate_error_rate:.4f} "
         f"(delta {result.delta_error_rate:+.4f})"
     )
     click.echo("")
@@ -475,116 +394,28 @@ def release_promote(release_id: str, environment: str, window: str, reason: str)
     cfg = load_config()
     storage = Storage(cfg.db_path)
     storage.migrate()
-
-    target = storage.get_release(release_id)
-    if not target:
-        raise click.ClickException(f"Unknown release: {release_id}")
-
-    target_artifact = ReleaseArtifact.model_validate(target.artifact_json)
-    agent_id = target_artifact.spec.agent.agent_id
-    active_policy = storage.get_active_policy() or default_policy()
-    current_release_id = storage.get_promoted_release_id(agent_id, environment)
-
-    policy_result: PolicyResult
-    if not current_release_id:
-        policy_result = PolicyResult(
-            passed=True,
-            reasons=["first promotion: no promoted baseline for agent/environment"],
-        )
-    else:
-        baseline = storage.get_release(current_release_id)
-        if not baseline:
-            raise click.ClickException(f"Promoted baseline release is missing: {current_release_id}")
-
-        baseline_artifact = ReleaseArtifact.model_validate(baseline.artifact_json)
-        baseline_pricing_ref = baseline_artifact.spec.pricing_reference
-        candidate_pricing_ref = target_artifact.spec.pricing_reference
-
-        baseline_table = storage.get_pricing_table(
-            baseline_pricing_ref.provider,
-            baseline_pricing_ref.pricing_version,
-        )
-        if not baseline_table:
-            raise click.ClickException(
-                "Missing pricing table for promoted baseline "
-                f"{baseline_pricing_ref.provider}/{baseline_pricing_ref.pricing_version}. "
-                "Run `flightdeck pricing import ...`."
-            )
-
-        candidate_table = storage.get_pricing_table(
-            candidate_pricing_ref.provider,
-            candidate_pricing_ref.pricing_version,
-        )
-        if not candidate_table:
-            raise click.ClickException(
-                "Missing pricing table for candidate "
-                f"{candidate_pricing_ref.provider}/{candidate_pricing_ref.pricing_version}. "
-                "Run `flightdeck pricing import ...`."
-            )
-
-        try:
-            delta = parse_window(window)
-        except ValueError as e:
-            raise click.ClickException(str(e)) from e
-        until = utc_now()
-        since = until - delta
-        baseline_events = storage.query_runs(
-            current_release_id,
-            since,
-            until,
+    try:
+        outcome = promote_release(
+            cfg=cfg,
+            storage=storage,
+            release_id=release_id,
             environment=environment,
+            window=window,
+            reason=reason,
+            actor=actor_name(),
         )
-        candidate_events = storage.query_runs(
-            release_id,
-            since,
-            until,
-            environment=environment,
-        )
+    except OperationError as e:
+        raise click.ClickException(str(e)) from e
 
-        try:
-            diff = diff_releases(
-                cfg=cfg,
-                policy=active_policy,
-                baseline_events=baseline_events,
-                candidate_events=candidate_events,
-                baseline_pricing_table=baseline_table,
-                candidate_pricing_table=candidate_table,
-                window=window,
-            )
-        except KeyError as e:
-            raise click.ClickException(
-                "Pricing table missing model entry. "
-                f"baseline_model={baseline_artifact.spec.runtime.model} "
-                f"candidate_model={target_artifact.spec.runtime.model}."
-            ) from e
-        except ValueError as e:
-            raise click.ClickException(str(e)) from e
-        policy_result = diff.policy
-
-    record = PromotionRecord(
-        action_id=f"act_{uuid4().hex[:12]}",
-        action="promote",
-        actor=actor_name(),
-        release_id=release_id,
-        agent_id=agent_id,
-        environment=environment,
-        reason=reason,
-        policy_result=policy_result,
-        baseline_release_id=current_release_id,
-        created_at=utc_now(),
-    )
-
-    if not policy_result.passed:
-        storage.insert_promotion_record(record)
+    if not outcome.policy.passed:
         click.echo("Policy: FAIL")
-        for r in policy_result.reasons:
+        for r in outcome.policy.reasons:
             click.echo(f"- {r}")
         raise click.ClickException("Promotion blocked by policy")
 
-    storage.commit_promotion(record, new_promoted_release_id=release_id)
-    click.echo(f"Promoted {release_id} for {agent_id}/{environment}")
+    click.echo(f"Promoted {release_id} for {outcome.agent_id}/{environment}")
     click.echo("Policy: PASS")
-    for r in policy_result.reasons:
+    for r in outcome.policy.reasons:
         click.echo(f"- {r}")
 
 
@@ -598,107 +429,28 @@ def release_rollback(release_id: str, environment: str, window: str, reason: str
     cfg = load_config()
     storage = Storage(cfg.db_path)
     storage.migrate()
-
-    target = storage.get_release(release_id)
-    if not target:
-        raise click.ClickException(f"Unknown release: {release_id}")
-
-    target_artifact = ReleaseArtifact.model_validate(target.artifact_json)
-    agent_id = target_artifact.spec.agent.agent_id
-    active_policy = storage.get_active_policy() or default_policy()
-    current_release_id = storage.get_promoted_release_id(agent_id, environment)
-    if not current_release_id:
-        raise click.ClickException("No promoted release exists for this agent/environment; nothing to roll back to.")
-
-    baseline = storage.get_release(current_release_id)
-    if not baseline:
-        raise click.ClickException(f"Promoted baseline release is missing: {current_release_id}")
-
-    baseline_artifact = ReleaseArtifact.model_validate(baseline.artifact_json)
-    baseline_pricing_ref = baseline_artifact.spec.pricing_reference
-    candidate_pricing_ref = target_artifact.spec.pricing_reference
-
-    baseline_table = storage.get_pricing_table(baseline_pricing_ref.provider, baseline_pricing_ref.pricing_version)
-    if not baseline_table:
-        raise click.ClickException(
-            "Missing pricing table for promoted baseline "
-            f"{baseline_pricing_ref.provider}/{baseline_pricing_ref.pricing_version}. "
-            "Run `flightdeck pricing import ...`."
-        )
-
-    candidate_table = storage.get_pricing_table(candidate_pricing_ref.provider, candidate_pricing_ref.pricing_version)
-    if not candidate_table:
-        raise click.ClickException(
-            "Missing pricing table for rollback target "
-            f"{candidate_pricing_ref.provider}/{candidate_pricing_ref.pricing_version}. "
-            "Run `flightdeck pricing import ...`."
-        )
-
     try:
-        delta = parse_window(window)
-    except ValueError as e:
-        raise click.ClickException(str(e)) from e
-    until = utc_now()
-    since = until - delta
-
-    baseline_events = storage.query_runs(
-        current_release_id,
-        since,
-        until,
-        environment=environment,
-    )
-    candidate_events = storage.query_runs(
-        release_id,
-        since,
-        until,
-        environment=environment,
-    )
-
-    try:
-        diff = diff_releases(
+        outcome = rollback_release(
             cfg=cfg,
-            policy=active_policy,
-            baseline_events=baseline_events,
-            candidate_events=candidate_events,
-            baseline_pricing_table=baseline_table,
-            candidate_pricing_table=candidate_table,
+            storage=storage,
+            release_id=release_id,
+            environment=environment,
             window=window,
+            reason=reason,
+            actor=actor_name(),
         )
-    except KeyError as e:
-        raise click.ClickException(
-            "Pricing table missing model entry. "
-            f"baseline_model={baseline_artifact.spec.runtime.model} "
-            f"candidate_model={target_artifact.spec.runtime.model}."
-        ) from e
-    except ValueError as e:
+    except OperationError as e:
         raise click.ClickException(str(e)) from e
 
-    policy_result = diff.policy
-
-    record = PromotionRecord(
-        action_id=f"act_{uuid4().hex[:12]}",
-        action="rollback",
-        actor=actor_name(),
-        release_id=release_id,
-        agent_id=agent_id,
-        environment=environment,
-        reason=reason,
-        policy_result=policy_result,
-        baseline_release_id=current_release_id,
-        created_at=utc_now(),
-    )
-
-    if not policy_result.passed:
-        storage.insert_promotion_record(record)
+    if not outcome.policy.passed:
         click.echo("Policy: FAIL")
-        for r in policy_result.reasons:
+        for r in outcome.policy.reasons:
             click.echo(f"- {r}")
         raise click.ClickException("Rollback blocked by policy")
 
-    storage.commit_promotion(record, new_promoted_release_id=release_id)
-    click.echo(f"Rolled back to {release_id} for {agent_id}/{environment}")
+    click.echo(f"Rolled back to {release_id} for {outcome.agent_id}/{environment}")
     click.echo("Policy: PASS")
-    for r in policy_result.reasons:
+    for r in outcome.policy.reasons:
         click.echo(f"- {r}")
 
 

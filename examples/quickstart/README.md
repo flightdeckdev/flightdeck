@@ -7,10 +7,12 @@ These files are meant to be copied or substituted locally:
 - `policy.yaml` is an example active policy used by `release diff` and `release promote`.
 - `*-events.jsonl` contain placeholder `release_id` values (`__BASELINE_RELEASE_ID__`, `__CANDIDATE_RELEASE_ID__`).
 
-Fastest path:
+Fastest path (from **repository root**, with **uv**):
 
-- Run `../../scripts/smoke.sh` from a Unix shell (Git Bash/WSL on Windows).
+```bash
+uv run flightdeck-quickstart-verify
+```
 
-Manual path:
+Or **`python -m flightdeck.quickstart_smoke`** / **`py -3 -m flightdeck.quickstart_smoke`** in an activated venv. Unix shell alternative from this directory: **`../../scripts/smoke.sh`** (Git Bash / WSL on Windows).
 
-- See [docs/quickstart.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/quickstart.md).
+Manual step-by-step: root **[README.md](../../README.md)**.

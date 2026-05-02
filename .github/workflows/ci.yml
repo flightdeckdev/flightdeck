@@ -17,6 +17,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
         with:
@@ -25,6 +32,20 @@ jobs:
 
       - name: Sync dependencies
         run: uv sync --frozen --extra dev
+
+      - name: Build web UI
+        run: |
+          cd web
+          npm ci
+          npm run build
+          cd ..
+          git diff --exit-code src/flightdeck/server/static/
+
+      - name: Playwright E2E (served UI)
+        run: |
+          cd web
+          npx playwright install chromium
+          npm run test:e2e
 
       - name: Lint
         run: uv run python -m ruff check src tests
@@ -38,7 +59,7 @@ jobs:
           git diff --exit-code schemas/
 
       - name: Quickstart smoke (cross-platform)
-        run: uv run python scripts/quickstart_smoke.py
+        run: uv run flightdeck-quickstart-verify
 
       - name: CLI smoke
         run: uv run flightdeck --help
@@ -54,6 +75,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
         with:
@@ -62,6 +90,22 @@ jobs:
 
       - name: Sync dependencies
         run: uv sync --frozen --extra dev
+
+      - name: Build web UI
+        shell: bash
+        run: |
+          cd web
+          npm ci
+          npm run build
+          cd ..
+          git diff --exit-code src/flightdeck/server/static/
+
+      - name: Playwright E2E (served UI)
+        shell: bash
+        run: |
+          cd web
+          npx playwright install chromium
+          npm run test:e2e
 
       - name: Lint
         run: uv run python -m ruff check src tests
@@ -75,7 +119,7 @@ jobs:
           git diff --exit-code schemas/
 
       - name: Quickstart smoke (cross-platform)
-        run: uv run python scripts/quickstart_smoke.py
+        run: uv run flightdeck-quickstart-verify
 
       - name: CLI smoke
         run: uv run flightdeck --help

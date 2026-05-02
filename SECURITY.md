@@ -32,4 +32,8 @@ company information in issues, discussions, examples, or tests.
 - **Optional local-only trees:** **`private/`** and **`secrets/`** are gitignored for material that must not ship with the public tree.
 - **Keys / certs:** patterns such as **`*.pem`**, **`*.p12`**, and common `*credentials*.json` names are ignored—still review `git status` before every commit.
 
-See **[docs/github-organization.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/github-organization.md)** for a pre-push checklist aligned with the **[flightdeckdev](https://github.com/flightdeckdev)** org.
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for a pre-push checklist aligned with the **[flightdeckdev](https://github.com/flightdeckdev)** org.
+
+## Local HTTP API (`flightdeck serve`)
+
+The bundled server is intended for **local development and demos**. **`POST /v1/promote`** and **`POST /v1/rollback`** are gated so that, with no token configured, only **loopback** clients can invoke them. If you set **`FLIGHTDECK_LOCAL_API_TOKEN`**, every mutation request must include **`Authorization: Bearer <that value>`**; use a strong random value and treat it like a local secret. Do not expose **`flightdeck serve`** on untrusted networks without understanding that **`POST /v1/events`** and **`POST /v1/diff`** are not behind the same Bearer gate (ingest and diff are still local-trust assumptions).

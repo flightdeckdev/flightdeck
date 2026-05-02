@@ -58,6 +58,7 @@ Changelog = "https://github.com/flightdeckdev/flightdeck/blob/main/CHANGELOG.md"
 
 [project.scripts]
 flightdeck = "flightdeck.cli.main:cli"
+flightdeck-quickstart-verify = "flightdeck.quickstart_smoke:quickstart_verify_main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/flightdeck"]

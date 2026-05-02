@@ -170,3 +170,58 @@ def test_doctor_fails_when_promoted_release_missing(tmp_path: Path, monkeypatch)
     res = runner.invoke(cli, ["doctor"])
     assert res.exit_code != 0
     assert "rel_missing" in res.output or "missing" in res.output.lower()
+
+
+def test_release_actions_audit_seq_is_contiguous_direct_check(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    assert runner.invoke(cli, ["init"]).exit_code == 0
+    policy = write_policy(tmp_path, max_cost_per_run_usd=10.0)
+    assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
+    pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
+    assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0
+
+    baseline_dir = write_release(
+        tmp_path,
+        agent_id="agent_support",
+        version="1",
+        pricing_provider="openai",
+        pricing_version="openai-2026-04-30",
+    )
+    candidate_dir = write_release(
+        tmp_path,
+        agent_id="agent_support",
+        version="2",
+        pricing_provider="openai",
+        pricing_version="openai-2026-04-30",
+    )
+    rollback_dir = write_release(
+        tmp_path,
+        agent_id="agent_support",
+        version="3",
+        pricing_provider="openai",
+        pricing_version="openai-2026-04-30",
+    )
+    baseline_id = runner.invoke(cli, ["release", "register", str(baseline_dir)]).output.strip()
+    candidate_id = runner.invoke(cli, ["release", "register", str(candidate_dir)]).output.strip()
+    rollback_id = runner.invoke(cli, ["release", "register", str(rollback_dir)]).output.strip()
+
+    now = datetime.now(tz=timezone.utc)
+    assert runner.invoke(cli, ["runs", "ingest", str(write_events(tmp_path, release_id=baseline_id, agent_id="agent_support", n=5, ts=now))]).exit_code == 0
+    assert runner.invoke(cli, ["runs", "ingest", str(write_events(tmp_path, release_id=candidate_id, agent_id="agent_support", n=5, ts=now))]).exit_code == 0
+    assert runner.invoke(cli, ["runs", "ingest", str(write_events(tmp_path, release_id=rollback_id, agent_id="agent_support", n=5, ts=now))]).exit_code == 0
+
+    assert runner.invoke(
+        cli, ["release", "promote", baseline_id, "--env", "local", "--window", "7d", "--reason", "baseline"]
+    ).exit_code == 0
+    assert runner.invoke(
+        cli, ["release", "promote", candidate_id, "--env", "local", "--window", "7d", "--reason", "candidate"]
+    ).exit_code == 0
+    assert runner.invoke(
+        cli, ["release", "rollback", rollback_id, "--env", "local", "--window", "7d", "--reason", "rollback"]
+    ).exit_code == 0
+
+    storage = Storage(str(tmp_path / ".flightdeck" / "flightdeck.db"))
+    actions = storage.list_release_actions(agent_id="agent_support", environment="local")
+    seqs = sorted([a.audit_seq for a in actions if a.audit_seq is not None])
+    assert seqs == list(range(1, len(seqs) + 1))

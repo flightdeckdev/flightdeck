@@ -2,7 +2,7 @@
 
 Short entry for **Claude Code**, **Cursor**, and similar agents. **Authoritative policy:** root **`AGENTS.md`** (mission, non-goals, contracts, verification, doctrine).
 
-Canonical repository (full **`docs/`** tree and org workflows): **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** (`main`).
+Canonical repository (full history and maintainer workflows): **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** (`main`).
 
 ## Read first
 
@@ -10,13 +10,13 @@ Canonical repository (full **`docs/`** tree and org workflows): **[github.com/fl
 |--------|------|
 | Agent / contributor rules | `AGENTS.md` |
 | Setup and local demo | `DEVELOPMENT.md` |
-| CLI flags and exit codes | [docs/cli.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/cli.md) (canonical repo) |
-| v1 direction | [docs/spec-v1-forward.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/spec-v1-forward.md) |
-| Shipped 0.x behavior snapshot | [docs/spec.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/spec.md) |
-| Backlog and milestone status | [docs/v1-next-steps.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/v1-next-steps.md) |
+| CLI flags and exit codes | [README.md](https://github.com/flightdeckdev/flightdeck/blob/main/README.md) (canonical repo) |
+| v1 direction | [RELEASE_NOTES.md](https://github.com/flightdeckdev/flightdeck/blob/main/RELEASE_NOTES.md) |
+| Shipped 0.x behavior snapshot | [RELEASE_NOTES.md](https://github.com/flightdeckdev/flightdeck/blob/main/RELEASE_NOTES.md) |
+| Backlog and milestone status | [ROADMAP.md](https://github.com/flightdeckdev/flightdeck/blob/main/ROADMAP.md) |
 | GA / release notes | `RELEASE_NOTES.md`, `CHANGELOG.md` |
-| Org publish & staging (maintainer) | [docs/github-organization.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/github-organization.md) |
-| Repo layout & CODEOWNERS | `.github/CODEOWNERS`, [docs/github-organization.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/github-organization.md) |
+| Org publish & staging (maintainer) | [CONTRIBUTING.md](https://github.com/flightdeckdev/flightdeck/blob/main/CONTRIBUTING.md) |
+| Repo layout & CODEOWNERS | `.github/CODEOWNERS`, [CONTRIBUTING.md](https://github.com/flightdeckdev/flightdeck/blob/main/CONTRIBUTING.md) |
 
 ## Verify before you finish
 
@@ -26,7 +26,7 @@ With **uv** (recommended):
 uv sync --frozen --extra dev
 uv run python -m ruff check src tests
 uv run python -m pytest
-uv run python scripts/quickstart_smoke.py
+uv run flightdeck-quickstart-verify
 ```
 
 With **pip** + venv: use **`python -m …`** equivalents in **`DEVELOPMENT.md`**.

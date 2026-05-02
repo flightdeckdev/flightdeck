@@ -1,46 +1,42 @@
 from __future__ import annotations
 
-from typing import Any
+from contextlib import asynccontextmanager
+import os
+from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from flightdeck.config import load_config
-from flightdeck.models import RunEvent
+from flightdeck.server.routes import include_routes
 from flightdeck.storage import Storage
 
 
-class IngestEventsRequest(BaseModel):
-    events: list[dict[str, Any]] = Field(min_length=1)
-
-
 def create_app() -> FastAPI:
-    app = FastAPI(title="FlightDeck", version="local")
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        cfg = load_config()
+        storage = Storage(cfg.db_path)
+        storage.migrate()
+        app.state.cfg = cfg
+        app.state.storage = storage
+        app.state.local_api_token = os.environ.get("FLIGHTDECK_LOCAL_API_TOKEN")
+        yield
+
+    app = FastAPI(title="FlightDeck", version="local", lifespan=lifespan)
+    include_routes(app)
+    static_dir = Path(__file__).resolve().parent / "static"
+    assets_dir = static_dir / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="ui-assets")
 
     @app.get("/health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    @app.post("/v1/events")
-    def ingest_events(req: IngestEventsRequest) -> dict[str, int]:
-        cfg = load_config()
-        storage = Storage(cfg.db_path)
-        storage.migrate()
-
-        events: list[RunEvent] = []
-        for item in req.events:
-            av = item.get("api_version", "v1")
-            if av != "v1":
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Unsupported api_version for POST /v1/events: {av!r} (only 'v1' is accepted).",
-                )
-            try:
-                events.append(RunEvent.model_validate(item))
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Invalid RunEvent: {e}") from e
-
-        inserted = storage.insert_run_events(events)
-        return {"inserted": inserted}
+    @app.get("/")
+    def ui_index() -> FileResponse:
+        return FileResponse(static_dir / "index.html")
 
     return app

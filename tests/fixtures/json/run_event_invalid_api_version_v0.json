@@ -1,0 +1,28 @@
+{
+  "api_version": "v0",
+  "type": "run_end",
+  "timestamp": "2026-04-30T12:00:00+00:00",
+  "workspace_id": "ws_fixture",
+  "agent_id": "agent_fixture",
+  "release_id": "rel_fixture",
+  "run_id": "run_fixture_bad_api",
+  "tenant_id": "tenant_fixture",
+  "task_id": "task_fixture",
+  "environment": "local",
+  "metrics": {
+    "latency_ms": 10,
+    "success": true,
+    "error_type": null
+  },
+  "usage": {
+    "model": {
+      "provider": "openai",
+      "model": "gpt-4.1-mini",
+      "input_tokens": 100,
+      "output_tokens": 50,
+      "cached_input_tokens": 0
+    },
+    "tools": []
+  },
+  "labels": {}
+}

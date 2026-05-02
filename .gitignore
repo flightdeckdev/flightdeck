@@ -5,6 +5,8 @@ pytest-cache-files-*/
 .ruff_cache/
 .tmp/
 .venv/
+web/node_modules/
+.tools/
 build/
 dist/
 *.egg-info/
@@ -12,6 +14,18 @@ dist/
 htmlcov/
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# npm / package managers (noise at repo root or under web/)
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# TypeScript / editor noise
+*.tsbuildinfo
+*.swp
+*~
 
 # Local FlightDeck workspace (SQLite ledger + local config); never commit.
 .flightdeck/

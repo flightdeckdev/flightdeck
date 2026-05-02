@@ -2,6 +2,6 @@
 
 Read **`AGENTS.md`** for mission, non-goals, public contracts, engineering rules, verification, and docs policy. **`CLAUDE.md`** is a short index for Claude Code / Cursor.
 
-Quick verify (uv): `uv sync --frozen --extra dev`, then `uv run python -m ruff check src tests`, `uv run python -m pytest`, `uv run python scripts/quickstart_smoke.py` (pip/venv equivalents in `DEVELOPMENT.md`; on Windows, `py -3` if needed).
+Quick verify (uv): `uv sync --frozen --extra dev`, then `uv run python -m ruff check src tests`, `uv run python -m pytest`, `uv run flightdeck-quickstart-verify` (pip/venv equivalents in `DEVELOPMENT.md`; on Windows, `py -3` if needed). After **`web/src/`** edits: `cd web && npm ci && npm run build`, commit **`src/flightdeck/server/static/`** if it changes; optionally `npm run test:e2e` (see **`web/README.md`**).
 
-Normative v1 direction: https://github.com/flightdeckdev/flightdeck/blob/main/docs/spec-v1-forward.md · backlog: https://github.com/flightdeckdev/flightdeck/blob/main/docs/v1-next-steps.md · CLI: https://github.com/flightdeckdev/flightdeck/blob/main/docs/cli.md
+Normative v1 direction: https://github.com/flightdeckdev/flightdeck/blob/main/RELEASE_NOTES.md · backlog: https://github.com/flightdeckdev/flightdeck/blob/main/ROADMAP.md · CLI: https://github.com/flightdeckdev/flightdeck/blob/main/README.md

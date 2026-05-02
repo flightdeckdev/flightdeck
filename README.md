@@ -28,10 +28,10 @@ Current local spine:
 FlightDeck is **local-first** and ships as a Python CLI backed by SQLite.
 
 **v1.0.0** establishes **SemVer-stable public contracts** for the documented CLI
-(**[docs/cli.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/cli.md)** on `main`),
+(**[README.md](https://github.com/flightdeckdev/flightdeck/blob/main/README.md)** on `main`),
 committed **`schemas/v1/`**, and **`POST /v1/events`** with **`api_version` `v1`**. See
-**[RELEASE_NOTES.md](RELEASE_NOTES.md)** and
-**[docs/spec-v1-forward.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/spec-v1-forward.md)**.
+**[RELEASE_NOTES.md](RELEASE_NOTES.md)** (same narrative on
+**[`main`](https://github.com/flightdeckdev/flightdeck/blob/main/RELEASE_NOTES.md)**).
 The product scope is still intentionally narrow (release governance, not a hosted agent platform).
 
 Not implemented yet:
@@ -43,9 +43,13 @@ Not implemented yet:
 
 Shipped locally:
 
-- `flightdeck serve` + `POST /v1/events`
+- `flightdeck serve` + JSON routes under `/v1/*` (read + diff/promote/rollback + event ingest); see **Local HTTP API** below
 - minimal Python SDK (`flightdeck.sdk.client`)
 - `flightdeck release rollback` (policy-gated, audited)
+
+### Local HTTP API
+
+With **`flightdeck serve`** (default bind **127.0.0.1**), the app exposes **`GET /health`**, **`GET /v1/releases`**, **`GET /v1/promoted`**, **`GET /v1/actions`**, **`POST /v1/events`**, **`POST /v1/diff`**, **`POST /v1/promote`**, and **`POST /v1/rollback`**. **`POST /v1/promote`** and **`POST /v1/rollback`** accept requests only from loopback clients unless **`FLIGHTDECK_LOCAL_API_TOKEN`** is set, in which case callers must send **`Authorization: Bearer <token>`** (same behavior as the **`web/`** dev UI via **`VITE_FLIGHTDECK_LOCAL_API_TOKEN`**). See **[SECURITY.md](SECURITY.md)**.
 
 ## Quickstart
 
@@ -67,10 +71,10 @@ flightdeck --help
 Run the cross-platform quickstart smoke (same as CI):
 
 ```bash
-uv run python scripts/quickstart_smoke.py
+uv run flightdeck-quickstart-verify
 ```
 
-(or **`python scripts/quickstart_smoke.py`** inside an activated venv)
+(or **`python -m flightdeck.quickstart_smoke`** / **`python scripts/quickstart_smoke.py`** inside an activated venv)
 
 Or use the bash wrapper (Git Bash / WSL on Windows):
 
@@ -101,29 +105,20 @@ flightdeck release history --agent agent_support --env local
 ```
 
 The static event files in `examples/quickstart` use placeholder release IDs so the repo can ship stable examples.
-Substitute them before ingestion, or run **`uv run python scripts/quickstart_smoke.py`** / **`python scripts/quickstart_smoke.py`** (venv) or **`./scripts/smoke.sh`** from Git Bash/WSL on Windows.
+Substitute them before ingestion, or run **`uv run flightdeck-quickstart-verify`** / **`python -m flightdeck.quickstart_smoke`** (venv) or **`./scripts/smoke.sh`** from Git Bash/WSL on Windows.
 
 ## Documentation
 
-This tree stays small; narrative docs live on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** (`main`):
+This clone keeps docs lightweight. Core references:
 
-- [Quickstart](https://github.com/flightdeckdev/flightdeck/blob/main/docs/quickstart.md)
-- [CLI reference](https://github.com/flightdeckdev/flightdeck/blob/main/docs/cli.md)
-- [Architecture](https://github.com/flightdeckdev/flightdeck/blob/main/docs/architecture.md)
-- [Specification (0.x snapshot)](https://github.com/flightdeckdev/flightdeck/blob/main/docs/spec.md)
-- [Forward spec — v1 GA track](https://github.com/flightdeckdev/flightdeck/blob/main/docs/spec-v1-forward.md)
-- [v1 next steps (backlog)](https://github.com/flightdeckdev/flightdeck/blob/main/docs/v1-next-steps.md)
-- [JSON Schemas](schemas/v1/) (in this repo)
-- [Changelog](CHANGELOG.md)
+- [JSON Schemas](schemas/v1/)
 - [Release notes (maintainer)](RELEASE_NOTES.md)
 - [Roadmap](ROADMAP.md)
-- [Contributing](CONTRIBUTING.md)
-- [CLAUDE.md](CLAUDE.md) (short agent entry; see [AGENTS.md](AGENTS.md) for full rules)
+- [Versioning](VERSIONING.md)
 - [Development](DEVELOPMENT.md)
+- [Contributing](CONTRIBUTING.md)
 - [Security](SECURITY.md)
-- [Research clone vs org repos](https://github.com/flightdeckdev/flightdeck/blob/main/docs/research-workflow.md)
-- [Git remotes: personal vs org](https://github.com/flightdeckdev/flightdeck/blob/main/docs/git-remotes.md)
-- [GitHub org & push gate](https://github.com/flightdeckdev/flightdeck/blob/main/docs/github-organization.md)
+- [CLAUDE.md](CLAUDE.md) and [AGENTS.md](AGENTS.md)
 
 ## Development
 
@@ -131,6 +126,7 @@ This tree stays small; narrative docs live on **[github.com/flightdeckdev/flight
 uv sync --frozen --extra dev
 uv run python -m ruff check src tests
 uv run python -m pytest
+uv run flightdeck-quickstart-verify
 ```
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for **uv** and **pip** setup, verification, troubleshooting, and **PyPI releases** (tag-driven; not on merge to `main`).
