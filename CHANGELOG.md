@@ -4,11 +4,16 @@ All notable changes to FlightDeck will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**, documented CLI behavior (**[README.md](https://github.com/flightdeckdev/flightdeck/blob/main/README.md)** on the canonical **`main`** branch), committed **`schemas/v1/`**, and **`POST /v1/events`** payloads with **`api_version` `v1`** are treated as stable public contracts unless a release notes a semver-major bump.
 
-## Unreleased
+## 1.1.2 - 2026-05-03
 
 ### Added
 
 - **`trace_id` filter** on `GET /v1/runs`, `flightdeck runs list --trace-id`, and SDK `list_runs(trace_id=…)` — exact match on ingested `RunEvent.request.trace_id`.
+- **`flightdeck runs export`** — write the same filtered run-event slice as **`runs list`** as **JSONL** (optional **`-o`** file; default stdout); **`--limit`** defaults to **500** (max **500**); prints a **stderr** warning when results are truncated.
+
+### Changed
+
+- **Examples / CI snippets:** **`flightdeck-ai>=1.1.2`** where version pins apply.
 
 ## 1.1.1 - 2026-05-02
 

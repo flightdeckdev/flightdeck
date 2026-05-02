@@ -69,4 +69,5 @@ Compose sets a **`healthcheck`** on **`/health`** plus restart policies; for sys
 ## Related
 
 - **[examples/integration/README.md](../integration/README.md)** — emit `RunEvent` traffic into a running server.
-- **[examples/ci/README.md](../ci/README.md)** — CI policy gates without `serve`.
+- **[examples/ci/README.md](../ci/README.md)** — CI policy gates without `serve`; **approval-gated promote** script [promote_with_approval.sh](../ci/promote_with_approval.sh) and workflow samples.
+- **[SECURITY.md](../../SECURITY.md)** — trust boundaries before exposing **`/v1/*`** beyond loopback.

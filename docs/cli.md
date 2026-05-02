@@ -446,7 +446,7 @@ If no policy has been set, prints the default policy (all constraints `null`/dis
 
 ## `flightdeck runs`
 
-Subgroup for ingesting and listing run events.
+Subgroup for ingesting, listing, and exporting run events.
 
 ### `flightdeck runs list`
 
@@ -457,6 +457,16 @@ flightdeck runs list RELEASE_ID --window WINDOW [--env ENV] [--tenant …] [--ta
 ```
 
 `--trace-id` filters to events whose ingested `request.trace_id` equals the given string (exact match), same as the `trace_id` query parameter on `GET /v1/runs`.
+
+### `flightdeck runs export`
+
+Write the same filtered slice as `runs list` (newest first) as **JSONL** — one `RunEvent` JSON object per line. Default **`--limit`** is **500** (maximum **500**). If more events match the window and filters, only the first **`--limit`** lines are written and a **`WARNING:`** line is printed to **stderr** with `exported` / `matching` counts.
+
+```bash
+flightdeck runs export RELEASE_ID --window WINDOW [-o export.jsonl] [--env ENV] [--tenant …] [--task …] [--trace-id ID] [--limit N]
+```
+
+With **`-o` / `--output`**, writes UTF-8 JSONL to that path; without it, writes to **stdout** (suitable for pipes).
 
 ### `flightdeck runs ingest`
 

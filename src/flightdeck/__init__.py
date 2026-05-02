@@ -1,3 +1,3 @@
 """FlightDeck — ship AI agents safely with release diffs, runtime evidence, and policy gates."""
 
-__version__ = "1.1.1"
+__version__ = "1.1.2"

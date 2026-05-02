@@ -4,6 +4,10 @@ High-level notes for **shipping FlightDeck**. Detailed history: **[CHANGELOG.md]
 
 Narrative docs (including the CLI reference) are maintained on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** `main`; this file and **`schemas/`** ship in minimal clones.
 
+## v1.1.2 — Forensics filters, JSONL export, Phase 1 closure slice
+
+Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): optional **`trace_id`** filter on **`GET /v1/runs`**, **`flightdeck runs list --trace-id`**, and SDK **`list_runs(trace_id=…)`** (exact match on **`RunEvent.request.trace_id`**); **`flightdeck runs export`** writes the same filtered slice as JSONL (stdout or **`-o`**, **`--limit`** up to **500**, stderr warning when truncated). **Stable contracts:** additive HTTP query param and CLI command only.
+
 ## v1.1.1 — Workspace discovery, web approval UX, docs + CI cookbook
 
 Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): **`GET /v1/workspace`** exposes non-secret workspace flags (**`promotion_requires_approval`**, **`pricing_catalog_configured`**, **`server_version`**) for scripting and the **Actions** page; web **Promote** follows the two-step request/confirm path when approval is required; expanded operator docs and **`examples/ci/promote_with_approval.sh`** + README workflow snippet. **Stable contracts:** additive HTTP and JSON Schema only.
