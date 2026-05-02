@@ -20,6 +20,18 @@ This creates **`.venv/`** (gitignored), installs **`flightdeck`** editable plus 
 
 Optional extras (telemetry, SDK helpers): e.g. **`uv sync --extra dev --extra telemetry`**.
 
+### Package extras
+
+| Extra | Packages installed | When to use |
+|-------|--------------------|-------------|
+| `dev` | `pytest`, `ruff` | Development and CI; required to run tests and lint |
+| `openai` | `openai>=1.0` | If you want to use the OpenAI Python client alongside the SDK in your own agent code (not required by FlightDeck core) |
+| `anthropic` | `anthropic>=0.20` | Same, for the Anthropic Python client |
+| `telemetry` | `opentelemetry-api`, `-sdk`, `-exporter-otlp` | Forward-looking OTLP integration; FlightDeck core does **not** import OpenTelemetry at runtime |
+| `all` | `openai` + `anthropic` + `telemetry` | All optional packages in one shot |
+
+FlightDeck's core package (`flightdeck-ai`) does not import OpenAI, Anthropic, or OpenTelemetry at runtime. These extras exist so your project can declare a single dependency (`flightdeck-ai[openai]`) and get a compatible version of both without resolving conflicts manually.
+
 ## Setup (pip — fallback)
 
 ```bash
@@ -151,6 +163,66 @@ For a fully runnable demo that generates matching run events after release regis
 ```bash
 ./scripts/smoke.sh
 ```
+
+**`scripts/smoke.sh`** is a Bash script for Unix/macOS/Git Bash that mirrors the manual demo above. It creates a fresh temporary workspace, registers both quickstart releases, writes a pair of synthetic run events (one baseline, one candidate) with the assigned release IDs substituted inline, ingests them, runs `release diff`, promotes the baseline, and shows history. It does **not** run `release verify` or `doctor` — use `flightdeck-quickstart-verify` for the full end-to-end check including those steps.
+
+### Smoke-test script comparison
+
+| Script | Platform | What it covers |
+|--------|----------|----------------|
+| `flightdeck-quickstart-verify` (or `scripts/quickstart_smoke.py`) | All (Python) | Full workflow: init → pricing → policy → register → ingest → diff → promote → history → **verify → doctor**. Used in CI. |
+| `scripts/smoke.sh` | Unix / Git Bash | Abbreviated demo: same workflow minus `verify` and `doctor`. Generates events inline so it needs no pre-substituted fixtures. |
+| `examples/ci/ledger_gate.py` | All (Python) | Policy-gate CI gate only: init → pricing → register → ingest → diff (`--fail-on-policy`). No promote. Used in CI workflow. |
+
+## Adding a SQLite migration
+
+Migrations are forward-only numbered steps in `src/flightdeck/storage.py`. The current
+highest version is tracked by `LATEST_SCHEMA_MIGRATION_VERSION`.
+
+1. **Add the migration block** inside `Storage.migrate()`. Follow the existing pattern:
+
+   ```python
+   # v4: short description of what this migration does.
+   apply(4, [
+       "ALTER TABLE some_table ADD COLUMN new_col TEXT;",
+   ])
+   ```
+
+   For migrations that need data-backfill or conditional DDL (like v3's `ALTER TABLE` +
+   `PRAGMA table_info` check), write the logic inline before inserting into
+   `schema_migrations`, similar to the `if 3 not in applied:` block.
+
+2. **Bump `LATEST_SCHEMA_MIGRATION_VERSION`** at the top of `storage.py`:
+
+   ```python
+   LATEST_SCHEMA_MIGRATION_VERSION = 4   # was 3
+   ```
+
+3. **Add a `doctor` / `test_doctor.py` assertion** if the migration introduces a new
+   invariant that `flightdeck doctor` should verify (e.g. a contiguous sequence or a
+   foreign-key pointer). Update `test_doctor.py` to expect the new migration version.
+
+4. **Update `docs/operations-and-policy.md § Schema migrations`** table to document the
+   new version number and what it changes.
+
+5. **Run the full test suite** to confirm the migration applies cleanly on a fresh DB
+   and on a DB that already has the previous version applied:
+
+   ```bash
+   uv run python -m pytest tests/test_doctor.py tests/test_spine.py -v
+   ```
+
+### Migration constraints
+
+- All migrations are **additive**; never drop columns or rename them without a new
+  `api_version` major bump.
+- Migrations are applied inside the same `conn.execute` autocommit context as the
+  `CREATE TABLE IF NOT EXISTS` block; for large backfills consider using `transaction()`
+  explicitly to avoid partial writes.
+- `Storage.migrate()` is idempotent — calling it multiple times on the same DB is safe.
+  `flightdeck doctor` calls it at startup as its first step.
+
+---
 
 ## Local State
 
