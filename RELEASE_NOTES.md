@@ -4,6 +4,10 @@ High-level notes for **shipping FlightDeck**. Detailed history: **[CHANGELOG.md]
 
 Narrative docs (including the CLI reference) are maintained on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** `main`; this file and **`schemas/`** ship in minimal clones.
 
+## v1.0.3 — Phase 0 hardening (tests + UI)
+
+Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): broader **pytest** coverage for **`diff_releases`** (MEDIUM/LOW confidence, **`max_latency_ms`**, **`max_error_rate`**, combined failures), **CLI** integration for MEDIUM confidence blocking promotion when **`require_high_diff_confidence`** is on, **`runs ingest`** edge cases (empty file, bad JSONL, JSON array file), and **multi-provider / cross-model** **`release diff`** plus **`POST /v1/diff`** parity on **`pricing.pricing_or_model_changed`**. **Web UI:** promote/rollback responses use structured panels (raw JSON optional); **Run diff** surfaces the same pricing/model-change note as the CLI when the diff payload flags it. **Stable contracts:** no CLI flag removals, no **`v1`** schema or **`POST /v1/events`** shape changes; **HTTP** diff and action response shapes are unchanged (additive UI only on the client).
+
 ## v1.0.2 — CI examples, serve packaging, and policy gate CLI
 
 Minor release (see **[CHANGELOG.md](CHANGELOG.md)**): **`flightdeck release diff --fail-on-policy`** for CI gates; **`examples/ci/`** (`ledger-gate.sh`, GitHub Actions templates) exercised in root CI; **`examples/deploy/`** (Docker/Compose for **`flightdeck serve`**); **`examples/integration/`** (SDK sample emitter for **`POST /v1/events`**); **`GET /health`** adds non-secret **`mutation_auth`** (`loopback` vs `bearer`); web shell shows mutation/token ergonomics and optional read-only UI (**`VITE_FLIGHTDECK_UI_READ_ONLY`**). Fix: policy **`min_*_runs`** explicit **`0`** overrides workspace defaults ( **`is not None`** resolution in **`diff_releases`** ). **Stable contracts:** additive **`/health`** field only; CLI flag is backward-compatible.

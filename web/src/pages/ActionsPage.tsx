@@ -1,7 +1,57 @@
 import { useState } from "react";
+import type { ActionOutcomePayload } from "../api";
 import { fetchJson } from "../api";
+import { Badge } from "../components/Badge";
 import { JsonPanel } from "../components/JsonPanel";
 import { useTimelineRefresh } from "../context/TimelineRefreshContext";
+
+function shortId(id: string, keepStart = 10, keepEnd = 6) {
+  if (id.length <= keepStart + keepEnd + 1) return id;
+  return `${id.slice(0, keepStart)}…${id.slice(-keepEnd)}`;
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+/**
+ * Coerces `/v1/promote` and `/v1/rollback` 200 responses into an
+ * `ActionOutcomePayload`.  Returns null for anything that doesn't look like
+ * the documented contract so we can fall back to the raw JSON panel.
+ */
+function pickOutcome(data: unknown): ActionOutcomePayload | null {
+  if (!isRecord(data)) return null;
+  const policy = data.policy;
+  if (!isRecord(policy)) return null;
+  const reasons = Array.isArray(policy.reasons)
+    ? policy.reasons.filter((r): r is string => typeof r === "string")
+    : [];
+  if (
+    typeof data.action_id !== "string" ||
+    typeof data.release_id !== "string" ||
+    typeof data.agent_id !== "string" ||
+    typeof data.environment !== "string" ||
+    (data.action !== "promote" && data.action !== "rollback") ||
+    typeof data.promoted_pointer_changed !== "boolean"
+  ) {
+    return null;
+  }
+  return {
+    action_id: data.action_id,
+    action: data.action,
+    release_id: data.release_id,
+    agent_id: data.agent_id,
+    environment: data.environment,
+    baseline_release_id:
+      typeof data.baseline_release_id === "string" ? data.baseline_release_id : null,
+    promoted_pointer_changed: data.promoted_pointer_changed,
+    policy: {
+      passed: policy.passed === true,
+      reasons,
+      evaluated_at: typeof policy.evaluated_at === "string" ? policy.evaluated_at : undefined,
+    },
+  };
+}
 
 export function ActionsPage() {
   const { notifyTimelineMutated } = useTimelineRefresh();
@@ -9,13 +59,15 @@ export function ActionsPage() {
   const [actEnv, setActEnv] = useState("local");
   const [actWindow, setActWindow] = useState("7d");
   const [actReason, setActReason] = useState("");
-  const [actOut, setActOut] = useState<string | null>(null);
+  const [actOutcome, setActOutcome] = useState<ActionOutcomePayload | null>(null);
+  const [actRaw, setActRaw] = useState<string | null>(null);
   const [actErr, setActErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<null | "promote" | "rollback">(null);
 
   const runAction = async (path: "/v1/promote" | "/v1/rollback") => {
     setActErr(null);
-    setActOut(null);
+    setActOutcome(null);
+    setActRaw(null);
     const reason = actReason.trim();
     if (!reason) {
       setActErr("Reason is required.");
@@ -38,7 +90,8 @@ export function ActionsPage() {
           actor: "react-ui",
         }),
       });
-      setActOut(JSON.stringify(data, null, 2));
+      setActOutcome(pickOutcome(data));
+      setActRaw(JSON.stringify(data, null, 2));
       notifyTimelineMutated();
     } catch (e) {
       setActErr(String(e));
@@ -100,7 +153,73 @@ export function ActionsPage() {
       </section>
 
       {actErr ? <p className="fd-alert fd-alert--error">{actErr}</p> : null}
-      {actOut ? <JsonPanel title="Last response JSON" value={actOut} defaultOpen /> : null}
+
+      {actOutcome ? (
+        <section className="fd-card">
+          <div className="fd-card__head">
+            <h3 className="fd-card__subtitle">
+              {actOutcome.action === "promote" ? "Promotion" : "Rollback"} outcome
+            </h3>
+            <div className="fd-inline">
+              <span className="fd-muted">Policy:</span>{" "}
+              <Badge tone={actOutcome.policy.passed ? "pass" : "fail"}>
+                {actOutcome.policy.passed ? "PASS" : "FAIL"}
+              </Badge>
+            </div>
+          </div>
+          <p className="fd-muted fd-samples">
+            Pointer:{" "}
+            <Badge tone={actOutcome.promoted_pointer_changed ? "pass" : "neutral"}>
+              {actOutcome.promoted_pointer_changed ? "Updated" : "Unchanged"}
+            </Badge>{" "}
+            · agent={actOutcome.agent_id} · env={actOutcome.environment}
+          </p>
+          <div className="fd-metric-grid">
+            <div className="fd-metric">
+              <div className="fd-metric__label">Action ID</div>
+              <div className="fd-metric__row">
+                <code className="fd-mono fd-mono--sm" title={actOutcome.action_id}>
+                  {shortId(actOutcome.action_id)}
+                </code>
+              </div>
+            </div>
+            <div className="fd-metric">
+              <div className="fd-metric__label">Release</div>
+              <div className="fd-metric__row">
+                <code className="fd-mono fd-mono--sm" title={actOutcome.release_id}>
+                  {shortId(actOutcome.release_id)}
+                </code>
+              </div>
+            </div>
+            <div className="fd-metric">
+              <div className="fd-metric__label">Previous baseline</div>
+              <div className="fd-metric__row">
+                {actOutcome.baseline_release_id ? (
+                  <code
+                    className="fd-mono fd-mono--sm"
+                    title={actOutcome.baseline_release_id}
+                  >
+                    {shortId(actOutcome.baseline_release_id)}
+                  </code>
+                ) : (
+                  <span className="fd-muted">none (first promotion)</span>
+                )}
+              </div>
+            </div>
+          </div>
+          {actOutcome.policy.reasons.length > 0 ? (
+            <ul className="fd-reasons">
+              {actOutcome.policy.reasons.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      ) : null}
+
+      {actRaw ? (
+        <JsonPanel title="Raw response JSON" value={actRaw} defaultOpen={actOutcome === null} />
+      ) : null}
     </>
   );
 }

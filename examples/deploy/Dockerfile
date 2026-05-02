@@ -2,7 +2,7 @@
 FROM python:3.14-slim
 
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir "flightdeck-ai>=1.0.2"
+    && pip install --no-cache-dir "flightdeck-ai>=1.0.3"
 
 WORKDIR /workspace
 

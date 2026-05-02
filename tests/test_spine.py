@@ -767,3 +767,286 @@ def test_passing_second_promotion_replaces_current_release(tmp_path: Path, monke
     storage.migrate()
     assert storage.get_promoted_release_id("agent_support", "local") == candidate_id
 
+
+def test_diff_medium_confidence_blocks_promotion(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+
+    assert runner.invoke(cli, ["init"]).exit_code == 0
+    policy = write_policy(tmp_path, require_high_diff_confidence=True)
+    assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
+
+    pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
+    assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0
+
+    baseline_dir = write_release(
+        tmp_path,
+        agent_id="agent_support",
+        version="1",
+        pricing_provider="openai",
+        pricing_version="openai-2026-04-30",
+    )
+    candidate_dir = write_release(
+        tmp_path,
+        agent_id="agent_support",
+        version="2",
+        pricing_provider="openai",
+        pricing_version="openai-2026-04-30",
+    )
+    baseline_id = runner.invoke(cli, ["release", "register", str(baseline_dir)]).output.strip()
+    candidate_id = runner.invoke(cli, ["release", "register", str(candidate_dir)]).output.strip()
+
+    now = datetime.now(tz=timezone.utc)
+    # 100 events per side: above LOW floor (50) but below HIGH target (500) -> MEDIUM.
+    baseline_events = write_events(tmp_path, release_id=baseline_id, agent_id="agent_support", n=100, ts=now)
+    candidate_events = write_events(tmp_path, release_id=candidate_id, agent_id="agent_support", n=100, ts=now)
+    assert runner.invoke(cli, ["runs", "ingest", str(baseline_events)]).exit_code == 0
+    assert runner.invoke(cli, ["runs", "ingest", str(candidate_events)]).exit_code == 0
+
+    # Establish the baseline (first promotion is unconditional, so it succeeds even at MEDIUM).
+    assert (
+        runner.invoke(
+            cli,
+            ["release", "promote", baseline_id, "--env", "local", "--window", "7d", "--reason", "baseline"],
+        ).exit_code
+        == 0
+    )
+
+    res = runner.invoke(
+        cli,
+        ["release", "promote", candidate_id, "--env", "local", "--window", "7d", "--reason", "ship candidate"],
+    )
+    assert res.exit_code != 0
+    assert "Policy: FAIL" in res.output
+    assert "MEDIUM" in res.output
+    assert "promotion requires HIGH" in res.output
+
+    storage = Storage(load_config().db_path)
+    storage.migrate()
+    assert storage.get_promoted_release_id("agent_support", "local") == baseline_id
+
+
+def test_runs_ingest_empty_file(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    assert runner.invoke(cli, ["init"]).exit_code == 0
+
+    empty = tmp_path / "empty.jsonl"
+    empty.write_text("", encoding="utf-8")
+
+    res = runner.invoke(cli, ["runs", "ingest", str(empty)])
+    assert res.exit_code == 0
+    assert "Inserted 0 events" in res.output
+
+
+def test_runs_ingest_rejects_malformed_jsonl(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    assert runner.invoke(cli, ["init"]).exit_code == 0
+
+    bad = tmp_path / "bad.jsonl"
+    bad.write_text("{not valid json}\n", encoding="utf-8")
+
+    res = runner.invoke(cli, ["runs", "ingest", str(bad)])
+    assert res.exit_code != 0
+
+
+def test_runs_ingest_accepts_json_array(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    assert runner.invoke(cli, ["init"]).exit_code == 0
+
+    pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
+    assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0
+    rel_dir = write_release(
+        tmp_path,
+        agent_id="agent_support",
+        version="1",
+        pricing_provider="openai",
+        pricing_version="openai-2026-04-30",
+    )
+    release_id = runner.invoke(cli, ["release", "register", str(rel_dir)]).output.strip()
+
+    now = datetime.now(tz=timezone.utc).isoformat()
+    events = [
+        {
+            "api_version": "v1",
+            "type": "run_end",
+            "timestamp": now,
+            "workspace_id": "ws_local",
+            "agent_id": "agent_support",
+            "release_id": release_id,
+            "run_id": f"{release_id}_array_{i}",
+            "tenant_id": "unknown",
+            "task_id": "unknown",
+            "environment": "local",
+            "metrics": {"latency_ms": 1000, "success": True, "error_type": None},
+            "usage": {
+                "model": {
+                    "provider": "openai",
+                    "model": "gpt-4.1-mini",
+                    "input_tokens": 1000,
+                    "output_tokens": 500,
+                    "cached_input_tokens": 0,
+                },
+                "tools": [],
+            },
+            "labels": {},
+        }
+        for i in range(3)
+    ]
+    p = tmp_path / "events_array.json"
+    p.write_text(json.dumps(events), encoding="utf-8")
+
+    res = runner.invoke(cli, ["runs", "ingest", str(p)])
+    assert res.exit_code == 0
+    assert "Inserted 3 events" in res.output
+
+
+def test_diff_cross_provider_releases(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+
+    assert runner.invoke(cli, ["init"]).exit_code == 0
+
+    openai_pricing = write_pricing(
+        tmp_path,
+        provider="openai",
+        pricing_version="openai-2026-04-30",
+        model="gpt-4.1-mini",
+        input_price=1.0,
+        output_price=2.0,
+    )
+    anthropic_pricing = write_pricing(
+        tmp_path,
+        provider="anthropic",
+        pricing_version="anthropic-2026-04-30",
+        model="claude-3-sonnet",
+        input_price=3.0,
+        output_price=4.0,
+    )
+    assert runner.invoke(cli, ["pricing", "import", str(openai_pricing)]).exit_code == 0
+    assert runner.invoke(cli, ["pricing", "import", str(anthropic_pricing)]).exit_code == 0
+
+    baseline_dir = write_release(
+        tmp_path,
+        agent_id="agent_support",
+        version="1",
+        pricing_provider="openai",
+        pricing_version="openai-2026-04-30",
+        model="gpt-4.1-mini",
+    )
+    candidate_dir = write_release(
+        tmp_path,
+        agent_id="agent_support",
+        version="2",
+        pricing_provider="anthropic",
+        pricing_version="anthropic-2026-04-30",
+        model="claude-3-sonnet",
+    )
+    baseline_id = runner.invoke(cli, ["release", "register", str(baseline_dir)]).output.strip()
+    candidate_id = runner.invoke(cli, ["release", "register", str(candidate_dir)]).output.strip()
+
+    now = datetime.now(tz=timezone.utc)
+    baseline_events = write_events(
+        tmp_path, release_id=baseline_id, agent_id="agent_support", n=1, ts=now, model="gpt-4.1-mini"
+    )
+    candidate_events = write_events(
+        tmp_path, release_id=candidate_id, agent_id="agent_support", n=1, ts=now, model="claude-3-sonnet"
+    )
+    assert runner.invoke(cli, ["runs", "ingest", str(baseline_events)]).exit_code == 0
+    assert runner.invoke(cli, ["runs", "ingest", str(candidate_events)]).exit_code == 0
+
+    res = runner.invoke(cli, ["release", "diff", baseline_id, candidate_id, "--window", "7d"])
+    assert res.exit_code == 0
+    assert "Baseline pricing: openai/openai-2026-04-30" in res.output
+    assert "Candidate pricing: anthropic/anthropic-2026-04-30" in res.output
+    assert "(model=gpt-4.1-mini)" in res.output
+    assert "(model=claude-3-sonnet)" in res.output
+    assert "NOTE: cost delta includes pricing/model assumption changes" in res.output
+    # baseline: 1000 input * 1.0/1k + 500 output * 2.0/1k = 1.0 + 1.0 = 2.0
+    # candidate: 1000 * 3.0/1k + 500 * 4.0/1k = 3.0 + 2.0 = 5.0
+    assert "Estimated model token cost/run (USD): 2.000000 -> 5.000000" in res.output
+
+    # HTTP route exposes the same pricing-or-model-changed flag.
+    from fastapi.testclient import TestClient
+
+    from flightdeck.server.app import create_app
+
+    with TestClient(create_app()) as client:
+        resp = client.post(
+            "/v1/diff",
+            json={
+                "baseline_release_id": baseline_id,
+                "candidate_release_id": candidate_id,
+                "window": "7d",
+                "environment": "local",
+            },
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["pricing"]["baseline_provider"] == "openai"
+        assert body["pricing"]["candidate_provider"] == "anthropic"
+        assert body["pricing"]["pricing_or_model_changed"] is True
+
+
+def test_diff_cross_model_same_provider(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+
+    assert runner.invoke(cli, ["init"]).exit_code == 0
+
+    pricing_path = tmp_path / "pricing_openai_multi.yaml"
+    pricing_data = {
+        "provider": "openai",
+        "pricing_version": "openai-2026-04-30",
+        "entries": [
+            {
+                "model": "gpt-4.1-mini",
+                "input_usd_per_1k_tokens": 1.0,
+                "output_usd_per_1k_tokens": 2.0,
+            },
+            {
+                "model": "gpt-4.1",
+                "input_usd_per_1k_tokens": 5.0,
+                "output_usd_per_1k_tokens": 10.0,
+            },
+        ],
+    }
+    pricing_path.write_text(yaml.safe_dump(pricing_data, sort_keys=False), encoding="utf-8")
+    assert runner.invoke(cli, ["pricing", "import", str(pricing_path)]).exit_code == 0
+
+    baseline_dir = write_release(
+        tmp_path,
+        agent_id="agent_support",
+        version="1",
+        pricing_provider="openai",
+        pricing_version="openai-2026-04-30",
+        model="gpt-4.1-mini",
+    )
+    candidate_dir = write_release(
+        tmp_path,
+        agent_id="agent_support",
+        version="2",
+        pricing_provider="openai",
+        pricing_version="openai-2026-04-30",
+        model="gpt-4.1",
+    )
+    baseline_id = runner.invoke(cli, ["release", "register", str(baseline_dir)]).output.strip()
+    candidate_id = runner.invoke(cli, ["release", "register", str(candidate_dir)]).output.strip()
+
+    now = datetime.now(tz=timezone.utc)
+    baseline_events = write_events(
+        tmp_path, release_id=baseline_id, agent_id="agent_support", n=1, ts=now, model="gpt-4.1-mini"
+    )
+    candidate_events = write_events(
+        tmp_path, release_id=candidate_id, agent_id="agent_support", n=1, ts=now, model="gpt-4.1"
+    )
+    assert runner.invoke(cli, ["runs", "ingest", str(baseline_events)]).exit_code == 0
+    assert runner.invoke(cli, ["runs", "ingest", str(candidate_events)]).exit_code == 0
+
+    res = runner.invoke(cli, ["release", "diff", baseline_id, candidate_id, "--window", "7d"])
+    assert res.exit_code == 0
+    assert "(model=gpt-4.1-mini)" in res.output
+    assert "(model=gpt-4.1)" in res.output
+    assert "NOTE: cost delta includes pricing/model assumption changes" in res.output
