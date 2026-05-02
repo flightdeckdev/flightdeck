@@ -98,7 +98,7 @@ Goal: move from solid local tooling to repeatable production usage patterns.
 
 - **Approval workflow:** **v1.1.0** added HTTP + CLI + **`GET /v1/promotion-requests`**. **v1.1.1** adds **`GET /v1/workspace`** and a first-class **web** path (request → pending table → confirm) keyed off `promotion_requires_approval`, plus **`examples/ci/promote_with_approval.sh`** and a **`workflow_dispatch`** sample workflow.
 - **Operator narrative:** README / **examples** index / **web-ui** / **release-artifact** / **http-api** / **sdk** / optional **`docs/pricing-catalog.md`** describe catalog fields, runs listing, and the two promote modes.
-- **Still open:** **Forensics** beyond read-only runs list (replay/trace-style views, exports), richer catalog lifecycle governance, OTLP-oriented telemetry — see gaps table above.
+- **Still open:** **Forensics** beyond read-only runs list and **`trace_id`-scoped listing** (replay-style views, JSONL exports), richer catalog lifecycle governance, OTLP-oriented telemetry — see gaps table above.
 
 ### Build in this phase
 

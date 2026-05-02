@@ -80,6 +80,7 @@ def get_runs(
     environment: str | None = Query(default=None),
     tenant_id: str | None = Query(default=None),
     task_id: str | None = Query(default=None),
+    trace_id: str | None = Query(default=None),
     limit: int = Query(default=100, ge=1, le=500),
 ) -> dict[str, object]:
     cfg, storage = ensure_app_state(request)
@@ -92,6 +93,7 @@ def get_runs(
             environment=environment,
             tenant_id=tenant_id,
             task_id=task_id,
+            trace_id=trace_id,
             limit=limit,
         )
     except OperationError as exc:

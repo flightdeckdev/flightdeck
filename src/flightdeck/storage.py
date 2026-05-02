@@ -801,6 +801,7 @@ class Storage:
         tenant_id: str | None = None,
         task_id: str | None = None,
         environment: str | None = None,
+        trace_id: str | None = None,
     ) -> list[RunEvent]:
         clauses: list[str] = ["release_id = ?", "timestamp >= ?", "timestamp < ?"]
         params: list[Any] = [release_id, since.isoformat(), until.isoformat()]
@@ -814,6 +815,9 @@ class Storage:
         if environment:
             clauses.append("environment = ?")
             params.append(environment)
+        if trace_id:
+            clauses.append("json_extract(event_json, '$.request.trace_id') = ?")
+            params.append(trace_id)
 
         where = " AND ".join(clauses)
 

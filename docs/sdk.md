@@ -177,9 +177,9 @@ as `post_promote`.
 
 `GET /v1/promotion-requests`.
 
-### `list_runs(*, release_id, window, environment=None, tenant_id=None, task_id=None, limit=100) -> dict`
+### `list_runs(*, release_id, window, environment=None, tenant_id=None, task_id=None, trace_id=None, limit=100) -> dict`
 
-`GET /v1/runs` — read-only event slice for forensics.
+`GET /v1/runs` — read-only event slice for forensics. When `trace_id` is set, only events whose `request.trace_id` matches are returned.
 
 ## Async usage
 

@@ -720,12 +720,14 @@ def query_run_events_page(
     environment: str | None,
     tenant_id: str | None,
     task_id: str | None,
+    trace_id: str | None = None,
     limit: int,
 ) -> dict[str, object]:
     """Read-only slice of run events for forensics (newest-first truncation)."""
     if not storage.get_release(release_id):
         raise OperationError(f"Unknown release: {release_id}")
     env = environment or cfg.default_environment
+    tid = (trace_id or "").strip() or None
     try:
         delta = parse_window(window)
     except ValueError as e:
@@ -739,6 +741,7 @@ def query_run_events_page(
         tenant_id=tenant_id,
         task_id=task_id,
         environment=env,
+        trace_id=tid,
     )
     events_sorted = sorted(events, key=lambda e: e.timestamp, reverse=True)
     lim = max(1, min(500, limit))
@@ -751,6 +754,7 @@ def query_run_events_page(
             "environment": env,
             "tenant_id": tenant_id,
             "task_id": task_id,
+            "trace_id": tid,
         },
         "matched_total": len(events),
         "returned": len(page),

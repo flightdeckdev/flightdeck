@@ -453,8 +453,10 @@ Subgroup for ingesting and listing run events.
 Print ingested events for a release (newest first), truncated to `--limit`.
 
 ```bash
-flightdeck runs list RELEASE_ID --window WINDOW [--env ENV] [--tenant …] [--task …] [--limit N] [--output json]
+flightdeck runs list RELEASE_ID --window WINDOW [--env ENV] [--tenant …] [--task …] [--trace-id ID] [--limit N] [--output json]
 ```
+
+`--trace-id` filters to events whose ingested `request.trace_id` equals the given string (exact match), same as the `trace_id` query parameter on `GET /v1/runs`.
 
 ### `flightdeck runs ingest`
 
