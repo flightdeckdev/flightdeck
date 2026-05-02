@@ -16,7 +16,21 @@ serve` see [http-api.md](http-api.md).
 | `--help` | Print help for any command or subcommand |
 
 All commands require a `flightdeck.yaml` in the working directory (or the default path
-`./flightdeck.yaml`). Run `flightdeck init` to create one.
+`./flightdeck.yaml`). Run `flightdeck init` to create one. The only exception is
+`flightdeck init` itself — it writes the file and does not call `load_config`.
+
+## Actor resolution
+
+Several commands that write to the audit ledger (`release promote`, `release rollback`,
+`pricing import`) record an `actor` value. For CLI commands, `actor` is resolved from
+the environment at invocation time:
+
+1. `USER` environment variable (Unix / macOS)
+2. `USERNAME` environment variable (Windows)
+3. Falls back to `"unknown"` if neither is set
+
+The HTTP API's `POST /v1/promote` and `POST /v1/rollback` accept an explicit `"actor"`
+field in the request body (defaults to `"http"` when omitted).
 
 ## Exit codes
 

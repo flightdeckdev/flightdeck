@@ -106,11 +106,44 @@ cost = (input_tokens / 1000) * input_usd_per_1k
 
 Runs are averaged across all events in the window to produce `cost_per_run_usd`.
 
+### `compute_diff` vs. `promote_release` / `rollback_release`: filter scope
+
+`compute_diff` supports optional `tenant_id` and `task_id` filters in addition to
+`environment`. These allow you to narrow the evidence window to a specific tenant or task
+type when comparing releases.
+
+`_evaluate_promotion_or_rollback` (the shared path for `promote` and `rollback`) does
+**not** accept tenant or task filters. It queries run events for the entire environment
+over the window:
+
+```python
+# promote/rollback path — no tenant_id or task_id argument passed
+storage.query_runs(release_id, since, until, environment=environment)
+```
+
+This means **policy evaluation for promote/rollback aggregates all runs in the
+environment over the window**, regardless of tenant or task. The active policy applies to
+the full population of events for that release, not a filtered slice. If you need
+tenant-scoped evaluation, use `release diff` first to inspect the filtered evidence, then
+decide whether to promote.
+
 ### Important constraint: cross-agent diffs
 
 `compute_diff` checks that both releases have the same `agent_id` in their artifact
 spec *before* querying events. This is checked again inside `diff_releases` if run events
 from both sides are non-empty.
+
+`diff_releases` also enforces that all events on a given side share a single `agent_id`.
+If events for the baseline (or candidate) release span multiple agent IDs, the diff is
+rejected with:
+
+```
+Each side of the diff must have a single consistent agent_id among run events.
+```
+
+This can happen if `run_id` values from different agents were ingested under the same
+`release_id`. Ensure every `RunEvent` for a release carries the correct `agent_id`
+matching `spec.agent.agent_id` in the release artifact.
 
 ### Rollup semantics
 
@@ -413,6 +446,7 @@ corresponding check in `test_schemas.py` (or `test_doctor.py`).
 | `Unknown baseline release: rel_...` | Release not registered | `flightdeck release register <path>` |
 | `Missing pricing table for baseline openai/2024-02` | Pricing not imported | `flightdeck pricing import <path>` |
 | `Cross-agent diff is not allowed` | Releases belong to different agents | Use releases from the same `agent_id` |
+| `Each side of the diff must have a single consistent agent_id among run events` | Ingested events for that release contain mixed `agent_id` values | Verify all `RunEvent` records use the correct `agent_id` matching the release artifact; re-ingest corrected events |
 | `Pricing table missing model entry` | Pricing table does not list the model used in the release | Add the model to the pricing YAML and reimport with `--replace` |
 | `Reason is required for promote/rollback actions` | Empty `--reason` flag | Provide a non-empty `--reason` |
 | `No promoted release exists for this agent/environment; nothing to roll back to` | Trying to roll back with no baseline | Promote a release first |
