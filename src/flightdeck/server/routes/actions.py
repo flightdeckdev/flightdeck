@@ -117,6 +117,11 @@ def post_diff(request: Request, req: DiffRequest) -> dict[str, object]:
                 "candidate_output_usd_per_1k_tokens": result.candidate_output_usd_per_1k_tokens,
                 "candidate_cached_input_usd_per_1k_tokens": result.candidate_cached_input_usd_per_1k_tokens,
             },
+            # Diagnostic strings when a release's resolved model has no entry
+            # in its pricing table; the cost rollup still raises if such a
+            # model appears in events. These are informational only and do
+            # not flip policy.
+            "warnings": list(result.pricing_warnings),
         },
         "samples": {
             "baseline_runs": result.baseline_runs,

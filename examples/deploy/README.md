@@ -23,7 +23,18 @@ docker compose up --build
 
 - **UI + API:** `http://127.0.0.1:8765/` (static UI + `/v1/*`).
 - **Health:** `GET http://127.0.0.1:8765/health`.
+- **Compose healthcheck:** `docker-compose.yml` probes **`/health`** so orchestrators can mark the service ready (see `healthcheck:` in that file).
 - **Data:** named Docker volume **`fd_workspace`** (SQLite under **`.flightdeck/`** inside the volume). Remove with `docker compose down -v` when you want a clean ledger.
+
+### SQLite backups
+
+FlightDeck stores the ledger in **`.flightdeck/flightdeck.db`** under the workspace root. For a **hot copy** while the server is stopped or idle, run from the workspace directory:
+
+```bash
+flightdeck doctor --backup ./backups/flightdeck-$(date -u +%Y%m%dT%H%M%SZ).db
+```
+
+Inside the Compose stack, **`exec`** into the running container with **`/workspace`** as cwd (same layout as local **`flightdeck init`**), or run a one-shot sidecar that mounts the same volume and invokes **`flightdeck doctor --backup /workspace/backups/snapshot.db`**. Schedule with **cron** or your platform scheduler; keep backups off the primary volume when possible.
 
 ### Optional mutation token
 
@@ -42,7 +53,7 @@ Use an absolute path on Linux/macOS; on Windows Docker Desktop, use a path Docke
 
 ## Process supervision
 
-Compose provides restart policies; for systemd/Kubernetes, reuse the same image and run **`/entrypoint.sh`** (or invoke **`flightdeck serve`** directly with a prepared workspace directory).
+Compose sets a **`healthcheck`** on **`/health`** plus restart policies; for systemd/Kubernetes, reuse the same image and run **`/entrypoint.sh`** (or invoke **`flightdeck serve`** directly with a prepared workspace directory).
 
 ## Related
 

@@ -29,6 +29,7 @@ type PricingInfo = {
   candidateModel: string;
   changed: boolean;
   prices: PricingPrices | null;
+  warnings: string[];
 };
 
 type PricingPrices = {
@@ -59,6 +60,10 @@ function pickPricing(data: DiffJson): PricingInfo | null {
   const p = data.pricing;
   if (!isRecord(p)) return null;
   const get = (k: string): string => (typeof p[k] === "string" ? (p[k] as string) : "");
+  const rawWarnings = p.warnings;
+  const warnings = Array.isArray(rawWarnings)
+    ? rawWarnings.filter((x): x is string => typeof x === "string")
+    : [];
   return {
     baselineProvider: get("baseline_provider"),
     baselineVersion: get("baseline_version"),
@@ -68,6 +73,7 @@ function pickPricing(data: DiffJson): PricingInfo | null {
     candidateModel: get("candidate_model"),
     changed: p.pricing_or_model_changed === true,
     prices: pickPrices(p),
+    warnings,
   };
 }
 
@@ -224,6 +230,13 @@ export function DiffPage() {
                 confidence: <strong>{String(samples.confidence ?? "—")}</strong>
                 {typeof samples.confidence_reason === "string" ? ` — ${samples.confidence_reason}` : null}
               </p>
+            ) : null}
+            {pricing && pricing.warnings.length > 0 ? (
+              <ul className="fd-alert fd-alert--warn fd-reasons">
+                {pricing.warnings.map((w) => (
+                  <li key={w}>Pricing warning: {w}</li>
+                ))}
+              </ul>
             ) : null}
             {pricing && pricing.changed ? (
               <p className="fd-alert fd-alert--warn">

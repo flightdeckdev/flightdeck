@@ -39,6 +39,24 @@ export type HealthPayload = {
   mutation_auth?: "bearer" | "loopback";
 };
 
+/**
+ * Response shape for `GET /v1/metrics`. Mirrors `routes/metrics.py` and
+ * `Storage.get_ledger_counters()`. Counters are non-negative integers; the
+ * `actions_by_action` map is keyed by action name (e.g. `promote`, `rollback`).
+ */
+export type MetricsPayload = {
+  counters: {
+    releases_total: number;
+    pricing_tables_total: number;
+    run_events_total: number;
+    promoted_pointers_total: number;
+    actions_total: number;
+    actions_by_action: Record<string, number>;
+  };
+  schema_version: number;
+  generated_at: string;
+};
+
 export type PolicyResultPayload = {
   passed: boolean;
   reasons: string[];
@@ -83,6 +101,10 @@ export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T>
 
 export async function fetchHealth(): Promise<HealthPayload> {
   return fetchJson<HealthPayload>("/health");
+}
+
+export async function fetchMetrics(): Promise<MetricsPayload> {
+  return fetchJson<MetricsPayload>("/v1/metrics");
 }
 
 export async function loadTimeline(): Promise<TimelinePayload> {

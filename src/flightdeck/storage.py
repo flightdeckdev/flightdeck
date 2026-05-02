@@ -204,6 +204,28 @@ class Storage:
                 conn.execute("INSERT INTO schema_migrations (version) VALUES (?)", (3,))
                 applied.add(3)
 
+    def backup_to(self, dest: Path) -> None:
+        """Copy the workspace SQLite file to ``dest`` using SQLite's online backup API.
+
+        Creates parent directories. Overwrites ``dest`` if it already exists.
+        ``dest`` must not be the same path as :attr:`db_path`.
+        """
+        dest_path = dest.expanduser().resolve()
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        source_path = Path(self.db_path).expanduser().resolve()
+        if dest_path == source_path:
+            msg = "backup destination must not be the same path as the workspace database"
+            raise ValueError(msg)
+        ensure_parent_dir(self.db_path)
+        self.migrate()
+        with self.connect() as src:
+            dst = sqlite3.connect(str(dest_path))
+            try:
+                src.backup(dst)
+                dst.commit()
+            finally:
+                dst.close()
+
     def list_applied_migrations(self) -> list[int]:
         """Return applied schema migration versions (requires tables to exist; call `migrate()` first)."""
         with self.connect() as conn:

@@ -71,10 +71,14 @@ in a shared repo. See [release-artifact.md § Workspace config](release-artifact
 Run read-only health checks on the local SQLite ledger.
 
 ```bash
-flightdeck doctor
+flightdeck doctor [--backup PATH]
 ```
 
-No flags. Calls `Storage.migrate()` at start (idempotent) and then checks:
+Calls `Storage.migrate()` at start (idempotent). With **`--backup PATH`**, runs an SQLite
+online backup of the workspace database to **`PATH`** (parent directories are created;
+an existing file is overwritten), then runs the checks below.
+
+Without **`--backup`**, only the checks run. In both cases **`migrate()`** runs first.
 
 | Check | What it verifies |
 |-------|-----------------|
@@ -216,10 +220,15 @@ flightdeck release diff BASELINE_ID CANDIDATE_ID --window WINDOW [OPTIONS]
 | `--tenant` | Filter events by `tenant_id` |
 | `--task` | Filter events by `task_id` |
 | `--fail-on-policy` | After printing the diff, exit **1** when the active policy does not pass (for CI gates). |
+| `--output` | `text` (default) or `json`. **`json`**: same JSON object as **`POST /v1/diff`** (stable keys for `jq` / CI parsers). With **`--fail-on-policy`**, JSON is still printed to stdout before exit **1**. |
 
 Both releases must have the same `agent_id`. Cross-agent diffs are rejected with exit 1.
 
 **Exit codes:** invalid input, missing pricing, or other `OperationError` → non-zero. With **`--fail-on-policy`**, a computed diff whose policy result is **FAIL** also exits **1** (after the usual stdout).
+
+When a release's resolved model has **no row** in its pricing table, the diff still completes
+(if rollups do not need that rate for ingested events), and the CLI prints **`WARNING:`** lines
+and JSON includes **`pricing.warnings`** — diagnostic only; policy is unchanged.
 
 The diff is a **read-only computation** — it does not write to the audit ledger or update
 any promoted pointers.

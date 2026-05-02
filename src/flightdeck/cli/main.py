@@ -79,10 +79,20 @@ def init(path_: str) -> None:
 
 
 @cli.command("doctor")
-def doctor_cmd() -> None:
+@click.option(
+    "--backup",
+    "backup_path",
+    type=click.Path(path_type=Path, dir_okay=False),
+    default=None,
+    help="Copy the workspace SQLite database to PATH (online backup), then run checks.",
+)
+def doctor_cmd(backup_path: Path | None) -> None:
     """Run read-only health checks on the local ledger (migrations, promoted pointers)."""
     cfg = load_config()
     storage = Storage(cfg.db_path)
+    if backup_path is not None:
+        storage.backup_to(backup_path)
+        click.echo(f"Backed up database to {backup_path}")
     checks = run_doctor(storage)
     failed = False
     for c in checks:
@@ -327,6 +337,14 @@ def runs_ingest(path: Path) -> None:
     default=False,
     help="Exit with code 1 when the active policy does not pass (after printing the diff).",
 )
+@click.option(
+    "--output",
+    "output_format",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    show_default=True,
+    help="Output format. 'json' emits the same shape as POST /v1/diff for machine consumers.",
+)
 def release_diff(
     baseline_release_id: str,
     candidate_release_id: str,
@@ -335,6 +353,7 @@ def release_diff(
     task_id: str | None,
     environment: str | None,
     fail_on_policy: bool,
+    output_format: str,
 ) -> None:
     """Compare two releases over a time window and print a confidence-labeled safety diff."""
     cfg = load_config()
@@ -354,6 +373,59 @@ def release_diff(
     except OperationError as e:
         raise click.ClickException(str(e)) from e
 
+    if output_format == "json":
+        body = {
+            "window": result.window,
+            "since": result.since.isoformat(),
+            "until": result.until.isoformat(),
+            "filters": {
+                "environment": result.environment,
+                "tenant_id": result.tenant_id,
+                "task_id": result.task_id,
+            },
+            "pricing": {
+                "baseline_provider": result.baseline_pricing_provider,
+                "baseline_version": result.baseline_pricing_version,
+                "baseline_model": result.baseline_model,
+                "candidate_provider": result.candidate_pricing_provider,
+                "candidate_version": result.candidate_pricing_version,
+                "candidate_model": result.candidate_model,
+                "pricing_or_model_changed": result.pricing_or_model_changed,
+                "prices": {
+                    "baseline_input_usd_per_1k_tokens": result.baseline_input_usd_per_1k_tokens,
+                    "baseline_output_usd_per_1k_tokens": result.baseline_output_usd_per_1k_tokens,
+                    "baseline_cached_input_usd_per_1k_tokens": result.baseline_cached_input_usd_per_1k_tokens,
+                    "candidate_input_usd_per_1k_tokens": result.candidate_input_usd_per_1k_tokens,
+                    "candidate_output_usd_per_1k_tokens": result.candidate_output_usd_per_1k_tokens,
+                    "candidate_cached_input_usd_per_1k_tokens": result.candidate_cached_input_usd_per_1k_tokens,
+                },
+                "warnings": list(result.pricing_warnings),
+            },
+            "samples": {
+                "baseline_runs": result.baseline_runs,
+                "candidate_runs": result.candidate_runs,
+                "confidence": result.confidence,
+                "confidence_reason": result.confidence_reason,
+            },
+            "metrics": {
+                "baseline_cost_per_run_usd": result.baseline_cost_per_run_usd,
+                "candidate_cost_per_run_usd": result.candidate_cost_per_run_usd,
+                "delta_cost_per_run_usd": result.delta_cost_per_run_usd,
+                "delta_cost_per_run_pct": result.delta_cost_per_run_pct,
+                "baseline_latency_ms_avg": result.baseline_latency_ms_avg,
+                "candidate_latency_ms_avg": result.candidate_latency_ms_avg,
+                "delta_latency_ms_avg": result.delta_latency_ms_avg,
+                "baseline_error_rate": result.baseline_error_rate,
+                "candidate_error_rate": result.candidate_error_rate,
+                "delta_error_rate": result.delta_error_rate,
+            },
+            "policy": result.policy.model_dump(mode="json"),
+        }
+        click.echo(json.dumps(body, indent=2, sort_keys=True))
+        if fail_on_policy and not result.policy.passed:
+            raise click.ClickException("Policy gate: diff blocked by active policy (see policy.reasons in JSON output).")
+        return
+
     click.echo(f"Window: {window} ({result.since.isoformat()} .. {result.until.isoformat()})")
     click.echo(f"Filters: env={result.environment} tenant={tenant_id or '*'} task={task_id or '*'}")
     click.echo(
@@ -364,6 +436,8 @@ def release_diff(
         f"Candidate pricing: {result.candidate_pricing_provider}/{result.candidate_pricing_version} "
         f"(model={result.candidate_model})"
     )
+    for w in result.pricing_warnings:
+        click.echo(f"WARNING: {w}")
     if result.pricing_or_model_changed:
         click.echo("NOTE: cost delta includes pricing/model assumption changes (pricing reference and/or model differ).")
         if (

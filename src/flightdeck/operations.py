@@ -58,6 +58,7 @@ class DiffOutcome:
     candidate_error_rate: float
     delta_error_rate: float
     policy: PolicyResult
+    pricing_warnings: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -193,6 +194,18 @@ def compute_diff(
     base_entry = pricing_entry_for(base_table, base_artifact.spec.runtime.model)
     cand_entry = pricing_entry_for(cand_table, cand_artifact.spec.runtime.model)
 
+    pricing_warnings: list[str] = []
+    if base_entry is None:
+        pricing_warnings.append(
+            f"baseline pricing table {base_ref.provider}/{base_ref.pricing_version} "
+            f"has no entry for model {base_artifact.spec.runtime.model!r}"
+        )
+    if cand_entry is None:
+        pricing_warnings.append(
+            f"candidate pricing table {cand_ref.provider}/{cand_ref.pricing_version} "
+            f"has no entry for model {cand_artifact.spec.runtime.model!r}"
+        )
+
     return DiffOutcome(
         window=window,
         since=since,
@@ -236,6 +249,7 @@ def compute_diff(
         candidate_error_rate=diff.candidate.error_rate,
         delta_error_rate=diff.delta_error_rate,
         policy=diff.policy,
+        pricing_warnings=tuple(pricing_warnings),
     )
 
 

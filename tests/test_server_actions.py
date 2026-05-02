@@ -93,6 +93,60 @@ def test_http_routes_expose_read_and_diff(tmp_path: Path) -> None:
             body = diff_resp.json()
             assert body["samples"]["baseline_runs"] == 5
             assert body["samples"]["candidate_runs"] == 5
+            assert body["pricing"]["warnings"] == []
+
+
+def test_http_v1_diff_pricing_warnings_when_model_missing(tmp_path: Path) -> None:
+    ws = tmp_path / "ws_warn"
+    ws.mkdir(parents=True, exist_ok=True)
+    runner = CliRunner()
+    with _cwd(ws):
+        assert runner.invoke(cli, ["init"]).exit_code == 0
+        policy = write_policy(
+            ws,
+            max_cost_per_run_usd=10.0,
+            min_candidate_runs=0,
+            min_baseline_runs=0,
+            min_low_runs=0,
+            require_high_diff_confidence=False,
+        )
+        assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
+        pricing = write_pricing(ws, provider="openai", pricing_version="openai-2026-04-30", model="gpt-4.1-mini")
+        assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0
+        b_dir = write_release(
+            ws,
+            agent_id="agent_warn",
+            version="1",
+            pricing_provider="openai",
+            pricing_version="openai-2026-04-30",
+            model="unlisted-model-x",
+        )
+        c_dir = write_release(
+            ws,
+            agent_id="agent_warn",
+            version="2",
+            pricing_provider="openai",
+            pricing_version="openai-2026-04-30",
+            model="unlisted-model-x",
+        )
+        baseline_id = runner.invoke(cli, ["release", "register", str(b_dir)]).output.strip()
+        candidate_id = runner.invoke(cli, ["release", "register", str(c_dir)]).output.strip()
+
+        with TestClient(create_app()) as client:
+            diff_resp = client.post(
+                "/v1/diff",
+                json={
+                    "baseline_release_id": baseline_id,
+                    "candidate_release_id": candidate_id,
+                    "window": "7d",
+                    "environment": "local",
+                },
+            )
+    assert diff_resp.status_code == 200
+    body = diff_resp.json()
+    w = body["pricing"]["warnings"]
+    assert len(w) == 2
+    assert all("unlisted-model-x" in s for s in w)
 
 
 def test_http_promote_parity_with_cli_outcome(tmp_path: Path) -> None:

@@ -330,7 +330,8 @@ the audit ledger.
       "candidate_input_usd_per_1k_tokens": 0.0045,
       "candidate_output_usd_per_1k_tokens": 0.0135,
       "candidate_cached_input_usd_per_1k_tokens": null
-    }
+    },
+    "warnings": []
   },
   "samples": {
     "baseline_runs": 1200,
@@ -357,6 +358,12 @@ the audit ledger.
   }
 }
 ```
+
+**`pricing.warnings`** — array of human-readable strings when the baseline or candidate
+release's **`spec.runtime.model`** has no matching entry in that side's imported pricing
+table. Per-side **`prices.*`** fields are **`null`** in that case. Warnings are **informational
+only** and do not change **`policy`**. If ingested run events reference a model that cannot
+be priced, the diff request still fails with HTTP 400 as before.
 
 **Confidence levels**
 

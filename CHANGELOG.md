@@ -6,6 +6,30 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ## Unreleased
 
+## 1.0.6 - 2026-05-02
+
+### Added
+
+- **CLI `flightdeck doctor --backup PATH`:** SQLite online backup of the workspace database to **`PATH`** (parent directories created; file overwritten if present), then the usual doctor checks.
+- **Examples:** **[examples/integration/emit_sample_events.node.mjs](examples/integration/emit_sample_events.node.mjs)** — **`POST /v1/events`** sample using built-in **`fetch`** (Node 18+); **[examples/integration/README.md](examples/integration/README.md)** adds **`curl`** + **`jq`** example.
+- **Docs:** **[examples/deploy/README.md](examples/deploy/README.md)** — Compose **`/health`** healthcheck and **`doctor --backup`** / cron scheduling notes.
+- **Roadmap:** **Phase 0** declared **closed**; **catalog-level** multi-provider pricing normalization called out under **Phase 1** build items.
+- **Tests:** **`test_doctor_backup_writes_valid_sqlite`** in **`tests/test_cli.py`**.
+
+### Changed
+
+- **Examples / CI snippets:** **`flightdeck-ai>=1.0.6`** in Docker and PyPI gate samples.
+
+## 1.0.5 - 2026-05-02
+
+### Added
+
+- **CLI `release diff --output json`:** prints the same JSON object as **`POST /v1/diff`** (sorted keys) for **`jq`** / CI parsers; works with **`--fail-on-policy`** (JSON to stdout, then exit **1** on policy failure).
+- **`POST /v1/diff`:** **`pricing.warnings`** — string list when baseline or candidate **`spec.runtime.model`** has no row in that side's imported pricing table (diagnostic only; **`policy`** unchanged). CLI prints matching **`WARNING:`** lines in text mode.
+- **Web UI:** **Run diff** shows pricing warnings above the pricing/model-change banner; **Overview** adds a **Ledger metrics** card (**`GET /v1/metrics`**).
+- **Docs:** **[docs/cli.md](docs/cli.md)** and **[docs/http-api.md](docs/http-api.md)** document **`--output json`** and **`pricing.warnings`**.
+- **Tests:** **`test_release_diff_output_json_shape`**, **`test_release_diff_pricing_warnings_when_model_not_in_table`** in **`tests/test_spine.py`**; **`test_release_diff_fail_on_policy_with_json_output`** in **`tests/test_cli_contract.py`**; **`test_http_v1_diff_pricing_warnings_when_model_missing`** and **`pricing.warnings`** assertion on the happy path in **`tests/test_server_actions.py`**.
+
 ## 1.0.4 - 2026-05-03
 
 ### Added
