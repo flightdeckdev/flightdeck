@@ -51,7 +51,7 @@ flightdeck doctor
 flightdeck-quickstart-verify
 ```
 
-Full command flags and exit codes: [README.md](https://github.com/flightdeckdev/flightdeck/blob/main/README.md). Cross-platform quickstart parity: **`flightdeck-quickstart-verify`** / **`python -m flightdeck.quickstart_smoke`** (also run in CI).
+Full command flags and exit codes: [README.md](https://github.com/flightdeckdev/flightdeck/blob/main/README.md). Cross-platform quickstart parity: **`flightdeck-quickstart-verify`** / **`python -m flightdeck.quickstart_smoke`** (also run in CI). HTTP API reference: **[docs/http-api.md](docs/http-api.md)**. Python SDK: **[docs/sdk.md](docs/sdk.md)**.
 
 **Lockfile:** when you change **`pyproject.toml`** dependencies or extras, run **`uv lock`** and commit **`uv.lock`** so CI stays **`--frozen`**-reproducible.
 
