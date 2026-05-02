@@ -14,10 +14,17 @@ test("home loads FlightDeck shell and overview tables", async ({ page }) => {
 test("hash routes reach diff, runs, and promote pages", async ({ page }) => {
   await page.goto("/#/diff");
   await expect(page.getByRole("heading", { name: "Run diff", level: 2 })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Diff help" })).toBeVisible();
   await page.goto("/#/runs");
   await expect(page.getByRole("heading", { name: "Run events", level: 2 })).toBeVisible();
   await page.goto("/#/actions");
   await expect(page.getByRole("heading", { name: "Promote & rollback", level: 2 })).toBeVisible();
+});
+
+test("runs page requires release id before query", async ({ page }) => {
+  await page.goto("/#/runs");
+  await page.getByRole("button", { name: "Load runs" }).click();
+  await expect(page.getByText("Release ID is required.")).toBeVisible();
 });
 
 test("GET /v1/workspace returns WorkspacePublic", async ({ request }) => {

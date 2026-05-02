@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { ReleaseRow, RunsListPayload } from "../api";
 import { fetchRuns, fetchRunsExportBlob, loadTimeline } from "../api";
 import { JsonPanel } from "../components/JsonPanel";
@@ -8,7 +8,41 @@ function shortId(id: string, keepStart = 12, keepEnd = 6) {
   return `${id.slice(0, keepStart)}…${id.slice(-keepEnd)}`;
 }
 
+function asRecord(v: unknown): Record<string, unknown> | null {
+  if (v && typeof v === "object" && !Array.isArray(v)) return v as Record<string, unknown>;
+  return null;
+}
+
+function getRequest(ev: Record<string, unknown>): Record<string, unknown> | null {
+  return asRecord(ev.request);
+}
+
+function getMetrics(ev: Record<string, unknown>): Record<string, unknown> | null {
+  return asRecord(ev.metrics);
+}
+
+function getTraceId(ev: Record<string, unknown>): string {
+  const req = getRequest(ev);
+  const t = req?.trace_id;
+  return typeof t === "string" ? t : "";
+}
+
+function getLatencyMs(ev: Record<string, unknown>): number | null {
+  const m = getMetrics(ev);
+  const n = m?.latency_ms;
+  return typeof n === "number" && Number.isFinite(n) ? n : null;
+}
+
+function getSuccess(ev: Record<string, unknown>): boolean {
+  const m = getMetrics(ev);
+  const s = m?.success;
+  return s !== false;
+}
+
 export function RunsPage() {
+  const drawerTitleId = useId();
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+
   const [releases, setReleases] = useState<ReleaseRow[]>([]);
   const [releaseId, setReleaseId] = useState("");
   const [windowVal, setWindowVal] = useState("7d");
@@ -25,6 +59,7 @@ export function RunsPage() {
   const [rawErr, setRawErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
+  const [detailEvent, setDetailEvent] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     void loadTimeline()
@@ -33,6 +68,21 @@ export function RunsPage() {
         /* optional */
       });
   }, []);
+
+  useEffect(() => {
+    if (!detailEvent) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDetailEvent(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [detailEvent]);
+
+  useEffect(() => {
+    if (!detailEvent) return;
+    const t = window.setTimeout(() => closeBtnRef.current?.focus(), 0);
+    return () => window.clearTimeout(t);
+  }, [detailEvent]);
 
   const runQuery = useCallback(async () => {
     setRawErr(null);
@@ -136,6 +186,8 @@ export function RunsPage() {
     windowVal,
   ]);
 
+  const closeDrawer = useCallback(() => setDetailEvent(null), []);
+
   return (
     <>
       <div className="fd-page-head">
@@ -143,7 +195,8 @@ export function RunsPage() {
           <h2 className="fd-page-title">Run events</h2>
           <p className="fd-page-sub">
             Read-only slice of ingested runs (<code className="fd-mono fd-mono--sm">GET /v1/runs</code>). Newest
-            first; offset pages through the match set.
+            first; offset pages through the match set. Use a row&apos;s <strong>View</strong> action for structured
+            detail (same payload as export lines).
           </p>
         </div>
       </div>
@@ -206,6 +259,10 @@ export function RunsPage() {
             <input className="fd-input" value={limit} onChange={(e) => setLimit(e.target.value)} />
           </label>
         </div>
+        <p className="fd-inline fd-muted" style={{ marginTop: "0.75rem" }}>
+          <strong>Export</strong> uses the same filters and <strong>limit</strong> as this form (server cap 500 rows
+          per download). Truncation warnings apply to the returned page, not necessarily the whole ledger.
+        </p>
         <div className="fd-actions">
           <button type="button" className="fd-btn fd-btn--primary" disabled={busy} onClick={() => void runQuery()}>
             {busy ? "Loading…" : "Load runs"}
@@ -223,7 +280,7 @@ export function RunsPage() {
       </section>
 
       {result ? (
-        <section className="fd-card" aria-label="Run events results">
+        <section className="fd-card" aria-label="Run events results" aria-busy={busy}>
           <div className="fd-card__head">
             <h3 className="fd-card__subtitle">Results</h3>
             <p className="fd-card__desc">
@@ -231,41 +288,202 @@ export function RunsPage() {
               {String(result.truncated)} offset={result.offset}
             </p>
           </div>
-          <div className="fd-table-wrap">
-            <table className="fd-table">
-              <thead>
-                <tr>
-                  <th scope="col">Run ID</th>
-                  <th scope="col">Timestamp</th>
-                  <th scope="col">Agent</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.events.length === 0 ? (
+
+          {result.matched_total === 0 ? (
+            <div className="fd-empty-state" role="status">
+              <p className="fd-empty-state__title">No run events matched</p>
+              <p className="fd-empty-state__body">
+                Nothing in this release matched the time window and filters. Try a wider <strong>Window</strong>,
+                clear optional filters, or confirm events were ingested for this <strong>Release ID</strong>.
+              </p>
+            </div>
+          ) : null}
+
+          {result.matched_total > 0 && result.returned === 0 ? (
+            <p className="fd-alert fd-alert--info" role="status">
+              This page is empty: <strong>offset</strong> is past the end of the match set. Lower offset or increase
+              limit.
+            </p>
+          ) : null}
+
+          {result.truncated ? (
+            <p className="fd-alert fd-alert--warn" role="status">
+              More events match this query than fit in this page. Increase <strong>offset</strong> to page forward, or
+              narrow filters (for example <strong>Trace ID</strong>) to shrink the match set.
+            </p>
+          ) : null}
+
+          {result.matched_total > 0 ? (
+            <div className="fd-table-wrap">
+              <table className="fd-table">
+                <thead>
                   <tr>
-                    <td colSpan={3} className="fd-muted">
-                      No events in this page.
-                    </td>
+                    <th scope="col">Run ID</th>
+                    <th scope="col">Timestamp</th>
+                    <th scope="col">Agent</th>
+                    <th scope="col">Trace</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">
+                      <span className="fd-sr-only">Actions</span>
+                    </th>
                   </tr>
-                ) : (
-                  result.events.map((ev, idx) => {
-                    const runId = typeof ev.run_id === "string" ? ev.run_id : "";
-                    const ts = typeof ev.timestamp === "string" ? ev.timestamp : "";
-                    const agent = typeof ev.agent_id === "string" ? ev.agent_id : "";
-                    return (
-                      <tr key={`${runId}-${idx}`}>
-                        <td className="fd-mono">{shortId(runId)}</td>
-                        <td className="fd-mono">{ts}</td>
-                        <td>{agent}</td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-          <JsonPanel title="Raw JSON" value={JSON.stringify(result, null, 2)} defaultOpen={false} />
+                </thead>
+                <tbody>
+                  {result.events.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="fd-empty-cell">
+                        No events in this page.
+                      </td>
+                    </tr>
+                  ) : (
+                    (() => {
+                      const rows: ReactNode[] = [];
+                      let prevTrace: string | null = null;
+                      result.events.forEach((ev, idx) => {
+                        const rec = ev as Record<string, unknown>;
+                        const tid = getTraceId(rec);
+                        if (tid && tid !== prevTrace) {
+                          rows.push(
+                            <tr key={`trace-sep-${idx}-${tid}`} className="fd-table__trace-sep">
+                              <td colSpan={6}>
+                                <span className="fd-table__trace-sep-label">Trace</span>{" "}
+                                <code className="fd-mono fd-mono--sm">{shortId(tid, 18, 10)}</code>
+                              </td>
+                            </tr>,
+                          );
+                          prevTrace = tid;
+                        }
+                        const runId = typeof rec.run_id === "string" ? rec.run_id : "";
+                        const ts = typeof rec.timestamp === "string" ? rec.timestamp : "";
+                        const agent = typeof rec.agent_id === "string" ? rec.agent_id : "";
+                        const lat = getLatencyMs(rec);
+                        const ok = getSuccess(rec);
+                        rows.push(
+                          <tr key={`${runId}-${idx}`}>
+                            <td className="fd-mono">{shortId(runId)}</td>
+                            <td className="fd-mono fd-nowrap">{ts}</td>
+                            <td>{agent}</td>
+                            <td className="fd-mono fd-mono--sm">{tid ? shortId(tid, 8, 4) : "—"}</td>
+                            <td>
+                              <span className={`fd-badge ${ok ? "fd-badge--pass" : "fd-badge--fail"}`}>
+                                {ok ? "ok" : "err"}
+                              </span>
+                              {lat != null ? (
+                                <span className="fd-muted" style={{ marginLeft: "0.35rem", fontSize: "0.78rem" }}>
+                                  {lat}ms
+                                </span>
+                              ) : null}
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                className="fd-btn fd-btn--ghost fd-btn--sm"
+                                onClick={() => setDetailEvent(rec)}
+                              >
+                                View
+                              </button>
+                            </td>
+                          </tr>,
+                        );
+                      });
+                      return rows;
+                    })()
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+
+          <JsonPanel title="Raw JSON (page)" value={JSON.stringify(result, null, 2)} defaultOpen={false} />
         </section>
+      ) : (
+        <section className="fd-card fd-card--hint" aria-label="Getting started">
+          <p className="fd-empty" style={{ margin: 0 }}>
+            Choose a <strong>Release ID</strong> (datalist is filled from registered releases when the server is
+            reachable), then <strong>Load runs</strong> to query <code className="fd-mono fd-mono--sm">GET /v1/runs</code>
+            .
+          </p>
+        </section>
+      )}
+
+      {detailEvent ? (
+        <div className="fd-drawer-root" role="presentation">
+          <button
+            type="button"
+            className="fd-drawer-backdrop"
+            aria-label="Close run detail"
+            onClick={closeDrawer}
+          />
+          <aside
+            className="fd-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={drawerTitleId}
+          >
+            <div className="fd-drawer__head">
+              <h3 className="fd-drawer__title" id={drawerTitleId}>
+                Run event
+              </h3>
+              <button ref={closeBtnRef} type="button" className="fd-btn fd-btn--ghost" onClick={closeDrawer}>
+                Close
+              </button>
+            </div>
+            <div className="fd-drawer__body">
+              {(() => {
+                const runId = typeof detailEvent.run_id === "string" ? detailEvent.run_id : "";
+                const ts = typeof detailEvent.timestamp === "string" ? detailEvent.timestamp : "";
+                const agent = typeof detailEvent.agent_id === "string" ? detailEvent.agent_id : "";
+                const tid = getTraceId(detailEvent);
+                const sess = getRequest(detailEvent)?.session_id;
+                const span = getRequest(detailEvent)?.span_id;
+                const lat = getLatencyMs(detailEvent);
+                const ok = getSuccess(detailEvent);
+                const err = getMetrics(detailEvent)?.error_type;
+                return (
+                  <dl className="fd-dl">
+                    <div>
+                      <dt>run_id</dt>
+                      <dd className="fd-mono fd-mono--sm">{runId || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt>timestamp</dt>
+                      <dd className="fd-mono fd-mono--sm">{ts || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt>agent_id</dt>
+                      <dd>{agent || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt>trace_id</dt>
+                      <dd className="fd-mono fd-mono--sm">{tid || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt>session_id</dt>
+                      <dd className="fd-mono fd-mono--sm">{typeof sess === "string" ? sess : "—"}</dd>
+                    </div>
+                    <div>
+                      <dt>span_id</dt>
+                      <dd className="fd-mono fd-mono--sm">{typeof span === "string" ? span : "—"}</dd>
+                    </div>
+                    <div>
+                      <dt>metrics</dt>
+                      <dd>
+                        <span className={`fd-badge ${ok ? "fd-badge--pass" : "fd-badge--fail"}`}>
+                          {ok ? "success" : "failed"}
+                        </span>
+                        {lat != null ? <span className="fd-muted"> · {lat}ms</span> : null}
+                        {typeof err === "string" && err ? (
+                          <span className="fd-muted"> · error_type: {err}</span>
+                        ) : null}
+                      </dd>
+                    </div>
+                  </dl>
+                );
+              })()}
+              <JsonPanel title="Full event JSON" value={JSON.stringify(detailEvent, null, 2)} defaultOpen />
+            </div>
+          </aside>
+        </div>
       ) : null}
     </>
   );

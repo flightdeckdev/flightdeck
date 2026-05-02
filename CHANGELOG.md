@@ -6,6 +6,13 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ## Unreleased
 
+### Changed
+
+- **Web Runs:** forensics UX — empty / offset / truncation messaging, export copy aligned to server limits, trace band rows, **View** drawer with structured fields and full event JSON, extra table columns (trace, status).
+- **Web Diff:** scannable sections (policy, evidence window, pricing/catalog/hints, rollups), pre-query hint, `evaluated_at` when present; **examples** index and **integration** README link **`/#/diff`** and **`POST /v1/diff`** to the end-to-end loop.
+- **Web Actions:** workspace loading skeleton; numbered steps when approval is on; pending table **Use for confirm** and **Refresh list**; clearer browser confirm copy and approval-reason placeholder.
+- **Web shell / Overview:** skeleton loading instead of plain “Loading…”; **Refresh** disabled while loading; ledger metrics line with links to **Diff** and **Runs**; Diff query card **`aria-busy`** while computing.
+
 ### Added
 
 - **`GET /v1/runs/export`** — NDJSON stream of the same filtered slice as **`GET /v1/runs`** (optional response headers when truncated).

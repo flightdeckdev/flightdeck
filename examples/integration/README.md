@@ -31,6 +31,10 @@ python examples/integration/emit_sample_events.py --release-id rel_abc123 --agen
 
 The HTTP body is `{"events": [<RunEvent>, ...]}` with **`api_version`: `"v1"`**. Field reference: **[docs/http-api.md](../../docs/http-api.md)** and **`schemas/v1/run_event.schema.json`**.
 
+### After ingest
+
+Use **`flightdeck release diff`**, **`POST /v1/diff`** (same JSON as **`release diff --output json`**), or the bundled UI at **`/#/diff`** to compare baseline vs candidate over a window once both releases are registered and run evidence exists. CI pattern: [examples/ci/README.md](../ci/README.md).
+
 ### `curl` (no SDK)
 
 Replace **`REL_ID`**, **`AGENT`**, and optionally **`BASE`** (default `http://127.0.0.1:8765`):

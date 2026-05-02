@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import type { ActionRow, MetricsPayload, PromotedRow, ReleaseRow, TimelinePayload } from "../api";
 import { fetchMetrics, loadTimeline } from "../api";
 import { useTimelineRefresh } from "../context/TimelineRefreshContext";
@@ -84,13 +85,20 @@ export function OverviewPage() {
           <h2 className="fd-page-title">Overview</h2>
           <p className="fd-page-sub">Registered releases, promotion pointers, and recent ledger actions.</p>
         </div>
-        <button type="button" className="fd-btn fd-btn--primary" onClick={() => void refresh()}>
+        <button type="button" className="fd-btn fd-btn--primary" disabled={loading} onClick={() => void refresh()}>
           Refresh
         </button>
       </div>
 
       {error && !loading ? <p className="fd-alert fd-alert--error">{error}</p> : null}
-      {loading ? <p className="fd-muted">Loading…</p> : null}
+      {loading ? (
+        <div className="fd-loading-panel" aria-busy="true" aria-live="polite">
+          <span className="fd-sr-only">Loading overview</span>
+          <span className="fd-skeleton fd-skeleton--w60" />
+          <span className="fd-skeleton fd-skeleton--w75 fd-skeleton--mt" />
+          <span className="fd-skeleton fd-skeleton--w40 fd-skeleton--mt" />
+        </div>
+      ) : null}
 
       {metrics ? (
         <section className="fd-card" aria-label="Ledger metrics">
@@ -143,6 +151,10 @@ export function OverviewPage() {
               ) : null}
             </div>
           </div>
+          <p className="fd-inline-nav">
+            Next: open <Link to="/diff">Diff</Link> to compare releases, or <Link to="/runs">Runs</Link> for evidence
+            forensics.
+          </p>
         </section>
       ) : metricsError && !loading ? (
         <p className="fd-alert fd-alert--warn">Ledger metrics unavailable: {metricsError}</p>
