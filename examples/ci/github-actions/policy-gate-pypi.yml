@@ -1,0 +1,41 @@
+# Reference workflow: install FlightDeck from PyPI and run the same gate as the monorepo
+# example, using sparse-checkout for quickstart fixtures only.
+#
+# Copy into your application repository, pin FLIGHTDECK_REF / package version together,
+# and replace ORG/REPO if you vendor fixtures elsewhere.
+name: FlightDeck policy gate (PyPI)
+
+on:
+  workflow_dispatch:
+
+env:
+  # Pin to a tag or SHA that matches your installed flightdeck-ai version when possible.
+  FLIGHTDECK_REF: main
+  FLIGHTDECK_AI_SPEC: ">=1.0.2"
+
+jobs:
+  ledger-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: flightdeckdev/flightdeck
+          ref: ${{ env.FLIGHTDECK_REF }}
+          path: _flightdeck_fixtures
+          sparse-checkout: |
+            examples/quickstart
+            examples/ci
+          sparse-checkout-cone-mode: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install FlightDeck CLI
+        run: pip install "flightdeck-ai${FLIGHTDECK_AI_SPEC}"
+
+      - name: Run ledger gate (diff + verify, no promote)
+        env:
+          WORKSPACE: ${{ runner.temp }}/fd-ledger-gate-${{ github.run_id }}-${{ github.run_attempt }}
+          QUICKSTART_ROOT: ${{ github.workspace }}/_flightdeck_fixtures/examples/quickstart
+        run: python "${GITHUB_WORKSPACE}/_flightdeck_fixtures/examples/ci/ledger_gate.py"

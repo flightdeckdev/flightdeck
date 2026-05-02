@@ -321,6 +321,12 @@ def runs_ingest(path: Path) -> None:
 @click.option("--tenant", "tenant_id", default=None)
 @click.option("--task", "task_id", default=None)
 @click.option("--env", "environment", default=None)
+@click.option(
+    "--fail-on-policy",
+    is_flag=True,
+    default=False,
+    help="Exit with code 1 when the active policy does not pass (after printing the diff).",
+)
 def release_diff(
     baseline_release_id: str,
     candidate_release_id: str,
@@ -328,6 +334,7 @@ def release_diff(
     tenant_id: str | None,
     task_id: str | None,
     environment: str | None,
+    fail_on_policy: bool,
 ) -> None:
     """Compare two releases over a time window and print a confidence-labeled safety diff."""
     cfg = load_config()
@@ -382,6 +389,8 @@ def release_diff(
     click.echo("Policy: " + ("PASS" if result.policy.passed else "FAIL"))
     for r in result.policy.reasons:
         click.echo(f"- {r}")
+    if fail_on_policy and not result.policy.passed:
+        raise click.ClickException("Policy gate: diff blocked by active policy (see reasons above).")
 
 
 @release.command("promote")

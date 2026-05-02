@@ -53,9 +53,17 @@ All paths below are relative to the server base URL, e.g. `http://127.0.0.1:8765
 Health probe. Always returns HTTP 200 while the server is up.
 
 **Response**
+
 ```json
-{"status": "ok"}
+{"status": "ok", "mutation_auth": "loopback"}
 ```
+
+`mutation_auth` is always present on current servers:
+
+- `"loopback"` — `FLIGHTDECK_LOCAL_API_TOKEN` is not set; promote and rollback are allowed only from loopback clients (no Bearer gate).
+- `"bearer"` — `FLIGHTDECK_LOCAL_API_TOKEN` is set; promote and rollback require `Authorization: Bearer <that value>`.
+
+This field never includes secret material.
 
 ---
 

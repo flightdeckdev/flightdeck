@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 import os
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -32,8 +32,12 @@ def create_app() -> FastAPI:
         app.mount("/assets", StaticFiles(directory=assets_dir), name="ui-assets")
 
     @app.get("/health")
-    def health() -> dict[str, str]:
-        return {"status": "ok"}
+    def health(request: Request) -> dict[str, str]:
+        """Liveness plus safe mutation-auth hints (no secrets)."""
+        token = getattr(request.app.state, "local_api_token", None)
+        token_s = token.strip() if isinstance(token, str) else ""
+        mutation_auth = "bearer" if token_s else "loopback"
+        return {"status": "ok", "mutation_auth": mutation_auth}
 
     @app.get("/")
     def ui_index() -> FileResponse:

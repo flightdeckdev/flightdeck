@@ -201,8 +201,11 @@ flightdeck release diff BASELINE_ID CANDIDATE_ID --window WINDOW [OPTIONS]
 | `--env` | Filter events by environment (default: `WorkspaceConfig.default_environment`) |
 | `--tenant` | Filter events by `tenant_id` |
 | `--task` | Filter events by `task_id` |
+| `--fail-on-policy` | After printing the diff, exit **1** when the active policy does not pass (for CI gates). |
 
 Both releases must have the same `agent_id`. Cross-agent diffs are rejected with exit 1.
+
+**Exit codes:** invalid input, missing pricing, or other `OperationError` → non-zero. With **`--fail-on-policy`**, a computed diff whose policy result is **FAIL** also exits **1** (after the usual stdout).
 
 The diff is a **read-only computation** — it does not write to the audit ledger or update
 any promoted pointers.

@@ -20,5 +20,10 @@ test("hash routes reach diff and promote pages", async ({ page }) => {
 test("health endpoint", async ({ request }) => {
   const res = await request.get("/health");
   expect(res.ok()).toBeTruthy();
-  await expect(res.json()).resolves.toMatchObject({ status: "ok" });
+  await expect(res.json()).resolves.toMatchObject({ status: "ok", mutation_auth: "loopback" });
+});
+
+test("security status reflects server loopback mode", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("status")).toContainText("loopback");
 });
