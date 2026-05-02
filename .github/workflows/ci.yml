@@ -79,6 +79,32 @@ jobs:
       - name: CLI smoke
         run: uv run flightdeck --help
 
+  integrations:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.14"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+
+      - name: Sync with integration extras
+        run: uv sync --frozen --extra dev --extra integrations-ci
+
+      - name: Lint
+        run: uv run python -m ruff check src tests
+
+      - name: Integration tests
+        run: uv run python -m pytest tests/test_integrations.py tests/test_integrations_langchain.py
+
   test-windows:
     runs-on: windows-latest
     strategy:

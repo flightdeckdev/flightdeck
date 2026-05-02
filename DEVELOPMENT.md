@@ -18,9 +18,10 @@ uv sync --extra dev
 
 This creates **`.venv/`** (gitignored), installs **`flightdeck`** editable plus **pytest** and **ruff**, and pins versions from **`uv.lock`**.
 
-Optional extras (telemetry, SDK helpers, PostgreSQL driver): e.g.
-**`uv sync --extra dev --extra telemetry`** or **`uv sync --extra dev --extra postgres`**
-for **`database_url`** / optional **`tests/test_storage_postgres.py`** runs (**`FLIGHTDECK_TEST_POSTGRES_URL`**).
+Optional extras (telemetry, SDK helpers, PostgreSQL driver, integration test deps): e.g.
+**`uv sync --extra dev --extra telemetry`**, **`uv sync --extra dev --extra postgres`**, or
+**`uv sync --extra dev --extra integrations-ci`** (LangChain / Temporal / OpenAI Agents for
+**`tests/test_integrations_langchain.py`** and the same lock resolution CI job uses).
 Local driver test helper (Docker optional): **`scripts/run_postgres_tests.ps1`** (see script header).
 
 ### Package extras
@@ -32,8 +33,14 @@ Local driver test helper (Docker optional): **`scripts/run_postgres_tests.ps1`**
 | `anthropic` | `anthropic>=0.20` | Same, for the Anthropic Python client |
 | `telemetry` | `opentelemetry-api`, `-sdk`, `-exporter-otlp` | Forward-looking OTLP integration; FlightDeck core does **not** import OpenTelemetry at runtime |
 | `all` | `openai` + `anthropic` + `telemetry` | All optional packages in one shot |
+| `integrations-langchain` | `langchain-core` | Optional **`FlightDeckLangChainCallbackHandler`** (see **`docs/sdk-integrations.md`**) |
+| `integrations-temporal` | `temporalio` | Optional worker-side typing helpers; core does not import Temporal |
+| `integrations-openai-agents` | `openai-agents` | Optional mapping from Agents SDK run results |
+| `integrations-ci` | `langchain-core` + `temporalio` + `openai-agents` | CI / local parity for integration tests (**`uv lock`** resolves this group) |
 
 FlightDeck's core package (`flightdeck-ai`) does not import OpenAI, Anthropic, or OpenTelemetry at runtime. These extras exist so your project can declare a single dependency (`flightdeck-ai[openai]`) and get a compatible version of both without resolving conflicts manually.
+
+**`flightdeck.integrations`** (experimental — see **`AGENTS.md`** and **`docs/sdk-integrations.md`**) ships thin mappers behind the **`integrations-*`** extras above. There is **no** declared **`crewai`** extra: install CrewAI in your own environment if you use **`crewai_bridge`**, to avoid pulling a very large dependency tree into **`uv.lock`**.
 
 **Note on listed core dependencies:** `pyproject.toml` currently lists `sqlalchemy`, `aiosqlite`, and `rich` as direct (non-optional) dependencies, but `src/flightdeck/` does not import any of them — the package uses the standard-library `sqlite3` module and plain `click` output. These entries are carried over from earlier prototypes and are scheduled for removal in a future cleanup release.
 

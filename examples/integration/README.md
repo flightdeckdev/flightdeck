@@ -2,6 +2,8 @@
 
 These examples show how application or agent runtimes can **push evidence** into FlightDeck over **`POST /v1/events`** (same contract as **`flightdeck runs ingest`**).
 
+**Framework adoption:** [adoption/](adoption/README.md) — optional **`flightdeck.integrations`** helpers and per-vendor scripts (see also **[docs/sdk-integrations.md](../../docs/sdk-integrations.md)**).
+
 ## Prerequisites
 
 - A running **`flightdeck serve`** (local CLI or **[examples/deploy](../deploy/README.md)**).

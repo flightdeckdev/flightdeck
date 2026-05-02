@@ -4,7 +4,7 @@ This folder holds **copy-pasteable** references for wiring FlightDeck into a rea
 
 ## End-to-end loop
 
-1. **Emit run events** from your app or a test harness — see [integration/](integration/README.md) (`emit_sample_events.py` and `POST /v1/events` shape).
+1. **Emit run events** from your app or a test harness — see [integration/](integration/README.md) (`emit_sample_events.py` and `POST /v1/events` shape). Optional framework-oriented emitters: [integration/adoption/](integration/adoption/README.md).
 2. **Ingest** evidence: `flightdeck runs ingest <file.jsonl>` (or JSON array file), or HTTP `POST /v1/events` while `flightdeck serve` is running.
 3. **Register** a release bundle: `flightdeck release register <bundle-dir>` then **`flightdeck release verify`** against the same tree before you trust the checksum.
 4. **Diff and gate** in CI: `flightdeck release diff …` with **`--fail-on-policy`** when you want a non-zero exit without mutating promotion — see [ci/](ci/README.md) and `ledger_gate.py` / GitHub Actions templates. Optional **`pricing_catalog_path`** in `flightdeck.yaml` adds **`pricing.catalog`** / **`pricing.hints`** on diffs (see [docs/pricing-catalog.md](../docs/pricing-catalog.md)). **Same contract in the browser or HTTP:** with `flightdeck serve`, open **`/#/diff`** for structured policy / pricing / rollup sections, or call **`POST /v1/diff`** (matches **`flightdeck release diff --output json`**). Details: [docs/web-ui.md](../docs/web-ui.md), [docs/http-api.md](../docs/http-api.md).
@@ -32,5 +32,6 @@ Use this as a **discoverability** pass for the **[ROADMAP.md](../ROADMAP.md)** s
 | [ci/](ci/README.md) | Policy gate script, sample policy YAML, GitHub Actions job snippets. |
 | [deploy/](deploy/README.md) | Dockerfile and compose for `flightdeck serve`. |
 | [integration/](integration/README.md) | Sample event emitter for HTTP ingest. |
+| [integration/adoption/](integration/adoption/README.md) | OpenAI, Anthropic, LangChain, Agents SDK, CrewAI-style totals, Temporal labels → `RunEvent`. |
 | [fleet/](fleet/README.md) | Multi-workspace naming, optional catalog path, approval workflow notes. |
 | [pricing/catalog.sample.yaml](pricing/catalog.sample.yaml) | Sample `PricingCatalog` for cross-vendor comparable diff costs. |
