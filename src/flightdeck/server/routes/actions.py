@@ -106,6 +106,17 @@ def post_diff(request: Request, req: DiffRequest) -> dict[str, object]:
             "candidate_version": result.candidate_pricing_version,
             "candidate_model": result.candidate_model,
             "pricing_or_model_changed": result.pricing_or_model_changed,
+            # Per-side unit prices for the resolved model (None when the model
+            # is missing from the pricing table; cost rollup will surface its
+            # own KeyError before reaching here when events are present).
+            "prices": {
+                "baseline_input_usd_per_1k_tokens": result.baseline_input_usd_per_1k_tokens,
+                "baseline_output_usd_per_1k_tokens": result.baseline_output_usd_per_1k_tokens,
+                "baseline_cached_input_usd_per_1k_tokens": result.baseline_cached_input_usd_per_1k_tokens,
+                "candidate_input_usd_per_1k_tokens": result.candidate_input_usd_per_1k_tokens,
+                "candidate_output_usd_per_1k_tokens": result.candidate_output_usd_per_1k_tokens,
+                "candidate_cached_input_usd_per_1k_tokens": result.candidate_cached_input_usd_per_1k_tokens,
+            },
         },
         "samples": {
             "baseline_runs": result.baseline_runs,

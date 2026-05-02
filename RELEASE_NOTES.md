@@ -4,6 +4,10 @@ High-level notes for **shipping FlightDeck**. Detailed history: **[CHANGELOG.md]
 
 Narrative docs (including the CLI reference) are maintained on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** `main`; this file and **`schemas/`** ship in minimal clones.
 
+## v1.0.4 — Phase 0 closing slice (pricing diagnostic, examples index, metrics)
+
+Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): **`GET /v1/metrics`** exposes additive JSON counters for operators; **`POST /v1/diff`** and **`flightdeck release diff`** add **`pricing.prices`** / a **Per-1k token prices** line when pricing or model differs, so cost deltas are easier to interpret; **[examples/README.md](examples/README.md)** ties **integration**, **CI**, and **deploy** examples into one loop; web **Run diff** shows the same unit-price deltas when present. **Stable contracts:** additive HTTP and CLI output only; no **`v1`** payload or schema removals.
+
 ## v1.0.3 — Phase 0 hardening (tests + UI)
 
 Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): broader **pytest** coverage for **`diff_releases`** (MEDIUM/LOW confidence, **`max_latency_ms`**, **`max_error_rate`**, combined failures), **CLI** integration for MEDIUM confidence blocking promotion when **`require_high_diff_confidence`** is on, **`runs ingest`** edge cases (empty file, bad JSONL, JSON array file), and **multi-provider / cross-model** **`release diff`** plus **`POST /v1/diff`** parity on **`pricing.pricing_or_model_changed`**. **Web UI:** promote/rollback responses use structured panels (raw JSON optional); **Run diff** surfaces the same pricing/model-change note as the CLI when the diff payload flags it. **Stable contracts:** no CLI flag removals, no **`v1`** schema or **`POST /v1/events`** shape changes; **HTTP** diff and action response shapes are unchanged (additive UI only on the client).

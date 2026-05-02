@@ -246,6 +246,28 @@ class Storage:
             return False, "duplicate audit_seq values"
         return True, f"contiguous 1..{m} ({len(ints)} row(s))"
 
+    def get_ledger_counters(self) -> dict[str, object]:
+        """Return aggregate counts for observability (`GET /v1/metrics`). Read-only."""
+        self.migrate()
+        with self.connect() as conn:
+            releases_total = int(conn.execute("SELECT COUNT(*) AS c FROM releases").fetchone()["c"])
+            pricing_tables_total = int(conn.execute("SELECT COUNT(*) AS c FROM pricing_tables").fetchone()["c"])
+            run_events_total = int(conn.execute("SELECT COUNT(*) AS c FROM run_events").fetchone()["c"])
+            promoted_pointers_total = int(conn.execute("SELECT COUNT(*) AS c FROM promoted_releases").fetchone()["c"])
+            actions_total = int(conn.execute("SELECT COUNT(*) AS c FROM release_actions").fetchone()["c"])
+            action_rows = conn.execute(
+                "SELECT action, COUNT(*) AS c FROM release_actions GROUP BY action ORDER BY action"
+            ).fetchall()
+        actions_by_action: dict[str, int] = {str(r["action"]): int(r["c"]) for r in action_rows}
+        return {
+            "releases_total": releases_total,
+            "pricing_tables_total": pricing_tables_total,
+            "run_events_total": run_events_total,
+            "promoted_pointers_total": promoted_pointers_total,
+            "actions_total": actions_total,
+            "actions_by_action": actions_by_action,
+        }
+
     def insert_pricing_table(
         self,
         table: PricingTable,

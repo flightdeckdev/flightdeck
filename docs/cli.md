@@ -230,7 +230,10 @@ When pricing or model changes between baseline and candidate, an additional note
 printed:
 ```
 NOTE: cost delta includes pricing/model assumption changes (pricing reference and/or model differ).
+Per-1k token prices: input 0.005000 -> 0.004500, output 0.015000 -> 0.013500
 ```
+
+The **Per-1k token prices** line shows the resolved table entry for each side’s model (input and output USD per 1k tokens), so you can separate **tariff moves** from **token volume** changes in the cost delta.
 
 See [operations-and-policy.md](operations-and-policy.md) for the cost calculation and
 confidence algorithm.

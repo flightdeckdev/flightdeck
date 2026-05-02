@@ -967,8 +967,12 @@ def test_diff_cross_provider_releases(tmp_path: Path, monkeypatch) -> None:
     # baseline: 1000 input * 1.0/1k + 500 output * 2.0/1k = 1.0 + 1.0 = 2.0
     # candidate: 1000 * 3.0/1k + 500 * 4.0/1k = 3.0 + 2.0 = 5.0
     assert "Estimated model token cost/run (USD): 2.000000 -> 5.000000" in res.output
+    assert (
+        "Per-1k token prices: input 1.000000 -> 3.000000, output 2.000000 -> 4.000000"
+        in res.output
+    )
 
-    # HTTP route exposes the same pricing-or-model-changed flag.
+    # HTTP route exposes the same pricing-or-model-changed flag and prices block.
     from fastapi.testclient import TestClient
 
     from flightdeck.server.app import create_app
@@ -988,6 +992,13 @@ def test_diff_cross_provider_releases(tmp_path: Path, monkeypatch) -> None:
         assert body["pricing"]["baseline_provider"] == "openai"
         assert body["pricing"]["candidate_provider"] == "anthropic"
         assert body["pricing"]["pricing_or_model_changed"] is True
+        prices = body["pricing"]["prices"]
+        assert prices["baseline_input_usd_per_1k_tokens"] == 1.0
+        assert prices["baseline_output_usd_per_1k_tokens"] == 2.0
+        assert prices["candidate_input_usd_per_1k_tokens"] == 3.0
+        assert prices["candidate_output_usd_per_1k_tokens"] == 4.0
+        assert prices["baseline_cached_input_usd_per_1k_tokens"] is None
+        assert prices["candidate_cached_input_usd_per_1k_tokens"] is None
 
 
 def test_diff_cross_model_same_provider(tmp_path: Path, monkeypatch) -> None:
@@ -1050,3 +1061,28 @@ def test_diff_cross_model_same_provider(tmp_path: Path, monkeypatch) -> None:
     assert "(model=gpt-4.1-mini)" in res.output
     assert "(model=gpt-4.1)" in res.output
     assert "NOTE: cost delta includes pricing/model assumption changes" in res.output
+    assert (
+        "Per-1k token prices: input 1.000000 -> 5.000000, output 2.000000 -> 10.000000"
+        in res.output
+    )
+
+    from fastapi.testclient import TestClient
+
+    from flightdeck.server.app import create_app
+
+    with TestClient(create_app()) as client:
+        resp = client.post(
+            "/v1/diff",
+            json={
+                "baseline_release_id": baseline_id,
+                "candidate_release_id": candidate_id,
+                "window": "7d",
+                "environment": "local",
+            },
+        )
+        assert resp.status_code == 200
+        prices = resp.json()["pricing"]["prices"]
+        assert prices["baseline_input_usd_per_1k_tokens"] == 1.0
+        assert prices["candidate_input_usd_per_1k_tokens"] == 5.0
+        assert prices["baseline_output_usd_per_1k_tokens"] == 2.0
+        assert prices["candidate_output_usd_per_1k_tokens"] == 10.0

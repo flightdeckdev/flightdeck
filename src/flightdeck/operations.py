@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import uuid4
 
-from flightdeck.ledger import diff_releases, parse_window
+from flightdeck.ledger import diff_releases, parse_window, pricing_entry_for
 from flightdeck.models import (
     Policy,
     PolicyResult,
@@ -33,9 +33,15 @@ class DiffOutcome:
     baseline_pricing_provider: str
     baseline_pricing_version: str
     baseline_model: str
+    baseline_input_usd_per_1k_tokens: float | None
+    baseline_output_usd_per_1k_tokens: float | None
+    baseline_cached_input_usd_per_1k_tokens: float | None
     candidate_pricing_provider: str
     candidate_pricing_version: str
     candidate_model: str
+    candidate_input_usd_per_1k_tokens: float | None
+    candidate_output_usd_per_1k_tokens: float | None
+    candidate_cached_input_usd_per_1k_tokens: float | None
     pricing_or_model_changed: bool
     baseline_runs: int
     candidate_runs: int
@@ -184,6 +190,9 @@ def compute_diff(
     except ValueError as e:
         raise OperationError(str(e)) from e
 
+    base_entry = pricing_entry_for(base_table, base_artifact.spec.runtime.model)
+    cand_entry = pricing_entry_for(cand_table, cand_artifact.spec.runtime.model)
+
     return DiffOutcome(
         window=window,
         since=since,
@@ -194,9 +203,19 @@ def compute_diff(
         baseline_pricing_provider=base_ref.provider,
         baseline_pricing_version=base_ref.pricing_version,
         baseline_model=base_artifact.spec.runtime.model,
+        baseline_input_usd_per_1k_tokens=base_entry.input_usd_per_1k_tokens if base_entry else None,
+        baseline_output_usd_per_1k_tokens=base_entry.output_usd_per_1k_tokens if base_entry else None,
+        baseline_cached_input_usd_per_1k_tokens=(
+            base_entry.cached_input_usd_per_1k_tokens if base_entry else None
+        ),
         candidate_pricing_provider=cand_ref.provider,
         candidate_pricing_version=cand_ref.pricing_version,
         candidate_model=cand_artifact.spec.runtime.model,
+        candidate_input_usd_per_1k_tokens=cand_entry.input_usd_per_1k_tokens if cand_entry else None,
+        candidate_output_usd_per_1k_tokens=cand_entry.output_usd_per_1k_tokens if cand_entry else None,
+        candidate_cached_input_usd_per_1k_tokens=(
+            cand_entry.cached_input_usd_per_1k_tokens if cand_entry else None
+        ),
         pricing_or_model_changed=(
             base_ref.provider != cand_ref.provider
             or base_ref.pricing_version != cand_ref.pricing_version

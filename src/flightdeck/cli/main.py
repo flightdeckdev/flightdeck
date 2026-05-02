@@ -366,6 +366,19 @@ def release_diff(
     )
     if result.pricing_or_model_changed:
         click.echo("NOTE: cost delta includes pricing/model assumption changes (pricing reference and/or model differ).")
+        if (
+            result.baseline_input_usd_per_1k_tokens is not None
+            and result.candidate_input_usd_per_1k_tokens is not None
+            and result.baseline_output_usd_per_1k_tokens is not None
+            and result.candidate_output_usd_per_1k_tokens is not None
+        ):
+            click.echo(
+                "Per-1k token prices: "
+                f"input {result.baseline_input_usd_per_1k_tokens:.6f} -> "
+                f"{result.candidate_input_usd_per_1k_tokens:.6f}, "
+                f"output {result.baseline_output_usd_per_1k_tokens:.6f} -> "
+                f"{result.candidate_output_usd_per_1k_tokens:.6f}"
+            )
     click.echo(f"Samples: baseline={result.baseline_runs} candidate={result.candidate_runs}")
     click.echo(
         f"Confidence: {result.confidence}" + (f" ({result.confidence_reason})" if result.confidence_reason else "")

@@ -22,7 +22,7 @@ Two access tiers:
 | Route | No token configured | `FLIGHTDECK_LOCAL_API_TOKEN` set |
 |-------|--------------------|---------------------------------|
 | `GET /health` | open | open |
-| `GET /v1/*` (reads) | open | open |
+| `GET /v1/*` (reads, including `GET /v1/metrics`) | open | open |
 | `POST /v1/events` | open† | open (no Bearer required) |
 | `POST /v1/diff` | open | open |
 | `POST /v1/promote` | loopback only | `Authorization: Bearer <token>` required |
@@ -64,6 +64,31 @@ Health probe. Always returns HTTP 200 while the server is up.
 - `"bearer"` — `FLIGHTDECK_LOCAL_API_TOKEN` is set; promote and rollback require `Authorization: Bearer <that value>`.
 
 This field never includes secret material.
+
+---
+
+## `GET /v1/metrics`
+
+Read-only JSON snapshot of aggregate counts in the local SQLite ledger (releases, pricing tables, run events, promotion pointers, audit actions). Intended for simple operators or scrapers; this is **not** Prometheus exposition format.
+
+**Response**
+
+```json
+{
+  "counters": {
+    "releases_total": 3,
+    "pricing_tables_total": 1,
+    "run_events_total": 120,
+    "promoted_pointers_total": 1,
+    "actions_total": 5,
+    "actions_by_action": { "promote": 4, "rollback": 1 }
+  },
+  "schema_version": 3,
+  "generated_at": "2026-05-03T12:00:00+00:00"
+}
+```
+
+`schema_version` matches the highest applied SQLite migration (`LATEST_SCHEMA_MIGRATION_VERSION` in `flightdeck.storage`).
 
 ---
 
@@ -284,7 +309,15 @@ the audit ledger.
     "candidate_provider": "openai",
     "candidate_version": "2024-05",
     "candidate_model": "gpt-4o",
-    "pricing_or_model_changed": true
+    "pricing_or_model_changed": true,
+    "prices": {
+      "baseline_input_usd_per_1k_tokens": 0.005,
+      "baseline_output_usd_per_1k_tokens": 0.015,
+      "baseline_cached_input_usd_per_1k_tokens": null,
+      "candidate_input_usd_per_1k_tokens": 0.0045,
+      "candidate_output_usd_per_1k_tokens": 0.0135,
+      "candidate_cached_input_usd_per_1k_tokens": null
+    }
   },
   "samples": {
     "baseline_runs": 1200,
