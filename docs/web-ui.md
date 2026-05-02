@@ -1,5 +1,7 @@
 # FlightDeck web UI reference
 
+Strategic UI priorities and UX intent live in **[ROADMAP.md](../ROADMAP.md#web-ui-and-operator-experience)**; this document is the **technical** reference (routes, components, build flags).
+
 `flightdeck serve` serves the React app at `/`. It is built from **`web/`** and the committed
 production bundle lives under **`src/flightdeck/server/static/`**.
 
@@ -16,10 +18,10 @@ The app uses **HashRouter** (`react-router-dom`) so all navigation stays within 
 
 | Hash path | Component | HTTP calls | Notes |
 |-----------|-----------|-----------|-------|
-| `#/` | `OverviewPage` | `GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions`, `GET /v1/metrics` (parallel where applicable) | Ledger metrics card is read-only counters |
-| `#/diff` | `DiffPage` | `POST /v1/diff` | Renders `pricing.warnings`, optional **`pricing.catalog`** / **`pricing.hints`**, per-1k prices when present |
-| `#/runs` | `RunsPage` | `GET /v1/releases` (for datalist), `GET /v1/runs`, `GET /v1/runs/export` | Forensics: filters, table, NDJSON download |
-| `#/actions` | `ActionsPage` | `GET /v1/workspace`, `GET /v1/promotion-requests` (when `promotion_requires_approval`), `POST /v1/promote` **or** `POST /v1/promote/request` + `POST /v1/promote/confirm`, `POST /v1/rollback` | Workspace strip shows server version + mode; see **ActionsPage** below |
+| `#/` | `OverviewPage` | `GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions`, `GET /v1/metrics` (parallel where applicable) | Ledger metrics (read-only); skeleton while loading; links to Diff/Runs |
+| `#/diff` | `DiffPage` | `POST /v1/diff` | Sections: policy gate (incl. `evaluated_at`), evidence window, pricing/catalog/hints, per-1k prices when present, cost/quality rollups; raw JSON panel |
+| `#/runs` | `RunsPage` | `GET /v1/releases` (for datalist), `GET /v1/runs`, `GET /v1/runs/export` | Forensics: filters, table (trace/status, trace band rows), **View** drawer, empty/offset/truncation hints, NDJSON download |
+| `#/actions` | `ActionsPage` | `GET /v1/workspace`, `GET /v1/promotion-requests` (when `promotion_requires_approval`), `POST /v1/promote` **or** `POST /v1/promote/request` + `POST /v1/promote/confirm`, `POST /v1/rollback` | Workspace skeleton then strip; approval path: numbered steps, pending **Refresh list** / **Use for confirm**; see **ActionsPage** below |
 | `#/*` (any other) | — | Redirects to `#/` | |
 
 `App.tsx` declares the route tree. `AppShell` is the layout wrapper rendered for all routes.

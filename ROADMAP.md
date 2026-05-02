@@ -1,174 +1,158 @@
 # Roadmap
 
-FlightDeck helps teams **ship AI agents safely** with release diffs, runtime evidence, and policy gates: immutable releases, runtime evidence, trusted diffs, and policy-gated promotion.
+FlightDeck helps teams **ship AI agents safely** with release diffs, runtime evidence, and policy gates: immutable releases, trusted diffs, and policy-gated promotion.
 
-This roadmap is meant to be clear from **what is already shipped** to **near-term commitments** and **long-horizon possibilities**. It also calls out what still makes the product feel standalone in production settings.
+This document is **strategy and ordering**, not a second changelog. It goes from **what is already shipped** to **what we are building next**, **why production can still feel standalone**, and **what stays off the table**. Per-version shipping notes live elsewhere (see below).
 
-**Reality check:** today FlightDeck is intentionally **local-first** (CLI + SQLite + optional `flightdeck serve`). That keeps trust boundaries explicit, but it also means teams still need integration glue to run it broadly in production.
+**Reality check:** FlightDeck is intentionally **local-first** (CLI + SQLite + optional `flightdeck serve`). That keeps trust boundaries explicit; teams still supply integration glue to run it broadly in production.
+
+**Version detail:** The current shipping line is **v1.1.2**. For SemVer-by-SemVer behavior and migrations, use **[RELEASE_NOTES.md](RELEASE_NOTES.md)** and **[CHANGELOG.md](CHANGELOG.md)**.
 
 ---
 
-## What is shipped today
+## What is shipped (capability snapshot)
 
 - **Release registry and verification:** versioned `release.yaml` artifacts with checksums, `flightdeck release verify`.
-- **Economic + operational governance:** immutable pricing imports, trusted `release diff`, policy-gated `promote` and `rollback`.
+- **Economic + operational governance:** immutable pricing imports, trusted `release diff`, policy-gated `promote` and `rollback` (including optional approval request/confirm when configured).
 - **Audit trail:** promotion/rollback history with stable sequencing (`audit_seq`) and integrity checks via `doctor`.
-- **Evidence ingestion:** `runs ingest` from JSONL/JSON arrays plus stable `POST /v1/events` contracts (`schemas/v1/`); **`GET /v1/runs`**, **`runs list`**, optional **`trace_id`** filter, and **`runs export`** (JSONL) for operator forensics.
-- **Local API + UI:** `flightdeck serve` routes and web UI (Overview with ledger metrics, Diff, Runs, Promote) in `src/flightdeck/server/static/`.
+- **Evidence ingestion:** `runs ingest` from JSONL/JSON arrays plus stable `POST /v1/events` (`schemas/v1/`); **`GET /v1/runs`**, **`runs list`**, optional **`trace_id`** filter, and **`runs export`** (JSONL) for operator forensics.
+- **Local API + UI:** `flightdeck serve` routes and shipped web bundle under `src/flightdeck/server/static/`; surfaces summarized in **Web UI and operator experience** below.
 - **SDK and tooling:** Python sync/async clients with retries/batching and `flightdeck-quickstart-verify`.
+- **Operator references:** CI examples, deploy/Compose guidance, Helm and fleet examples under `examples/`.
 
 ---
 
-## Next release
+## Web UI and operator experience
 
-Further work after **v1.1.2** — **OTLP-oriented** telemetry, **replay-style web** forensics, deeper **catalog lifecycle** governance, and **cross-workspace / fleet** product surfaces stay on **Phase 2 / mid-term** (see gaps table below). Track **[CHANGELOG.md](CHANGELOG.md)**.
+Strategic UX intent for the bundled React app (routing and components: **[docs/web-ui.md](docs/web-ui.md)**). This is not a visual design spec; it keeps UI work aligned with evidence, diff trust, and promotion safety—not dashboard sprawl (see **[AGENTS.md](AGENTS.md)**).
 
-**v1.1.2** (patch, shipped): **`trace_id`** filter on **`GET /v1/runs`**, **`flightdeck runs list --trace-id`**, and SDK **`list_runs`**, plus **`flightdeck runs export`** (JSONL, stderr warning when truncated); **[examples/README.md](examples/README.md)** adds a **readiness checklist**; **productization tranche status** (this document) records closure of the scoped local-first slice. See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**.
+**Principles**
 
-**v1.1.1** (patch, shipped): **`GET /v1/workspace`** (read-only flags + **`server_version`**); web **Actions** page uses it for **direct promote** vs **request / pending list / confirm**; operator docs refresh (**README**, **release-artifact**, **examples**, **web-ui**, **http-api**, **sdk**, **`docs/pricing-catalog.md`**, **SECURITY**); **`examples/ci/promote_with_approval.sh`** and **`github-actions/promote-approval-twostep.yml`**; CI runs a second Playwright pass with **`FD_E2E_FORCE_APPROVAL`**. See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**.
+- **Operator-first:** fewer steps to answer “Can I promote?” and “What broke?”; clarity over decoration.
+- **Trust and safety:** mutations are obvious; token/read-only posture stays visible.
+- **Evidence over chrome:** structured fields and light timelines where APIs are stable; raw JSON as an escape hatch, not the default reading path.
+- **Density, not platforms:** guided flows and scannable summaries—no APM-style UI, no charting product.
 
-**v1.1.0** (minor, shipped): **`pricing_catalog_path`** + **`pricing.catalog`** / **`pricing.hints`** on diffs; **`promotion_requires_approval`** + promote **request/confirm** (HTTP + CLI) + **`GET /v1/promotion-requests`**; **`GET /v1/runs`** / **`runs list`**; **Helm** reference chart; **`examples/fleet/`**; SQLite migration **v4**. See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**.
+**Shipped surfaces**
 
-**v1.0.6** (patch, shipped): Phase 0 closure — **`flightdeck release diff --output json`** (same shape as **`POST /v1/diff`**); **`pricing.warnings`** when a release model has no row in its pricing table (CLI **`WARNING:`** lines + web Diff); **Overview** ledger metrics card (**`GET /v1/metrics`**); **`curl`** + **Node** samples under **[examples/integration/](examples/integration/README.md)**; **`flightdeck doctor --backup PATH`** (SQLite online backup); **[examples/deploy/](examples/deploy/README.md)** documents Compose **`/health`** healthcheck and backup scheduling. **Phase 0** is declared **closed**; **catalog-level** multi-provider normalization moves to **mid-term productization** (the **v1.1.x** track). See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**. No breaking changes to stable CLI, HTTP, or **`api_version` `v1`** contracts.
+| Surface | Role |
+|--------|------|
+| **Overview** | Ledger / promotion snapshot, ledger metrics |
+| **Diff** | Release comparison, pricing / catalog / hints, policy outcome |
+| **Runs** | Forensics filters, listing, export |
+| **Actions / Promote** | Direct promote vs approval request/confirm, rollback |
+| **Shell** | Primary nav, security/status strip, optional read-only build |
+
+**UX and UI backlog (grouped)**
+
+These map to **What is next** items **1**, **2**, and **5**; ship notes stay in **RELEASE_NOTES** / **CHANGELOG**.
+
+1. **Runs and forensics (web)** — Run or trace **detail** (drawer or page), clearer **empty and error** states, optional **timeline** grouping by `trace_id` / session, export affordances consistent with server limits.
+2. **Diff comprehension** — Stronger **scannability** for policy blocks and pricing/catalog lines; surface **version skew** and hint copy when the API exposes it.
+3. **Promotion and approval** — **Progressive disclosure** for approval vs direct promote, clearer confirmation copy, **pending requests** table polish.
+4. **Overview and trust** — Metrics **context** (what a counter means), light cross-links to Diff/Runs—not a metrics dashboard product.
+5. **Shell and quality bar** — **Loading** states, consistent spacing and type rhythm, keyboard **focus** and labels, layouts that tolerate narrow viewports where cheap.
+6. **Security ergonomics (UI)** — Token/env/mutation visibility, read-only build behavior, cautious affordances for destructive actions.
+
+**Explicit UI deferrals**
+
+Out of scope for the near-term web app: theme marketplaces; embedded arbitrary log viewers; full observability or fleet consoles in the browser; multi-workspace UI (follows conditional **Fleet / cross-workspace** in **What is next**).
 
 ---
 
 ## Production readiness gaps (why it can feel standalone)
 
-These are current gaps between "works locally" and "easy to use across production services."
+Gaps between “works locally” and “easy to use across production services.”
 
 | Gap | What production-ready usually requires | FlightDeck intent |
 |-----|----------------------------------------|-------------------|
 | **Event pipeline** | Reliable `RunEvent` emission from app/agent runtimes. | Near term: reference integration examples; operator owns final runtime wiring. |
-| **CI/GitOps flow** | Register -> ingest -> diff -> gate -> promote in pipelines. | Near term: maintained CI examples/templates. |
+| **CI/GitOps flow** | Register → ingest → diff → gate → promote in pipelines. | Near term: maintained CI examples/templates. |
 | **Deployment unit** | Repeatable `serve` packaging, health checks, process supervision. | Near term: container/compose guidance; still local-first by default. |
-| **Identity and access** | Strong auth beyond loopback + optional bearer token. | Mid term: documented hardened patterns; first-class enterprise auth is longer arc. |
+| **Identity and access** | Strong auth beyond loopback + optional bearer token. | Mid term: documented hardened patterns; first-class enterprise auth is a longer arc. |
 | **Storage/availability** | Backup/restore, scaling, HA story. | Operator-owned today; improve docs and patterns. |
 | **Observability integration** | Correlated telemetry export and operational visibility. | Mid term: OTLP-oriented integration paths (not an APM/dashboard product). |
 | **Multi-workspace/fleet** | Cross-workspace views and policy coordination. | Long term and conditional; one workspace = one ledger today. |
 
 ---
 
-## Phase 0: Foundation to PMF (near term, next releases)
+## What is next (ordered)
 
-Goal: prove the wedge with real teams using FlightDeck as release governance source-of-truth.
+Each item ties to the core promise: **release integrity**, **runtime evidence**, **policy-gated promotion**, and **auditability** (see **[AGENTS.md](AGENTS.md)**).
 
-### Must ship in this phase
+1. **Evidence and forensics (web)** — Replay/trace-oriented views and richer export semantics on top of `runs list`, `trace_id`, and JSONL export, so operators can reason over evidence without leaving the product surface. *UI details: **[Web UI and operator experience](#web-ui-and-operator-experience)**.*
+2. **Catalog lifecycle and diff diagnostics** — Stronger mismatch signals beyond pricing-table row presence (for example version skew hints), strengthening economic governance on diffs. *UI details: **[Web UI and operator experience](#web-ui-and-operator-experience)**.*
+3. **Integration glue** — Maintain app runtime emitters, CI/GitOps examples, and `serve` deployment recipes so the path from code to gated promotion is copy-pasteable.
+4. **Serve and deployment hardening** — Clear operator narrative for health checks, supervision, and backup/restore alongside existing Compose/Helm references.
+5. **Security ergonomics** — Continue explicit token/env status, mutation guardrails, and optional read-only UI patterns for local and bounded remote use. *UI details: **[Web UI and operator experience](#web-ui-and-operator-experience)**.*
+6. **OTLP-oriented integration (mid term)** — Documented or thin adapter-style paths for correlated telemetry; not a commitment to an in-product APM.
+7. **Fleet / cross-workspace (conditional)** — Broader governance surfaces only after the signals in **Horizons and conditions** below; default remains one workspace, one ledger.
 
-- Harden CLI/schema contracts and edge-case policy coverage (sample windows, sparse traffic, error paths).
-- Add concrete integration references: app runtime event emitters, CI pipeline examples, and deployment recipes for `flightdeck serve`.
-- **Catalog-level cross-vendor pricing normalization** — first operator-driven slice in **v1.1.0** (`pricing_catalog_path`, **`pricing.catalog`** on diffs); **v1.0.4–v1.0.6** shipped per-side **`pricing.prices`** and **`pricing.warnings`** only.
-- Strengthen local security ergonomics: explicit token/env status in UI, mutation guardrails, optional read-only UX.
-- Continue UI productization for current scope (structured views over raw JSON where stable).
+Optional milestone framing (headline only): a **v1.2** line might emphasize **forensics + catalog diagnostics**; ship notes still land in **RELEASE_NOTES** / **CHANGELOG**.
 
-### Phase 0 progress (v1.0.3–v1.0.6)
+---
 
-Shipped on **`main`**:
+## Horizons and conditions
 
-- **Policy / diff tests (v1.0.3):** `diff_releases` coverage for MEDIUM confidence vs `require_high_diff_confidence`, LOW sample floor boundaries, `max_latency_ms` (including skip when latency is absent), `max_error_rate`, and stacked policy failure reasons; CLI integration for MEDIUM blocking a second promotion after a baseline is established.
-- **Ingest tests (v1.0.3):** empty JSONL (zero inserts), malformed line (non-zero exit), JSON array file accepted.
-- **Multi-provider pricing (v1.0.3):** integration tests that diff baseline vs candidate releases with different **`pricing_reference`** providers (and same-provider different models), including parity checks on **`POST /v1/diff`** `pricing.pricing_or_model_changed`.
-- **Web UI (v1.0.3):** structured outcome card after promote/rollback (policy, pointer, IDs) with raw JSON in a collapsible panel; Diff summary shows pricing/model change when the server marks it.
-- **Pricing diagnostics (v1.0.4):** **`pricing.prices`** on **`POST /v1/diff`** and matching CLI / web lines for per-1k input/output unit prices when pricing or model differs.
-- **Operating narrative (v1.0.4):** **[examples/README.md](examples/README.md)** index tying emit → ingest → verify → diff/gate → promote → serve.
-- **Observability foundation (v1.0.4):** **`GET /v1/metrics`** JSON counters over the local ledger (not Prometheus/OTel; longer arc stays mid term).
-- **Diff ergonomics (v1.0.5):** **`flightdeck release diff --output json`**; **`pricing.warnings`** on **`POST /v1/diff`** / CLI / web when the release model is missing from the imported pricing table; **Overview** shows key **`GET /v1/metrics`** counters.
-- **Operator + pipeline breadth (v1.0.6):** **`curl`** and **Node** **`emit_sample_events.node.mjs`** under **[examples/integration/](examples/integration/README.md)**; **`flightdeck doctor --backup`**; deploy README covers healthcheck + backup scheduling.
+### Near-term committed direction
 
-### Phase 0 status
+The ordered list above is the default backlog shape: deepen evidence and diff trust, reduce integration friction, and harden how `serve` is run—not a pivot to a hosted control plane.
 
-**Phase 0 is closed** as of **v1.0.6** for the local-first wedge (immutable releases, evidence ingest, diff + policy gate, promote/rollback, audit, CI/deploy/integration references, metrics, diagnostics, and operator backup ergonomics).
+### Conditional directions (not committed by default)
 
-**Carried forward** (see gaps table): **catalog-level** multi-provider pricing normalization (single comparable unit across vendors), deeper **fleet** ergonomics, and **OTLP-oriented** telemetry — not blocking further patch releases on the Phase 0 spine.
+- Optional hosted or federated control plane for cross-workspace policy and read models.
+- Fleet-level analytics via export/read-model patterns (without turning the core into a general data warehouse).
+- Deeper cost attribution and vendor/tool pricing coverage as the evidence model supports it.
+- Provenance or supply-chain-style attestations only where they directly strengthen release trust boundaries.
 
-### Phase-0 success signals
+### When to expand scope (e.g. fleet / platform options)
 
-- Teams use release versioning + checksum verification as the source of truth for promotion decisions.
+- Repeated external demand for cross-workspace governance.
+- Clear operator pain that cannot be solved with local-first patterns plus documented integrations.
+- Confidence that expansion does not break core trust boundaries and contract stability.
+
+### Vision (directional only, not backlog)
+
+- FlightDeck as a common release attestation reference for AI systems.
+- Federated policy models across teams/workspaces with auditable inheritance.
+- Ecosystem adapters that keep FlightDeck as a governance layer, not an agent framework.
+
+---
+
+## Success and readiness signals
+
+Use **[examples/README.md](examples/README.md)** as a discoverability pass against these signals (not a product guarantee).
+
+**Product (PMF wedge):**
+
+- Teams treat release versioning + checksum verification as the source of truth for promotion decisions.
 - Cost/latency/error diff output drives at least one real rollout decision (not demo-only usage).
 - Policy gates actively block at least one unsafe promotion in normal team workflows.
 - CI templates are adopted externally without local patching.
 
----
-
-## Mid term: Productization (v1.1.x tranche, roughly quarters)
-
-Goal: move from solid local tooling to repeatable production usage patterns.
-
-**v1.1.0** ships the first tranche: catalog + hints on diffs, approval-gated promote (HTTP + CLI), read-only runs listing, Helm + fleet reference docs, and migration **v4**. **v1.1.1** closes the **web + discovery** gap for approval (**`GET /v1/workspace`**, Actions UX) and refreshes team docs / CI examples. **v1.1.2** adds **CLI/HTTP forensics** filters and **JSONL export**; see **tranche status** below.
-
-### Productization progress (post–v1.1.0 / v1.1.1)
-
-- **Approval workflow:** **v1.1.0** added HTTP + CLI + **`GET /v1/promotion-requests`**. **v1.1.1** adds **`GET /v1/workspace`** and a first-class **web** path (request → pending table → confirm) keyed off `promotion_requires_approval`, plus **`examples/ci/promote_with_approval.sh`** and a **`workflow_dispatch`** sample workflow.
-- **Operator narrative:** README / **examples** index / **web-ui** / **release-artifact** / **http-api** / **sdk** / optional **`docs/pricing-catalog.md`** describe catalog fields, runs listing, and the two promote modes.
-- **Forensics (v1.1.2):** **`trace_id`** filter and **`runs export`** (JSONL). **Still open** for replay-style **web** views and richer export semantics if needed; **OTLP** and **catalog lifecycle** depth remain mid-term (gaps table).
-
-### Build targets
-
-- Human-in-the-loop approval workflow on top of policy gates (without requiring a hosted control plane).
-- **Catalog-level multi-provider pricing normalization** — single comparable tariff unit across vendors; additive to today's per-provider **`pricing import`** tables and **`pricing.prices`** / **`pricing.warnings`** diagnostics.
-- Stronger mismatch diagnostics beyond table row presence (for example version skew hints) as needed for the catalog work.
-- Incident forensics improvements (replay/trace-style analysis over ingested evidence) as governance support tooling.
-- Deployment hardening artifacts (for example Helm or equivalent) if a blessed server topology is chosen.
-- Multi-workspace operator ergonomics (naming, templates, reproducible setup patterns).
-
-### Readiness signals
+**Productization:**
 
 - Approval-gated promotion is used in at least one end-to-end production pipeline.
 - At least two provider pricing sources compare cleanly in one diff workflow.
 - Teams can stand up and operate `flightdeck serve` with documented deployment guidance.
 
-### Productization tranche status
+**Operator experience (web):**
 
-**The scoped v1.1.0–v1.1.2 tranche is closed** as of **v1.1.2**: catalog-aware diffs + hints, approval-gated promote (HTTP + CLI + web), read-only runs forensics (**`GET /v1/runs`**, **`runs list`**, **`trace_id`**, **`runs export`**), reference **Helm** / **Compose** / **fleet** examples, SQLite migration **v4**, **`GET /v1/workspace`**, and a discoverability **checklist** for the **readiness signals** in **[examples/README.md](examples/README.md)**.
-
-**Carried forward to Phase 2 / mid-term** (explicitly not claimed by this closure): **OTLP-oriented** correlated telemetry; **cross-workspace / fleet** governance products; **replay-style** forensics UI beyond CLI/HTTP listing; **enterprise-grade** identity beyond documented bearer + loopback patterns; deeper **catalog lifecycle** governance (for example version skew hints).
-
----
-
-## Phase 2: Scale and platform options (long term, conditional)
-
-Goal: expand from single-workspace governance to broader fleet patterns when demand is proven.
-
-### Candidate directions (conditional, not committed by default)
-
-- Optional hosted/federated control plane for cross-workspace policy and read models.
-- Fleet-level analytics via export/read-model patterns (without turning core into a general data warehouse).
-- Deeper cost attribution and vendor/tool pricing coverage once evidence model supports it.
-- Provenance/supply-chain style attestations if they directly strengthen release trust boundaries.
-
-### Conditions to enter Phase 2
-
-- Repeated external demand for cross-workspace governance.
-- Clear operator pain that cannot be solved with local-first patterns + documented integrations.
-- Confidence that expansion does not break core trust boundaries and contract stability.
+- An operator can reach a **promote vs blocked-by-policy** conclusion from **Diff** and **Actions** without opening raw JSON first.
+- A forensics task (for example trace-scoped triage) is completed from **Runs** without falling back to the CLI for the same filters and slice.
 
 ---
 
-## Phase 3: Super long term (vision only, highly conditional)
+## Non-goals
 
-- FlightDeck as a common release attestation standard for AI systems.
-- Federated policy models across teams/workspaces with auditable inheritance.
-- Broader ecosystem adapters that preserve FlightDeck's role as governance layer, not agent framework.
-
-These are directional, not committed backlog items.
-
----
-
-## Explicit non-goals (near term, aligned with AGENTS.md)
-
-- No prompt IDE, no agent framework, no gateway/proxy-by-default.
-- No compliance-scanner product as a near-term deliverable.
-- No fine-tuning operations roadmap in core.
-- No broad plugin/marketplace direction near term.
-- No dashboard-heavy product before CLI/local HTTP reliability is deeply proven.
-
-Hosted control plane and in-path traffic routing remain opt-in long-term considerations, not default product posture.
+Near-term exclusions match **[AGENTS.md](AGENTS.md)** (no prompt IDE, no agent framework, no gateway-by-default, no compliance-scanner product, no fine-tuning ops roadmap in core, no broad plugin system, no dashboard-heavy product before CLI/local HTTP is deeply proven). Hosted control plane and in-path traffic routing stay opt-in long-term considerations, not default posture.
 
 ---
 
 ## References
 
-- **Contracts and trust:** `RELEASE_NOTES.md`, `CHANGELOG.md`, `SECURITY.md`
-- **Versioning:** `VERSIONING.md`
-- **Contributors/org workflow:** `CONTRIBUTING.md`
-- **Engineering rules and doctrine:** `AGENTS.md`
+- **Contracts and trust:** [RELEASE_NOTES.md](RELEASE_NOTES.md), [CHANGELOG.md](CHANGELOG.md), [SECURITY.md](SECURITY.md)
+- **Versioning:** [VERSIONING.md](VERSIONING.md)
+- **Contributors/org workflow:** [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Engineering rules and doctrine:** [AGENTS.md](AGENTS.md)
+- **Web UI routing and components:** [docs/web-ui.md](docs/web-ui.md)

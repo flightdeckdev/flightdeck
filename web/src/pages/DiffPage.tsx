@@ -9,14 +9,20 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
 }
 
-function pickPolicy(data: DiffJson): { passed: boolean; reasons: string[] } | null {
+function pickPolicy(data: DiffJson): {
+  passed: boolean;
+  reasons: string[];
+  evaluatedAt: string | null;
+} | null {
   const p = data.policy;
   if (!isRecord(p)) return null;
   const passed = p.passed;
   const reasons = p.reasons;
+  const ev = p.evaluated_at;
   return {
     passed: passed === true,
     reasons: Array.isArray(reasons) ? reasons.filter((x): x is string => typeof x === "string") : [],
+    evaluatedAt: typeof ev === "string" ? ev : null,
   };
 }
 
@@ -205,7 +211,7 @@ export function DiffPage() {
         </div>
       </div>
 
-      <section className="fd-card">
+      <section className="fd-card" aria-busy={busy} aria-label="Diff query">
         <div className="fd-form-grid">
           <label className="fd-field">
             <span className="fd-field__label">Baseline release ID</span>
@@ -238,150 +244,248 @@ export function DiffPage() {
           <button type="button" className="fd-btn fd-btn--primary" disabled={busy} onClick={() => void runDiff()}>
             {busy ? "Computing…" : "Compute diff"}
           </button>
+          {busy ? (
+            <span className="fd-sr-only" aria-live="polite">
+              Computing diff
+            </span>
+          ) : null}
         </div>
       </section>
 
       {diffErr ? <p className="fd-alert fd-alert--error">{diffErr}</p> : null}
 
+      {!diffOut && !diffErr ? (
+        <section className="fd-card fd-card--hint" aria-label="Diff help">
+          <p className="fd-empty" style={{ margin: 0 }}>
+            Enter <strong>baseline</strong> and <strong>candidate</strong> release IDs, then <strong>Compute diff</strong>.
+            Same contract as <code className="fd-mono fd-mono--sm">POST /v1/diff</code> and{" "}
+            <code className="fd-mono fd-mono--sm">flightdeck release diff</code> — structured sections below summarize policy,
+            samples, pricing/catalog hints, and rollups; open <strong>Raw diff JSON</strong> for the full payload.
+          </p>
+        </section>
+      ) : null}
+
       {diffOut ? (
         <>
-          <section className="fd-card">
+          <section className="fd-card" aria-label="Diff result summary">
             <div className="fd-card__head">
-              <h3 className="fd-card__subtitle">Summary</h3>
-              {policy ? (
-                <div className="fd-inline">
-                  <span className="fd-muted">Policy:</span>{" "}
-                  <Badge tone={policy.passed ? "pass" : "fail"}>{policy.passed ? "PASS" : "FAIL"}</Badge>
-                </div>
-              ) : null}
+              <h3 className="fd-card__subtitle">Diff result</h3>
             </div>
-            {policy && policy.reasons.length > 0 ? (
-              <ul className="fd-reasons">
-                {policy.reasons.map((r) => (
-                  <li key={r}>{r}</li>
-                ))}
-              </ul>
-            ) : null}
-            {samples ? (
-              <p className="fd-muted fd-samples">
-                Samples: baseline={num(samples.baseline_runs)} · candidate={num(samples.candidate_runs)} ·
-                confidence: <strong>{String(samples.confidence ?? "—")}</strong>
-                {typeof samples.confidence_reason === "string" ? ` — ${samples.confidence_reason}` : null}
-              </p>
-            ) : null}
-            {pricing && pricing.warnings.length > 0 ? (
-              <ul className="fd-alert fd-alert--warn fd-reasons">
-                {pricing.warnings.map((w) => (
-                  <li key={w}>Pricing warning: {w}</li>
-                ))}
-              </ul>
-            ) : null}
-            {pricing && pricing.hints.length > 0 ? (
-              <ul className="fd-muted fd-reasons">
-                {pricing.hints.map((h) => (
-                  <li key={h}>Hint: {h}</li>
-                ))}
-              </ul>
-            ) : null}
-            {pricing && pricing.catalog && (pricing.catalog.enabled || pricing.catalog.warnings.length > 0) ? (
-              <div className="fd-alert fd-alert--info">
-                <strong>Catalog</strong>{" "}
-                {pricing.catalog.enabled ? (
-                  <>
-                    v{pricing.catalog.version ?? "—"} · slots{" "}
-                    <code className="fd-mono fd-mono--sm">{pricing.catalog.baselineSlot ?? "—"}</code> →{" "}
-                    <code className="fd-mono fd-mono--sm">{pricing.catalog.candidateSlot ?? "—"}</code>
-                    {pricing.catalog.baselineCost !== null &&
-                    pricing.catalog.candidateCost !== null &&
-                    pricing.catalog.deltaCost !== null ? (
+            <div className="fd-diff-stack">
+              <div className="fd-diff-section" role="region" aria-labelledby="diff-sec-policy">
+                <h4 className="fd-diff-section__title" id="diff-sec-policy">
+                  Policy gate
+                </h4>
+                {policy ? (
+                  <div className="fd-diff-section__body">
+                    <Badge tone={policy.passed ? "pass" : "fail"}>{policy.passed ? "PASS" : "FAIL"}</Badge>
+                    {policy.evaluatedAt ? (
+                      <span className="fd-muted" style={{ marginLeft: "0.5rem", fontSize: "0.85rem" }}>
+                        evaluated_at {policy.evaluatedAt}
+                      </span>
+                    ) : null}
+                    {policy.reasons.length > 0 ? (
+                      <ul className="fd-reasons" style={{ marginTop: "0.5rem" }}>
+                        {policy.reasons.map((r) => (
+                          <li key={r}>{r}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="fd-muted" style={{ margin: "0.35rem 0 0", fontSize: "0.88rem" }}>
+                        No policy constraint messages (pass with empty reasons, or policy omitted).
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="fd-muted fd-diff-section__body">No policy block in this response.</p>
+                )}
+              </div>
+
+              <div className="fd-diff-section" role="region" aria-labelledby="diff-sec-samples">
+                <h4 className="fd-diff-section__title" id="diff-sec-samples">
+                  Evidence window
+                </h4>
+                {samples ? (
+                  <p className="fd-diff-section__body fd-muted" style={{ margin: 0 }}>
+                    Baseline runs: <strong>{num(samples.baseline_runs)}</strong> · Candidate runs:{" "}
+                    <strong>{num(samples.candidate_runs)}</strong> · Confidence:{" "}
+                    <strong>{String(samples.confidence ?? "—")}</strong>
+                    {typeof samples.confidence_reason === "string" ? ` — ${samples.confidence_reason}` : null}
+                  </p>
+                ) : (
+                  <p className="fd-muted fd-diff-section__body">No sample counts in this response.</p>
+                )}
+              </div>
+
+              <div className="fd-diff-section" role="region" aria-labelledby="diff-sec-pricing">
+                <h4 className="fd-diff-section__title" id="diff-sec-pricing">
+                  Pricing, model, and catalog
+                </h4>
+                {pricing ? (
+                  <div className="fd-diff-section__body">
+                    <p className="fd-muted" style={{ margin: "0 0 0.65rem", fontSize: "0.88rem" }}>
+                      Resolved models:{" "}
+                      <code className="fd-mono fd-mono--sm">
+                        {pricing.baselineProvider}/{pricing.baselineVersion} {pricing.baselineModel}
+                      </code>{" "}
+                      →{" "}
+                      <code className="fd-mono fd-mono--sm">
+                        {pricing.candidateProvider}/{pricing.candidateVersion} {pricing.candidateModel}
+                      </code>
+                      {pricing.changed ? (
+                        <span className="fd-badge fd-badge--warn" style={{ marginLeft: "0.35rem" }}>
+                          pricing/model changed
+                        </span>
+                      ) : (
+                        <span className="fd-badge fd-badge--neutral" style={{ marginLeft: "0.35rem" }}>
+                          unchanged
+                        </span>
+                      )}
+                    </p>
+                    {pricing.warnings.length > 0 ? (
                       <>
-                        <br />
-                        Comparable cost/run: {pricing.catalog.baselineCost.toFixed(6)} →{" "}
-                        {pricing.catalog.candidateCost.toFixed(6)} (Δ {pricing.catalog.deltaCost >= 0 ? "+" : ""}
-                        {pricing.catalog.deltaCost.toFixed(6)})
+                        <p className="fd-diff-section__title" style={{ marginBottom: "0.35rem" }}>
+                          Pricing warnings
+                        </p>
+                        <ul className="fd-alert fd-alert--warn fd-reasons" style={{ marginTop: 0 }}>
+                          {pricing.warnings.map((w) => (
+                            <li key={w}>{w}</li>
+                          ))}
+                        </ul>
                       </>
                     ) : null}
-                  </>
+                    {pricing.hints.length > 0 ? (
+                      <>
+                        <p className="fd-diff-section__title" style={{ margin: "0.65rem 0 0.35rem" }}>
+                          Hints
+                        </p>
+                        <ul className="fd-alert fd-alert--info fd-reasons" style={{ marginTop: 0 }}>
+                          {pricing.hints.map((h) => (
+                            <li key={h}>{h}</li>
+                          ))}
+                        </ul>
+                      </>
+                    ) : null}
+                    {pricing.catalog && (pricing.catalog.enabled || pricing.catalog.warnings.length > 0) ? (
+                      <>
+                        <p className="fd-diff-section__title" style={{ margin: "0.65rem 0 0.35rem" }}>
+                          Pricing catalog
+                        </p>
+                        <div className="fd-alert fd-alert--info" style={{ marginTop: 0 }}>
+                          {pricing.catalog.enabled ? (
+                            <p style={{ margin: "0 0 0.35rem" }}>
+                              Catalog v{pricing.catalog.version ?? "—"} · slots{" "}
+                              <code className="fd-mono fd-mono--sm">{pricing.catalog.baselineSlot ?? "—"}</code> →{" "}
+                              <code className="fd-mono fd-mono--sm">{pricing.catalog.candidateSlot ?? "—"}</code>
+                              {pricing.catalog.baselineCost !== null &&
+                              pricing.catalog.candidateCost !== null &&
+                              pricing.catalog.deltaCost !== null ? (
+                                <>
+                                  <br />
+                                  Comparable cost/run: {pricing.catalog.baselineCost.toFixed(6)} →{" "}
+                                  {pricing.catalog.candidateCost.toFixed(6)} (Δ{" "}
+                                  {pricing.catalog.deltaCost >= 0 ? "+" : ""}
+                                  {pricing.catalog.deltaCost.toFixed(6)})
+                                </>
+                              ) : null}
+                            </p>
+                          ) : (
+                            <p className="fd-muted" style={{ margin: 0 }}>
+                              Catalog disabled or incomplete for this diff.
+                            </p>
+                          )}
+                          {pricing.catalog.warnings.length > 0 ? (
+                            <ul className="fd-reasons" style={{ marginBottom: 0 }}>
+                              {pricing.catalog.warnings.map((w) => (
+                                <li key={w}>{w}</li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </div>
+                      </>
+                    ) : null}
+                    {pricing.changed &&
+                    pricing.prices &&
+                    pricing.prices.baselineInput !== null &&
+                    pricing.prices.candidateInput !== null &&
+                    pricing.prices.baselineOutput !== null &&
+                    pricing.prices.candidateOutput !== null ? (
+                      <>
+                        <p className="fd-diff-section__title" style={{ margin: "0.65rem 0 0.35rem" }}>
+                          Per-1k token prices (USD)
+                        </p>
+                        <dl className="fd-dl fd-dl--inline" style={{ margin: 0 }}>
+                          <div>
+                            <dt>Input / 1k</dt>
+                            <dd className="fd-mono fd-mono--sm">
+                              {pricing.prices.baselineInput.toFixed(6)} → {pricing.prices.candidateInput.toFixed(6)}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Output / 1k</dt>
+                            <dd className="fd-mono fd-mono--sm">
+                              {pricing.prices.baselineOutput.toFixed(6)} → {pricing.prices.candidateOutput.toFixed(6)}
+                            </dd>
+                          </div>
+                        </dl>
+                        <p className="fd-muted" style={{ margin: "0.5rem 0 0", fontSize: "0.82rem" }}>
+                          Cost rollups reflect pricing table and model identity; compare with catalog lines above when
+                          configured.
+                        </p>
+                      </>
+                    ) : null}
+                  </div>
                 ) : (
-                  <span className="fd-muted">disabled or incomplete</span>
+                  <p className="fd-muted fd-diff-section__body">No pricing block in this response.</p>
                 )}
-                {pricing.catalog.warnings.length > 0 ? (
-                  <ul className="fd-reasons">
-                    {pricing.catalog.warnings.map((w) => (
-                      <li key={w}>{w}</li>
-                    ))}
-                  </ul>
-                ) : null}
               </div>
-            ) : null}
-            {pricing && pricing.changed ? (
-              <p className="fd-alert fd-alert--warn">
-                Pricing/model changed:{" "}
-                <code className="fd-mono fd-mono--sm">
-                  {pricing.baselineProvider}/{pricing.baselineVersion} {pricing.baselineModel}
-                </code>{" "}
-                →{" "}
-                <code className="fd-mono fd-mono--sm">
-                  {pricing.candidateProvider}/{pricing.candidateVersion} {pricing.candidateModel}
-                </code>
-                . Cost delta includes pricing and model assumption changes.
-                {pricing.prices &&
-                pricing.prices.baselineInput !== null &&
-                pricing.prices.candidateInput !== null &&
-                pricing.prices.baselineOutput !== null &&
-                pricing.prices.candidateOutput !== null ? (
-                  <>
-                    <br />
-                    Per-1k token prices: input{" "}
-                    <code className="fd-mono fd-mono--sm">
-                      {pricing.prices.baselineInput.toFixed(6)} → {pricing.prices.candidateInput.toFixed(6)}
-                    </code>
-                    , output{" "}
-                    <code className="fd-mono fd-mono--sm">
-                      {pricing.prices.baselineOutput.toFixed(6)} → {pricing.prices.candidateOutput.toFixed(6)}
-                    </code>
-                  </>
-                ) : null}
-              </p>
-            ) : null}
-            {metrics ? (
-              <div className="fd-metric-grid">
-                <Metric
-                  label="Cost / run (USD)"
-                  baseline={num(metrics.baseline_cost_per_run_usd)}
-                  candidate={num(metrics.candidate_cost_per_run_usd)}
-                  delta={
-                    typeof metrics.delta_cost_per_run_usd === "number"
-                      ? `Δ ${num(metrics.delta_cost_per_run_usd)}${
-                          typeof metrics.delta_cost_per_run_pct === "number"
-                            ? ` (${metrics.delta_cost_per_run_pct >= 0 ? "+" : ""}${(metrics.delta_cost_per_run_pct * 100).toFixed(2)}% vs baseline)`
-                            : ""
-                        }`
-                      : undefined
-                  }
-                />
-                <Metric
-                  label="Latency avg (ms)"
-                  baseline={num(metrics.baseline_latency_ms_avg)}
-                  candidate={num(metrics.candidate_latency_ms_avg)}
-                  delta={
-                    typeof metrics.delta_latency_ms_avg === "number"
-                      ? `Δ ${num(metrics.delta_latency_ms_avg)} ms`
-                      : undefined
-                  }
-                />
-                <Metric
-                  label="Error rate"
-                  baseline={pct(metrics.baseline_error_rate)}
-                  candidate={pct(metrics.candidate_error_rate)}
-                  delta={
-                    typeof metrics.delta_error_rate === "number"
-                      ? `Δ ${pct(metrics.delta_error_rate)}`
-                      : undefined
-                  }
-                />
+
+              <div className="fd-diff-section" role="region" aria-labelledby="diff-sec-metrics">
+                <h4 className="fd-diff-section__title" id="diff-sec-metrics">
+                  Cost and quality rollups
+                </h4>
+                {metrics ? (
+                  <div className="fd-metric-grid">
+                    <Metric
+                      label="Cost / run (USD)"
+                      baseline={num(metrics.baseline_cost_per_run_usd)}
+                      candidate={num(metrics.candidate_cost_per_run_usd)}
+                      delta={
+                        typeof metrics.delta_cost_per_run_usd === "number"
+                          ? `Δ ${num(metrics.delta_cost_per_run_usd)}${
+                              typeof metrics.delta_cost_per_run_pct === "number"
+                                ? ` (${metrics.delta_cost_per_run_pct >= 0 ? "+" : ""}${(metrics.delta_cost_per_run_pct * 100).toFixed(2)}% vs baseline)`
+                                : ""
+                            }`
+                          : undefined
+                      }
+                    />
+                    <Metric
+                      label="Latency avg (ms)"
+                      baseline={num(metrics.baseline_latency_ms_avg)}
+                      candidate={num(metrics.candidate_latency_ms_avg)}
+                      delta={
+                        typeof metrics.delta_latency_ms_avg === "number"
+                          ? `Δ ${num(metrics.delta_latency_ms_avg)} ms`
+                          : undefined
+                      }
+                    />
+                    <Metric
+                      label="Error rate"
+                      baseline={pct(metrics.baseline_error_rate)}
+                      candidate={pct(metrics.candidate_error_rate)}
+                      delta={
+                        typeof metrics.delta_error_rate === "number"
+                          ? `Δ ${pct(metrics.delta_error_rate)}`
+                          : undefined
+                      }
+                    />
+                  </div>
+                ) : (
+                  <p className="fd-muted fd-diff-section__body">No metrics block in this response.</p>
+                )}
               </div>
-            ) : null}
+            </div>
           </section>
           <JsonPanel title="Raw diff JSON" value={JSON.stringify(diffOut, null, 2)} defaultOpen={false} />
         </>
