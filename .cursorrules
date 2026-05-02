@@ -1,7 +1,7 @@
 # FlightDeck — Cursor
 
-Read **`AGENTS.md`** for mission, non-goals, public contracts, engineering rules, verification, and docs policy. **`CLAUDE.md`** is a short index for Claude Code / Cursor.
+Read **`AGENTS.md`** for mission, non-goals, public contracts, engineering rules, verification, and docs policy. **`CLAUDE.md`** is a short index for Claude Code / Cursor. In Cursor, **`.cursor/rules/flightdeck-ci-artifacts.mdc`** (`alwaysApply`) reminds you to commit **`src/flightdeck/server/static/`** and **`schemas/`** when CI gates apply.
 
-Quick verify (uv): `uv sync --frozen --extra dev`, then `uv run python -m ruff check src tests`, `uv run python -m pytest`, `uv run flightdeck-quickstart-verify` (pip/venv equivalents in `DEVELOPMENT.md`; on Windows, `py -3` if needed). After **`web/src/`** edits: `cd web && npm ci && npm run build`, commit **`src/flightdeck/server/static/`** if it changes; optionally `npm run test:e2e` (see **`web/README.md`**).
+Quick verify (uv): `uv sync --frozen --extra dev`, then `uv run python -m ruff check src tests`, `uv run python -m pytest`, `uv run flightdeck-quickstart-verify`, `uv run flightdeck --help` (pip/venv equivalents in **`DEVELOPMENT.md`**; on Windows, **`py -3`** if needed). After **Pydantic / wire model** edits: `uv run python scripts/generate_schemas.py` then `git diff --exit-code schemas/`. After **`web/`** edits that affect the production bundle: `cd web && npm ci && npm run build && cd .. && git diff --exit-code src/flightdeck/server/static/` (must be clean—commit all changes under **`static/`**); when UI behavior changes, `cd web && npx playwright install chromium && npm run test:e2e` (see **`web/README.md`**).
 
 Normative v1 direction: https://github.com/flightdeckdev/flightdeck/blob/main/RELEASE_NOTES.md · backlog: https://github.com/flightdeckdev/flightdeck/blob/main/ROADMAP.md · CLI: https://github.com/flightdeckdev/flightdeck/blob/main/README.md

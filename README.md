@@ -109,8 +109,11 @@ Substitute them before ingestion, or run **`uv run flightdeck-quickstart-verify`
 
 ## Documentation
 
-This clone keeps docs lightweight. Core references:
-
+- [CLI reference](docs/cli.md) — all commands, flags, arguments, and exit codes
+- [HTTP API reference](docs/http-api.md) — all `/v1/*` routes, request/response shapes, auth, `RunEvent` field reference
+- [Python SDK](docs/sdk.md) — `FlightdeckClient` / `AsyncFlightdeckClient` usage guide
+- [Operations and policy](docs/operations-and-policy.md) — diff, promote, rollback internals; policy model and confidence tiers
+- [Release artifacts and pricing](docs/release-artifact.md) — `release.yaml` format, bundle layout, checksum algorithm, workspace config, pricing tables
 - [JSON Schemas](schemas/v1/)
 - [Release notes (maintainer)](RELEASE_NOTES.md)
 - [Roadmap](ROADMAP.md)
@@ -127,7 +130,10 @@ uv sync --frozen --extra dev
 uv run python -m ruff check src tests
 uv run python -m pytest
 uv run flightdeck-quickstart-verify
+uv run flightdeck --help
 ```
+
+If you change **`web/`** or **Pydantic models**, also run the **`static/`** and **`schemas/`** drift checks from **[DEVELOPMENT.md](DEVELOPMENT.md)** (same gates as **`.github/workflows/ci.yml`**). **[AGENTS.md](AGENTS.md)** and **[`.cursor/rules/flightdeck-ci-artifacts.mdc`](.cursor/rules/flightdeck-ci-artifacts.mdc)** summarize them for humans and Cursor.
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for **uv** and **pip** setup, verification, troubleshooting, and **PyPI releases** (tag-driven; not on merge to `main`).
 

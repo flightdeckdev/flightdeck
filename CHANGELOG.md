@@ -23,7 +23,7 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 - **Docs:** README deduplicates **RELEASE_NOTES** links; **CHANGELOG** historic bullets use canonical **`https://github.com/flightdeckdev/flightdeck/...`** URLs for **`docs/*`** and **RESEARCH.md** (this slim tree does not ship those files).
 - **`tests/conftest.py`:** create repo **`.tmp/`** at import time so **`pytest --basetemp=.tmp/pytest`** works on fresh checkouts and **Linux** CI (parent dir is no longer Windows-only).
 - **`pyproject.toml` `[project] name`:** **`flightdeck-ai`** to match the **PyPI** trusted-publisher project; install with **`pip install flightdeck-ai`** / **`uv add flightdeck-ai`** (CLI remains **`flightdeck`**, imports **`flightdeck.*`**).
-- **Contributor docs** (**`README.md`**, **`DEVELOPMENT.md`**, **`CONTRIBUTING.md`**, **`AGENTS.md`**, **`CLAUDE.md`**, **`.cursorrules`**): prefer **uv**; keep **pip** / **`python -m venv`** as fallback.
+- **Contributor docs** (**`README.md`**, **`DEVELOPMENT.md`**, **`CONTRIBUTING.md`**, **`AGENTS.md`**, **`CLAUDE.md`**, **`.cursorrules`**, **`.github/PULL_REQUEST_TEMPLATE.md`**, **`web/README.md`**): prefer **uv**; document full CI parity (**`uv sync --frozen`**, **`flightdeck --help`**, **`schemas/`** + **`src/flightdeck/server/static/`** **`git diff --exit-code`** gates, Playwright when **`web/`** changes). Added **`.cursor/rules/flightdeck-ci-artifacts.mdc`** (Cursor **`alwaysApply`**). Keep **pip** / **`python -m venv`** as fallback.
 - **Python:** **`requires-python >=3.14,<3.15`**, **`.python-version`**, PyPI classifiers, **Ruff** `target-version`, **`uv.lock`**, and **CI** matrices now target **CPython 3.14** only (replacing broader **3.11–3.14** testing).
 
 ## 1.0.1 - 2026-05-01

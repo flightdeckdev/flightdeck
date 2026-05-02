@@ -4,7 +4,7 @@ FlightDeck is **v1.0.0+** on a narrow local-first spine; changes should meet pro
 
 Contributions are accepted under the **Apache License, Version 2.0** (see **`LICENSE`**). The canonical tree is [github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck).
 
-Human and AI contributors: follow **[AGENTS.md](AGENTS.md)** (full rules). For a short index, see **[CLAUDE.md](CLAUDE.md)**.
+Human and AI contributors: follow **[AGENTS.md](AGENTS.md)** (full rules). For a short index, see **[CLAUDE.md](CLAUDE.md)**. In **Cursor**, the project rule **[`.cursor/rules/flightdeck-ci-artifacts.mdc`](.cursor/rules/flightdeck-ci-artifacts.mdc)** (`alwaysApply`) summarizes the **web `static/`** and **`schemas/`** drift gates CI enforces.
 
 ## Local Setup
 
@@ -23,12 +23,14 @@ python -m pip install -e ".[dev]"
 
 ## Verify
 
-With **uv** (matches CI):
+With **uv** (core Python checks; see **`.github/workflows/ci.yml`** for the full job):
 
 ```bash
+uv sync --frozen --extra dev
 uv run python -m ruff check src tests
 uv run python -m pytest
 uv run flightdeck-quickstart-verify
+uv run flightdeck --help
 ```
 
 With an activated **venv**:
@@ -37,9 +39,17 @@ With an activated **venv**:
 python -m ruff check src tests
 python -m pytest
 flightdeck-quickstart-verify
+flightdeck --help
 ```
 
-If you change **`pyproject.toml`** dependencies, run **`uv lock`** and commit **`uv.lock`**. Use the same checks as **CI** (see **`AGENTS.md`**) before opening a PR.
+If you change **`pyproject.toml`** dependencies, run **`uv lock`** and commit **`uv.lock`**.
+
+**Also run before a PR** (when relevant—same gates as CI):
+
+- **Schemas:** `uv run python scripts/generate_schemas.py` then `git diff --exit-code schemas/`
+- **Web UI:** `cd web && npm ci && npm run build && cd .. && git diff --exit-code src/flightdeck/server/static/`; if UI behavior changed, `cd web && npx playwright install chromium && npm run test:e2e`
+
+Details, Windows notes, and doctrine: **`AGENTS.md`** (Verification), **`DEVELOPMENT.md`**, **`web/README.md`**.
 
 ## Private files and pushing to GitHub
 

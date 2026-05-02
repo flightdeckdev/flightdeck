@@ -34,6 +34,7 @@ python -m pip install -e ".[dev]"
 With **uv**:
 
 ```bash
+uv sync --frozen --extra dev
 uv run python -m ruff check src tests
 uv run python -m pytest
 uv run flightdeck --help
@@ -51,7 +52,16 @@ flightdeck doctor
 flightdeck-quickstart-verify
 ```
 
-Full command flags and exit codes: [README.md](https://github.com/flightdeckdev/flightdeck/blob/main/README.md). Cross-platform quickstart parity: **`flightdeck-quickstart-verify`** / **`python -m flightdeck.quickstart_smoke`** (also run in CI).
+Match **CI**’s CLI smoke: **`flightdeck --help`** must run successfully after changes to the CLI surface.
+
+Full command flags and exit codes: [README.md](https://github.com/flightdeckdev/flightdeck/blob/main/README.md). Cross-platform quickstart parity: **`flightdeck-quickstart-verify`** / **`python -m flightdeck.quickstart_smoke`** (also run in CI). HTTP API reference: **[docs/http-api.md](docs/http-api.md)**. Python SDK: **[docs/sdk.md](docs/sdk.md)**.
+
+**JSON Schemas:** when **`src/flightdeck/`** models or **`scripts/generate_schemas.py`** change wire contracts, regenerate and match CI:
+
+```bash
+uv run python scripts/generate_schemas.py
+git diff --exit-code schemas/
+```
 
 **Lockfile:** when you change **`pyproject.toml`** dependencies or extras, run **`uv lock`** and commit **`uv.lock`** so CI stays **`--frozen`**-reproducible.
 
@@ -64,8 +74,10 @@ cd web
 npm ci
 npm run build
 cd ..
-git status src/flightdeck/server/static/
+git diff --exit-code src/flightdeck/server/static/
 ```
+
+If that **`git diff`** fails, **`git add`** / commit everything under **`src/flightdeck/server/static/`** (hashed **`assets/*.js`**, **`index.html`**, etc.)—CI uses the same check after **`npm run build`**.
 
 **Playwright:** from **`web/`**, **`npx playwright install chromium`** once, then **`npm run test:e2e`** (matches CI after the **`static/`** diff gate; see **`web/README.md`**).
 

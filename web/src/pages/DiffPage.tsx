@@ -1,0 +1,220 @@
+import { useState } from "react";
+import { fetchJson } from "../api";
+import { Badge } from "../components/Badge";
+import { JsonPanel } from "../components/JsonPanel";
+
+type DiffJson = Record<string, unknown>;
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+function pickPolicy(data: DiffJson): { passed: boolean; reasons: string[] } | null {
+  const p = data.policy;
+  if (!isRecord(p)) return null;
+  const passed = p.passed;
+  const reasons = p.reasons;
+  return {
+    passed: passed === true,
+    reasons: Array.isArray(reasons) ? reasons.filter((x): x is string => typeof x === "string") : [],
+  };
+}
+
+function Metric({
+  label,
+  baseline,
+  candidate,
+  delta,
+  suffix = "",
+}: {
+  label: string;
+  baseline: string;
+  candidate: string;
+  delta?: string;
+  suffix?: string;
+}) {
+  return (
+    <div className="fd-metric">
+      <div className="fd-metric__label">{label}</div>
+      <div className="fd-metric__row">
+        <span className="fd-metric__bc">
+          <span className="fd-metric__tag">B</span> {baseline}
+          {suffix}
+        </span>
+        <span className="fd-metric__arrow" aria-hidden>
+          →
+        </span>
+        <span className="fd-metric__bc">
+          <span className="fd-metric__tag">C</span> {candidate}
+          {suffix}
+        </span>
+      </div>
+      {delta ? <div className="fd-metric__delta">{delta}</div> : null}
+    </div>
+  );
+}
+
+export function DiffPage() {
+  const [diffBaseline, setDiffBaseline] = useState("");
+  const [diffCandidate, setDiffCandidate] = useState("");
+  const [diffWindow, setDiffWindow] = useState("7d");
+  const [diffEnv, setDiffEnv] = useState("local");
+  const [diffOut, setDiffOut] = useState<DiffJson | null>(null);
+  const [diffErr, setDiffErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const runDiff = async () => {
+    setDiffErr(null);
+    setDiffOut(null);
+    setBusy(true);
+    try {
+      const body = {
+        baseline_release_id: diffBaseline.trim(),
+        candidate_release_id: diffCandidate.trim(),
+        window: diffWindow.trim(),
+        environment: diffEnv.trim() || null,
+      };
+      const data = await fetchJson<DiffJson>("/v1/diff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      setDiffOut(data);
+    } catch (e) {
+      setDiffErr(String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const m = diffOut?.metrics;
+  const s = diffOut?.samples;
+  const metrics = isRecord(m) ? m : null;
+  const samples = isRecord(s) ? s : null;
+  const policy = diffOut ? pickPolicy(diffOut) : null;
+
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? String(v) : "—");
+  const pct = (v: unknown) =>
+    typeof v === "number" && Number.isFinite(v) ? `${(v * 100).toFixed(2)}%` : "—";
+
+  return (
+    <>
+      <div className="fd-page-head">
+        <div>
+          <h2 className="fd-page-title">Run diff</h2>
+          <p className="fd-page-sub">
+            Compare baseline vs candidate over a window. Same contract as{" "}
+            <code className="fd-mono fd-mono--sm">flightdeck release diff</code>.
+          </p>
+        </div>
+      </div>
+
+      <section className="fd-card">
+        <div className="fd-form-grid">
+          <label className="fd-field">
+            <span className="fd-field__label">Baseline release ID</span>
+            <input
+              className="fd-input"
+              value={diffBaseline}
+              onChange={(e) => setDiffBaseline(e.target.value)}
+              autoComplete="off"
+            />
+          </label>
+          <label className="fd-field">
+            <span className="fd-field__label">Candidate release ID</span>
+            <input
+              className="fd-input"
+              value={diffCandidate}
+              onChange={(e) => setDiffCandidate(e.target.value)}
+              autoComplete="off"
+            />
+          </label>
+          <label className="fd-field">
+            <span className="fd-field__label">Window</span>
+            <input className="fd-input" value={diffWindow} onChange={(e) => setDiffWindow(e.target.value)} />
+          </label>
+          <label className="fd-field">
+            <span className="fd-field__label">Environment</span>
+            <input className="fd-input" value={diffEnv} onChange={(e) => setDiffEnv(e.target.value)} />
+          </label>
+        </div>
+        <div className="fd-actions">
+          <button type="button" className="fd-btn fd-btn--primary" disabled={busy} onClick={() => void runDiff()}>
+            {busy ? "Computing…" : "Compute diff"}
+          </button>
+        </div>
+      </section>
+
+      {diffErr ? <p className="fd-alert fd-alert--error">{diffErr}</p> : null}
+
+      {diffOut ? (
+        <>
+          <section className="fd-card">
+            <div className="fd-card__head">
+              <h3 className="fd-card__subtitle">Summary</h3>
+              {policy ? (
+                <div className="fd-inline">
+                  <span className="fd-muted">Policy:</span>{" "}
+                  <Badge tone={policy.passed ? "pass" : "fail"}>{policy.passed ? "PASS" : "FAIL"}</Badge>
+                </div>
+              ) : null}
+            </div>
+            {policy && policy.reasons.length > 0 ? (
+              <ul className="fd-reasons">
+                {policy.reasons.map((r) => (
+                  <li key={r}>{r}</li>
+                ))}
+              </ul>
+            ) : null}
+            {samples ? (
+              <p className="fd-muted fd-samples">
+                Samples: baseline={num(samples.baseline_runs)} · candidate={num(samples.candidate_runs)} ·
+                confidence: <strong>{String(samples.confidence ?? "—")}</strong>
+                {typeof samples.confidence_reason === "string" ? ` — ${samples.confidence_reason}` : null}
+              </p>
+            ) : null}
+            {metrics ? (
+              <div className="fd-metric-grid">
+                <Metric
+                  label="Cost / run (USD)"
+                  baseline={num(metrics.baseline_cost_per_run_usd)}
+                  candidate={num(metrics.candidate_cost_per_run_usd)}
+                  delta={
+                    typeof metrics.delta_cost_per_run_usd === "number"
+                      ? `Δ ${num(metrics.delta_cost_per_run_usd)}${
+                          typeof metrics.delta_cost_per_run_pct === "number"
+                            ? ` (${metrics.delta_cost_per_run_pct >= 0 ? "+" : ""}${(metrics.delta_cost_per_run_pct * 100).toFixed(2)}% vs baseline)`
+                            : ""
+                        }`
+                      : undefined
+                  }
+                />
+                <Metric
+                  label="Latency avg (ms)"
+                  baseline={num(metrics.baseline_latency_ms_avg)}
+                  candidate={num(metrics.candidate_latency_ms_avg)}
+                  delta={
+                    typeof metrics.delta_latency_ms_avg === "number"
+                      ? `Δ ${num(metrics.delta_latency_ms_avg)} ms`
+                      : undefined
+                  }
+                />
+                <Metric
+                  label="Error rate"
+                  baseline={pct(metrics.baseline_error_rate)}
+                  candidate={pct(metrics.candidate_error_rate)}
+                  delta={
+                    typeof metrics.delta_error_rate === "number"
+                      ? `Δ ${pct(metrics.delta_error_rate)}`
+                      : undefined
+                  }
+                />
+              </div>
+            ) : null}
+          </section>
+          <JsonPanel title="Raw diff JSON" value={JSON.stringify(diffOut, null, 2)} defaultOpen={false} />
+        </>
+      ) : null}
+    </>
+  );
+}

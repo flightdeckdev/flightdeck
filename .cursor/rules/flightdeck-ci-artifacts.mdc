@@ -1,0 +1,27 @@
+---
+description: FlightDeck — commit web static bundle and regenerated schemas CI enforces
+alwaysApply: true
+---
+
+# FlightDeck CI artifacts
+
+Normative detail: **`AGENTS.md`** (Verification), **`CLAUDE.md`**, **`CONTRIBUTING.md`**, **`DEVELOPMENT.md`**. Repo root **`.cursorrules`** defers here for Cursor users without rules UI. CI mirrors **`.github/workflows/ci.yml`**; PR checklist: **`.github/PULL_REQUEST_TEMPLATE.md`**.
+
+## Web UI (`web/` → `src/flightdeck/server/static/`)
+
+`flightdeck serve` serves the **checked-in** tree under **`src/flightdeck/server/static/`**, not a live Vite output.
+
+If the PR touches **`web/`** in a way that changes the production build (TS/TSX/CSS, **`vite.config.ts`**, **`web/package.json`** / lockfile, etc.):
+
+1. From **`web/`**: **`npm ci`** then **`npm run build`** (writes into **`src/flightdeck/server/static/`** and normalizes LF).
+2. From repo root: **`git diff --exit-code src/flightdeck/server/static/`** must pass—if not, **commit all** changes under that path (hashed **`assets/*.js`**, **`index.html`** script tags, etc.).
+3. If behavior changed, from **`web/`**: **`npm run test:e2e`**.
+
+## JSON Schemas (`schemas/`)
+
+If Pydantic models or generation scripts change wire contracts:
+
+1. **`uv run python scripts/generate_schemas.py`**
+2. **`git diff --exit-code schemas/`** must pass—commit **`schemas/`** updates with the same PR.
+
+Do not hand-edit generated schema files without running the script.
