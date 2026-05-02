@@ -109,8 +109,9 @@ Substitute them before ingestion, or run **`uv run flightdeck-quickstart-verify`
 
 ## Documentation
 
-This clone keeps docs lightweight. Core references:
-
+- [HTTP API reference](docs/http-api.md) — all `/v1/*` routes, request/response shapes, auth
+- [Python SDK](docs/sdk.md) — `FlightdeckClient` / `AsyncFlightdeckClient` usage guide
+- [Operations and policy](docs/operations-and-policy.md) — diff, promote, rollback internals; policy model and confidence tiers
 - [JSON Schemas](schemas/v1/)
 - [Release notes (maintainer)](RELEASE_NOTES.md)
 - [Roadmap](ROADMAP.md)
