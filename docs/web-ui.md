@@ -14,14 +14,19 @@ The app uses **HashRouter** (`react-router-dom`) so all navigation stays within 
 `index.html` that FastAPI's static file mount serves. URLs look like
 `http://127.0.0.1:8765/#/diff`. No server-side route matching is required.
 
-| Hash path | Component | HTTP calls |
-|-----------|-----------|-----------|
-| `#/` | `OverviewPage` | `GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions` (parallel) |
-| `#/diff` | `DiffPage` | `POST /v1/diff` |
-| `#/actions` | `ActionsPage` | `POST /v1/promote` or `POST /v1/rollback` |
-| `#/*` (any other) | — | Redirects to `#/` |
+| Hash path | Component | HTTP calls | Notes |
+|-----------|-----------|-----------|-------|
+| `#/` | `OverviewPage` | `GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions` (parallel) | |
+| `#/diff` | `DiffPage` | `POST /v1/diff` | |
+| `#/actions` | `ActionsPage` | `POST /v1/promote` or `POST /v1/rollback` | Redirects to `#/` when `VITE_FLIGHTDECK_UI_READ_ONLY=true` |
+| `#/*` (any other) | — | Redirects to `#/` | |
 
 `App.tsx` declares the route tree. `AppShell` is the layout wrapper rendered for all routes.
+
+When `VITE_FLIGHTDECK_UI_READ_ONLY=true` is set at build time, the `#/actions` route
+renders a `<Navigate to="/" replace />` rather than `ActionsPage`, and the nav link for
+**Promote** is suppressed. The read-only mode is for demos and shared screens where
+promote/rollback capability should be unavailable regardless of network placement.
 
 ---
 
@@ -31,9 +36,10 @@ The app uses **HashRouter** (`react-router-dom`) so all navigation stays within 
 App (HashRouter)
 └── AppShell (layout: header + nav)
     └── TimelineRefreshProvider (context)
+        ├── SecurityStatusBar (below header, above main content)
         ├── OverviewPage  (route: #/)
         ├── DiffPage      (route: #/diff)
-        └── ActionsPage   (route: #/actions)
+        └── ActionsPage   (route: #/actions; redirects → #/ when UI_READ_ONLY)
 ```
 
 ---
@@ -42,10 +48,12 @@ App (HashRouter)
 
 Renders the top header with brand name and primary nav links, then an `<Outlet>` for the
 active page. Wraps the entire subtree in `TimelineRefreshProvider` so any descendant can
-access the refresh context.
+access the refresh context. Mounts `SecurityStatusBar` between the header and the main
+content area.
 
 Nav links use `NavLink` from `react-router-dom` with an `fd-nav__link--active` class applied
-when the route is active.
+when the route is active. The **Promote** nav link is suppressed when `UI_READ_ONLY` is
+`true` (see [`uiConfig.ts`](#uiconfigts-websrcuiconfigts) below).
 
 ---
 
@@ -74,6 +82,40 @@ Throws if called outside `TimelineRefreshProvider`.
 3. On success, `notifyTimelineMutated()` is called.
 4. `OverviewPage` (mounted in the same shell) sees `generation` change via context.
 5. `useEffect` fires `loadTimeline()` and re-renders tables with fresh data.
+
+---
+
+## `uiConfig.ts` (`web/src/uiConfig.ts`)
+
+Build-time configuration helpers read from `import.meta.env`:
+
+| Export | Type | Description |
+|--------|------|-------------|
+| `UI_READ_ONLY` | `boolean` | `true` when `VITE_FLIGHTDECK_UI_READ_ONLY === "true"`. Hides the Promote nav link, redirects `#/actions` to `#/`, and causes `SecurityStatusBar` to show a read-only banner instead of the auth status. |
+| `clientMutationTokenConfigured()` | `() => boolean` | Returns `true` when `VITE_FLIGHTDECK_LOCAL_API_TOKEN` is set to a non-empty, non-whitespace string in the build env. Used by `SecurityStatusBar` to detect a mismatch between the server's bearer requirement and the client's token configuration. |
+
+---
+
+## `SecurityStatusBar` (`web/src/components/SecurityStatusBar.tsx`)
+
+Mounted by `AppShell` between the header and the main content area. Fetches `GET /health`
+on mount to read `mutation_auth` (`"bearer"` or `"loopback"`), then renders an info or
+warning strip:
+
+| Condition | What is shown |
+|-----------|---------------|
+| `UI_READ_ONLY=true` | Info banner: "Read-only UI: navigation to promote and rollback is disabled." |
+| `/health` fetch failed | Warning banner: "Could not load server security mode." (with error detail) |
+| `mutation_auth === null` (unknown value) | Nothing (renders `null`) |
+| Server `"bearer"` + client has no token | **Warning**: token mismatch — promote/rollback will be rejected until the UI token matches the server |
+| Normal (no mismatch) | Info strip with two lines: server mode description and client token status |
+
+The component never displays the token value itself. It uses the `role="status"` ARIA role
+for live-region accessibility.
+
+**Token mismatch detection:** when `mutation_auth` is `"bearer"` and
+`clientMutationTokenConfigured()` is `false`, the strip warns that mutation requests will
+fail. This is a configuration hint only — the server enforces the actual gate.
 
 ---
 
@@ -177,6 +219,12 @@ type ActionRow = {
 };
 
 type TimelinePayload = { releases: ReleaseRow[]; promoted: PromotedRow[]; actions: ActionRow[]; };
+
+type HealthPayload = {
+  status: string;
+  /** Present on current servers; "bearer" when FLIGHTDECK_LOCAL_API_TOKEN is set. */
+  mutation_auth?: "bearer" | "loopback";
+};
 ```
 
 ### `fetchJson<T>(path, init?): Promise<T>`
@@ -189,6 +237,11 @@ Thin wrapper around `fetch`:
 2. Calls `fetch(path, { ...init, headers })`.
 3. On non-2xx, extracts `response.json().detail` (string or array) and throws `Error(detail)`.
 4. On JSON parse failure, falls back to `{}` before checking `res.ok`.
+
+### `fetchHealth(): Promise<HealthPayload>`
+
+Calls `fetchJson<HealthPayload>("/health")`. Used by `SecurityStatusBar` to discover the
+server's mutation-auth mode (`"bearer"` or `"loopback"`) without exposing secret values.
 
 ### `loadTimeline(): Promise<TimelinePayload>`
 
@@ -270,7 +323,9 @@ All tokens are CSS custom properties on `:root`:
 | `fd-form-grid` | CSS Grid layout for form fields |
 | `fd-field` | Label + input pair; `--full` modifier spans both grid columns |
 | `fd-input` | Styled text input |
-| `fd-alert` | Inline alert box; `--error` modifier |
+| `fd-alert` | Inline alert box; `--error`, `--info`, `--warn` modifiers |
+| `fd-security-strip` | Full-width strip below the header; wraps `SecurityStatusBar` output |
+| `fd-security-strip__msg` | Message paragraph inside the security strip (zero margin) |
 | `fd-json-panel` | Collapsible JSON viewer container |
 | `fd-metric-grid` | Grid of metric cards for diff output |
 | `fd-metric` | Single metric card (label, baseline → candidate, delta) |
@@ -285,12 +340,18 @@ All tokens are CSS custom properties on `:root`:
 
 | Variable | Where set | Effect |
 |----------|-----------|--------|
-| `VITE_FLIGHTDECK_LOCAL_API_TOKEN` | `.env.local` or build env | Injected as `Authorization: Bearer …` on every `fetchJson` call |
+| `VITE_FLIGHTDECK_LOCAL_API_TOKEN` | `.env.local` or build env | Injected as `Authorization: Bearer …` on every `fetchJson` call. Must match `FLIGHTDECK_LOCAL_API_TOKEN` on the server when the server token gate is active. |
+| `VITE_FLIGHTDECK_UI_READ_ONLY` | `.env.local` or build env | Set to `"true"` to enable read-only mode: hides the Promote nav link, redirects `#/actions` to `#/`, and shows a read-only banner in `SecurityStatusBar`. Intended for demo / shared-screen deployments. |
 | `VITE_DEV_PROXY_TARGET` | `.env.local` | Overrides the Vite dev proxy target (default: `http://127.0.0.1:8765`) |
 
 These are **build-time** variables (`import.meta.env`). They are baked into the JavaScript
 bundle at build time; the production `static/` bundle does not read them from the server at
 runtime.
+
+**Note on whitespace-only tokens:** `VITE_FLIGHTDECK_LOCAL_API_TOKEN` is treated as
+unset (and no `Authorization` header is sent) when the value is empty or whitespace only.
+The server applies the same whitespace trim to `FLIGHTDECK_LOCAL_API_TOKEN` — a
+whitespace-only server token is treated as no token (`mutation_auth: "loopback"`).
 
 ---
 
