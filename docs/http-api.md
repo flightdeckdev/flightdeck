@@ -23,13 +23,17 @@ Two access tiers:
 |-------|--------------------|---------------------------------|
 | `GET /health` | open | open |
 | `GET /v1/*` (reads) | open | open |
-| `POST /v1/events` | loopback only† | open (no Bearer required) |
+| `POST /v1/events` | open† | open (no Bearer required) |
 | `POST /v1/diff` | open | open |
 | `POST /v1/promote` | loopback only | `Authorization: Bearer <token>` required |
 | `POST /v1/rollback` | loopback only | `Authorization: Bearer <token>` required |
 
-†`POST /v1/events` is not behind the Bearer gate but the server only listens on loopback
- by default, so it remains local-only unless `--host` is overridden.
+†`POST /v1/events` has **no server-side loopback or token gate** in code
+ (`server/routes/ingest.py`). Only `POST /v1/promote` and `POST /v1/rollback` call
+ `_require_mutation_access`. When the server binds to `127.0.0.1` (the default), ingest is
+ effectively local-only by network topology, not by application enforcement. If you bind
+ `--host 0.0.0.0`, event ingest becomes reachable from any host. Protect it at the network
+ layer (firewall / reverse proxy) if that is a concern.
 
 ```bash
 export FLIGHTDECK_LOCAL_API_TOKEN="$(openssl rand -hex 32)"
