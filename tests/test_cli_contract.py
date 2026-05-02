@@ -31,6 +31,53 @@ def test_release_verify_checksum_mismatch_exits_2(tmp_path: Path, monkeypatch) -
     assert "CHECKSUM MISMATCH" in res.output
 
 
+def test_release_diff_fail_on_policy_exits_1(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    assert runner.invoke(cli, ["init"]).exit_code == 0
+    policy = write_policy(tmp_path, max_cost_per_run_usd=0.000001)
+    assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
+    pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
+    assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0
+
+    baseline = write_release(
+        tmp_path,
+        agent_id="agent_support",
+        version="1",
+        pricing_provider="openai",
+        pricing_version="openai-2026-04-30",
+    )
+    candidate = write_release(
+        tmp_path,
+        agent_id="agent_support",
+        version="2",
+        pricing_provider="openai",
+        pricing_version="openai-2026-04-30",
+    )
+    baseline_id = runner.invoke(cli, ["release", "register", str(baseline)]).output.strip()
+    candidate_id = runner.invoke(cli, ["release", "register", str(candidate)]).output.strip()
+
+    now = datetime.now(tz=timezone.utc)
+    be = write_events(tmp_path, release_id=baseline_id, agent_id="agent_support", n=3, ts=now)
+    ce = write_events(tmp_path, release_id=candidate_id, agent_id="agent_support", n=3, ts=now)
+    assert runner.invoke(cli, ["runs", "ingest", str(be)]).exit_code == 0
+    assert runner.invoke(cli, ["runs", "ingest", str(ce)]).exit_code == 0
+
+    res_ok = runner.invoke(
+        cli,
+        ["release", "diff", baseline_id, candidate_id, "--window", "7d"],
+    )
+    assert res_ok.exit_code == 0
+    assert "Policy: FAIL" in res_ok.output
+
+    res_gate = runner.invoke(
+        cli,
+        ["release", "diff", baseline_id, candidate_id, "--window", "7d", "--fail-on-policy"],
+    )
+    assert res_gate.exit_code != 0
+    assert "Policy gate: diff blocked by active policy" in res_gate.output
+
+
 def test_release_diff_contract_invalid_window_is_nonzero(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()

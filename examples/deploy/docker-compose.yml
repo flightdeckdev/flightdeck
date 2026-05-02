@@ -1,0 +1,28 @@
+# Local-first reference stack: bind API to host loopback only.
+# From this directory: `docker compose up --build`
+services:
+  flightdeck:
+    build: .
+    init: true
+    volumes:
+      - fd_workspace:/workspace
+    ports:
+      - "127.0.0.1:8765:8765"
+    environment:
+      # Optional: require Bearer for promote/rollback (see SECURITY.md).
+      FLIGHTDECK_LOCAL_API_TOKEN: ${FLIGHTDECK_LOCAL_API_TOKEN:-}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/health').read()",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  fd_workspace:

@@ -35,6 +35,8 @@ After any change under **`web/src/`** (or **`vite.config.ts`**, **`package.json`
 
 **Auth:** when the server has **`FLIGHTDECK_LOCAL_API_TOKEN`** set, set **`VITE_FLIGHTDECK_LOCAL_API_TOKEN`** in **`.env.local`** to the same value so promote/rollback requests include **`Authorization: Bearer …`**.
 
+**Read-only UI:** set **`VITE_FLIGHTDECK_UI_READ_ONLY=true`** to hide the Promote nav entry and block **`#/actions`** (demos / wall displays). The shell still loads **`/health`** and shows a read-only banner.
+
 ## Playwright E2E
 
 **CI** (Ubuntu + Windows) and the **PyPI release** workflow run **`npm run test:e2e`** after the production **`static/`** build. One-time browser download locally:

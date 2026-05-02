@@ -6,13 +6,17 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ## Unreleased
 
+## 1.0.2 - 2026-05-02
+
 ### Added
 
-- **Quickstart:** **`flightdeck-quickstart-verify`**, **`flightdeck.quickstart_smoke`**, **`scripts/quickstart_smoke.py`**; **CI** and **PyPI release** run **`uv run flightdeck-quickstart-verify`** (release: after schema drift check).
-- **HTTP SDK:** **`FlightdeckClient`** / **`AsyncFlightdeckClient`** — optional **`api_token`**, **`health`**, **`list_releases`** / **`list_promoted`** / **`list_actions`**, **`post_diff`** / **`post_promote`** / **`post_rollback`**, plus ingest batching and retries.
-- **Web + E2E:** React/Vite **`web/`**, committed **`src/flightdeck/server/static/`**, FastAPI **`/assets`**; Vite dev proxy **`/v1`** / **`/health`**, optional **`VITE_FLIGHTDECK_LOCAL_API_TOKEN`**; **`.gitattributes`** LF on **`static/`**; **`web/e2e/`**, **`web/playwright.config.ts`**, **`web/scripts/e2e-server.mjs`**, **`@playwright/test`**; **CI** / **PyPI release**: **`npm ci`**, **`npm run build`**, **`git diff --exit-code static/`**, **`npx playwright install chromium`**, **`npm run test:e2e`**.
-- **Tests:** CLI contracts (**`release verify`**, **`diff`**, **`history`**, **`rollback`**); invalid JSON fixtures (**`PricingTable`**, **`RunEvent`**, **`ReleaseArtifact`**).
-- **Tooling:** **`uv.lock`** / **`uv sync --frozen --extra dev`** / **`astral-sh/setup-uv`**; **`.github/workflows/release-pypi.yml`** (tag ↔ **`pyproject.toml`** / **`__init__.py`**, ruff, pytest, schemas, **`uv build`**, OIDC **PyPI**, GitHub Release); **`tests/test_version_consistency.py`**.
+- **CLI:** **`flightdeck release diff --fail-on-policy`** exits **1** when the active policy does not pass (after printing the diff), for CI gates without calling **`release promote`**.
+- **HTTP `GET /health`:** response includes **`mutation_auth`** (`loopback` or `bearer`) — safe hint for whether **`FLIGHTDECK_LOCAL_API_TOKEN`** is configured (no secret material).
+- **Web UI:** security status strip (server mode + whether **`VITE_FLIGHTDECK_LOCAL_API_TOKEN`** is set); optional read-only mode via **`VITE_FLIGHTDECK_UI_READ_ONLY=true`** (hides Promote nav and **`#/actions`**).
+- **examples/ci:** **`ledger-gate.sh`**, **`github-actions/policy-gate-*.yml`**, **[examples/ci/README.md](examples/ci/README.md)**; **`.github/workflows/ci.yml`** runs the gate script on **Ubuntu** and **Windows** (bash).
+- **examples/deploy:** reference **`Dockerfile`**, **`docker-compose.yml`**, **`entrypoint.sh`**, **[examples/deploy/README.md](examples/deploy/README.md)**.
+- **examples/integration:** **`emit_sample_events.py`**, **[examples/integration/README.md](examples/integration/README.md)**.
+- **Tests:** **`tests/test_server_health.py`**; **`test_release_diff_fail_on_policy_exits_1`** in **`tests/test_cli_contract.py`**; Playwright smoke asserts **`/health`** includes **`mutation_auth`**.
 
 ### Fixed
 
@@ -20,11 +24,8 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ### Changed
 
-- **Docs:** README deduplicates **RELEASE_NOTES** links; **CHANGELOG** historic bullets use canonical **`https://github.com/flightdeckdev/flightdeck/...`** URLs for **`docs/*`** and **RESEARCH.md** (this slim tree does not ship those files).
-- **`tests/conftest.py`:** create repo **`.tmp/`** at import time so **`pytest --basetemp=.tmp/pytest`** works on fresh checkouts and **Linux** CI (parent dir is no longer Windows-only).
-- **`pyproject.toml` `[project] name`:** **`flightdeck-ai`** to match the **PyPI** trusted-publisher project; install with **`pip install flightdeck-ai`** / **`uv add flightdeck-ai`** (CLI remains **`flightdeck`**, imports **`flightdeck.*`**).
-- **Contributor docs** (**`README.md`**, **`DEVELOPMENT.md`**, **`CONTRIBUTING.md`**, **`AGENTS.md`**, **`CLAUDE.md`**, **`.cursorrules`**, **`.github/PULL_REQUEST_TEMPLATE.md`**, **`web/README.md`**): prefer **uv**; document full CI parity (**`uv sync --frozen`**, **`flightdeck --help`**, **`schemas/`** + **`src/flightdeck/server/static/`** **`git diff --exit-code`** gates, Playwright when **`web/`** changes). Added **`.cursor/rules/flightdeck-ci-artifacts.mdc`** (Cursor **`alwaysApply`**). Keep **pip** / **`python -m venv`** as fallback.
-- **Python:** **`requires-python >=3.14,<3.15`**, **`.python-version`**, PyPI classifiers, **Ruff** `target-version`, **`uv.lock`**, and **CI** matrices now target **CPython 3.14** only (replacing broader **3.11–3.14** testing).
+- **Docs:** **`docs/cli.md`** documents **`--fail-on-policy`**; **`docs/http-api.md`** / **`docs/sdk.md`** document **`GET /health`** `mutation_auth`.
+- **`.gitattributes`:** LF for **`examples/deploy/*.sh`** (Docker entrypoint).
 
 ## 1.0.1 - 2026-05-01
 
@@ -37,7 +38,7 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 - **Slim distribution:** this repository omits the full in-tree **`docs/`** tree, org mirror scripts, and **`verify-repo-standards`** wrappers. Narrative docs and maintainer runbooks live on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)**; in-repo links now point there where applicable.
 - **`pyproject.toml`:** OpenTelemetry packages are **optional** only (**`telemetry`** / **`all`** extras); the default install matches the **1.0.0** dependency story (core does not import OpenTelemetry).
 - **`.pre-commit-config.yaml`:** **ruff** replaces **black** / **isort**; **`ruff-pre-commit`** pinned to **v0.15.12** to match **`dev`** (**`ruff==0.15.12`**).
-- **CI:** Python **3.13** and **3.14** added to the Ubuntu and Windows matrices (superseded by **3.14**-only policy; see **Unreleased**).
+- **CI:** Python **3.13** and **3.14** added to the Ubuntu and Windows matrices (superseded by **3.14**-only policy as of **1.0.2**).
 - **`pyproject.toml`:** default **`pytest --basetemp=.tmp/pytest`** so local runs avoid Windows **`PermissionError`** on **`%TEMP%\pytest-of-*`**.
 - **`pre-commit-hooks`:** bumped to **v5.0.0**.
 

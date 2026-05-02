@@ -89,7 +89,7 @@ See [SECURITY.md](../SECURITY.md) for the full access model.
 
 ### `health() -> dict`
 
-`GET /health` — returns `{"status": "ok"}` when the server is up.
+`GET /health` — returns `{"status": "ok", "mutation_auth": "loopback"|"bearer"}` when the server is up (`mutation_auth` describes promote/rollback auth; see **HTTP API**).
 
 ### `list_releases() -> dict`
 

@@ -353,6 +353,27 @@ body {
   border: 1px solid rgba(183, 28, 28, 0.25);
 }
 
+.fd-alert--info {
+  background: #e7f1ff;
+  color: #0d3a66;
+  border: 1px solid rgba(13, 110, 253, 0.2);
+}
+
+.fd-alert--warn {
+  background: #fff8e1;
+  color: #6d4c00;
+  border: 1px solid rgba(180, 140, 0, 0.28);
+}
+
+.fd-security-strip {
+  padding: 0 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.fd-security-strip__msg {
+  margin: 0;
+}
+
 .fd-json-panel {
   margin-top: 0.5rem;
 }

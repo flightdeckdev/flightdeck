@@ -1,0 +1,35 @@
+# Reference workflow: policy-gated diff in the FlightDeck repository (or a fork).
+# Copy to .github/workflows/ and tune triggers as needed.
+name: FlightDeck policy gate (monorepo)
+
+on:
+  pull_request:
+    paths:
+      - "examples/quickstart/**"
+      - "examples/ci/**"
+      - "src/flightdeck/**"
+      - "pyproject.toml"
+      - "uv.lock"
+  workflow_dispatch:
+
+jobs:
+  ledger-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: "3.14"
+
+      - name: Sync Python env
+        run: uv sync --frozen --extra dev
+
+      - name: Run ledger gate (diff + verify, no promote)
+        env:
+          FD_PROJECT: ${{ github.workspace }}
+          WORKSPACE: ${{ runner.temp }}/fd-ledger-gate-${{ github.run_id }}
+          QUICKSTART_ROOT: ${{ github.workspace }}/examples/quickstart
+        run: bash examples/ci/ledger-gate.sh

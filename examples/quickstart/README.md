@@ -16,3 +16,7 @@ uv run flightdeck-quickstart-verify
 Or **`python -m flightdeck.quickstart_smoke`** / **`py -3 -m flightdeck.quickstart_smoke`** in an activated venv. Unix shell alternative from this directory: **`../../scripts/smoke.sh`** (Git Bash / WSL on Windows).
 
 Manual step-by-step: root **[README.md](../../README.md)**.
+
+CI / GitOps: **[../ci/README.md](../ci/README.md)** (policy gate script and GitHub Actions templates).
+
+Deploy **`serve`**: **[../deploy/README.md](../deploy/README.md)**. Runtime **`POST /v1/events`**: **[../integration/README.md](../integration/README.md)**.

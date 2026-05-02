@@ -4,6 +4,10 @@ High-level notes for **shipping FlightDeck**. Detailed history: **[CHANGELOG.md]
 
 Narrative docs (including the CLI reference) are maintained on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** `main`; this file and **`schemas/`** ship in minimal clones.
 
+## v1.0.2 — CI examples, serve packaging, and policy gate CLI
+
+Minor release (see **[CHANGELOG.md](CHANGELOG.md)**): **`flightdeck release diff --fail-on-policy`** for CI gates; **`examples/ci/`** (`ledger-gate.sh`, GitHub Actions templates) exercised in root CI; **`examples/deploy/`** (Docker/Compose for **`flightdeck serve`**); **`examples/integration/`** (SDK sample emitter for **`POST /v1/events`**); **`GET /health`** adds non-secret **`mutation_auth`** (`loopback` vs `bearer`); web shell shows mutation/token ergonomics and optional read-only UI (**`VITE_FLIGHTDECK_UI_READ_ONLY`**). Fix: policy **`min_*_runs`** explicit **`0`** overrides workspace defaults ( **`is not None`** resolution in **`diff_releases`** ). **Stable contracts:** additive **`/health`** field only; CLI flag is backward-compatible.
+
 ## v1.0.1 — distribution and developer tooling
 
 Patch release (see **[CHANGELOG.md](CHANGELOG.md)**): canonical **`main`** URLs for narrative docs in slim clones, optional OpenTelemetry in extras only, CI on **CPython 3.14** (Ubuntu and Windows), repo-local **pytest** basetemp on Windows, **ruff** pinned consistently with **pre-commit**, **`.gitattributes`** LF for the golden bundle fixture, and removal of a test that depended on unpublished export scripts. **Public CLI / schema / HTTP contracts** are unchanged from **v1.0.0**.

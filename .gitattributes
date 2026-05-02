@@ -6,3 +6,6 @@ src/flightdeck/server/static/** text eol=lf
 
 # Post-build Node scripts committed under web/ (avoid CRLF churn on Windows checkouts).
 web/scripts/** text eol=lf
+
+# Shell entrypoints used by Docker (Linux images expect LF shebang lines).
+examples/deploy/*.sh text eol=lf

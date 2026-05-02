@@ -107,6 +107,8 @@ flightdeck release history --agent agent_support --env local
 The static event files in `examples/quickstart` use placeholder release IDs so the repo can ship stable examples.
 Substitute them before ingestion, or run **`uv run flightdeck-quickstart-verify`** / **`python -m flightdeck.quickstart_smoke`** (venv) or **`./scripts/smoke.sh`** from Git Bash/WSL on Windows.
 
+**Examples:** [examples/quickstart/](examples/quickstart/) · [examples/ci/](examples/ci/) (policy gate + Actions) · [examples/deploy/](examples/deploy/) (`serve` via Docker/Compose) · [examples/integration/](examples/integration/) (HTTP event emitter).
+
 ## Documentation
 
 - [CLI reference](docs/cli.md) — all commands, flags, arguments, and exit codes

@@ -1,5 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { TimelineRefreshProvider } from "../context/TimelineRefreshContext";
+import { SecurityStatusBar } from "./SecurityStatusBar";
+import { UI_READ_ONLY } from "../uiConfig";
 
 const navCls = ({ isActive }: { isActive: boolean }) =>
   `fd-nav__link${isActive ? " fd-nav__link--active" : ""}`;
@@ -20,11 +22,14 @@ export function AppShell() {
             <NavLink to="/diff" className={navCls}>
               Diff
             </NavLink>
-            <NavLink to="/actions" className={navCls}>
-              Promote
-            </NavLink>
+            {UI_READ_ONLY ? null : (
+              <NavLink to="/actions" className={navCls}>
+                Promote
+              </NavLink>
+            )}
           </nav>
         </header>
+        <SecurityStatusBar />
         <main className="fd-main">
           <Outlet />
         </main>

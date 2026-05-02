@@ -33,6 +33,12 @@ export type TimelinePayload = {
   actions: ActionRow[];
 };
 
+export type HealthPayload = {
+  status: string;
+  /** Present on current servers; `bearer` when `FLIGHTDECK_LOCAL_API_TOKEN` is set. */
+  mutation_auth?: "bearer" | "loopback";
+};
+
 export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   const token = import.meta.env.VITE_FLIGHTDECK_LOCAL_API_TOKEN;
@@ -49,6 +55,10 @@ export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T>
     throw new Error(detail || `HTTP ${res.status}`);
   }
   return data as T;
+}
+
+export async function fetchHealth(): Promise<HealthPayload> {
+  return fetchJson<HealthPayload>("/health");
 }
 
 export async function loadTimeline(): Promise<TimelinePayload> {
