@@ -123,4 +123,3 @@ Hosted control plane and in-path traffic routing remain opt-in long-term conside
 - **Versioning:** `VERSIONING.md`
 - **Contributors/org workflow:** `CONTRIBUTING.md`
 - **Engineering rules and doctrine:** `AGENTS.md`
-- **Canonical repo:** [github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)
