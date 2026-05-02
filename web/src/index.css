@@ -316,6 +316,17 @@ body {
   background: transparent;
 }
 
+.fd-btn--danger {
+  border-color: rgba(183, 28, 28, 0.45);
+  color: #8b1a1a;
+  background: rgba(183, 28, 28, 0.06);
+}
+
+.fd-btn--danger:hover:not(:disabled) {
+  background: rgba(183, 28, 28, 0.12);
+  border-color: rgba(183, 28, 28, 0.55);
+}
+
 .fd-form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
@@ -484,6 +495,61 @@ body {
   margin-top: 0.4rem;
   font-size: 0.82rem;
   color: var(--fd-muted);
+}
+
+.fd-metric__hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--fd-muted);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.fd-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+  color: var(--fd-text);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.fd-checkbox-label input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--fd-accent);
+}
+
+.fd-trace-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.fd-trace-group {
+  border: 1px solid var(--fd-border);
+  border-radius: var(--fd-radius-sm);
+  background: var(--fd-surface);
+  padding: 0.15rem 0.5rem 0.5rem;
+}
+
+.fd-trace-group__summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.45rem 0.35rem;
+  list-style-position: outside;
+}
+
+.fd-trace-group__summary::-webkit-details-marker {
+  color: var(--fd-muted);
+}
+
+.fd-trace-group .fd-table-wrap {
+  margin: 0 -0.15rem;
 }
 
 .fd-inline {

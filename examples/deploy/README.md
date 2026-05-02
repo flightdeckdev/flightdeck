@@ -64,7 +64,13 @@ Use an absolute path on Linux/macOS; on Windows Docker Desktop, use a path Docke
 
 ## Process supervision
 
-Compose sets a **`healthcheck`** on **`/health`** plus restart policies; for systemd/Kubernetes, reuse the same image and run **`/entrypoint.sh`** (or invoke **`flightdeck serve`** directly with a prepared workspace directory).
+Compose sets a **`healthcheck`** on **`/health`** plus **`restart: unless-stopped`** on the service; for systemd/Kubernetes, reuse the same image and run **`/entrypoint.sh`** (or invoke **`flightdeck serve`** directly with a prepared workspace directory).
+
+## Operator checklist
+
+- **Logs:** `docker compose logs -f flightdeck` (or your platform log stream) when debugging ingest or policy failures.
+- **State:** one **`flightdeck serve`** instance per workspace SQLite file; do not run two writers against the same volume.
+- **Upgrades:** rebuild the image on semver bumps; keep **`/workspace`** mounted so the ledger survives container recreation.
 
 ## Related
 

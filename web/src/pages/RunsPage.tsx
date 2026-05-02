@@ -39,6 +39,23 @@ function getSuccess(ev: Record<string, unknown>): boolean {
   return s !== false;
 }
 
+/** Preserves API order (newest first); one group per distinct trace_id (or a single "no trace" bucket). */
+function buildTraceGroups(events: unknown[]): { key: string; rows: Record<string, unknown>[] }[] {
+  const order: string[] = [];
+  const map = new Map<string, Record<string, unknown>[]>();
+  for (const ev of events) {
+    const rec = ev as Record<string, unknown>;
+    const tid = getTraceId(rec);
+    const key = tid || "__none__";
+    if (!map.has(key)) {
+      map.set(key, []);
+      order.push(key);
+    }
+    map.get(key)!.push(rec);
+  }
+  return order.map((key) => ({ key, rows: map.get(key)! }));
+}
+
 export function RunsPage() {
   const drawerTitleId = useId();
   const closeBtnRef = useRef<HTMLButtonElement>(null);
@@ -60,6 +77,7 @@ export function RunsPage() {
   const [busy, setBusy] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
   const [detailEvent, setDetailEvent] = useState<Record<string, unknown> | null>(null);
+  const [groupByTrace, setGroupByTrace] = useState(false);
 
   useEffect(() => {
     void loadTimeline()
@@ -188,6 +206,61 @@ export function RunsPage() {
 
   const closeDrawer = useCallback(() => setDetailEvent(null), []);
 
+  const renderEventRow = useCallback(
+    (rec: Record<string, unknown>, idx: number, keyPrefix: string) => {
+      const runId = typeof rec.run_id === "string" ? rec.run_id : "";
+      const ts = typeof rec.timestamp === "string" ? rec.timestamp : "";
+      const agent = typeof rec.agent_id === "string" ? rec.agent_id : "";
+      const tid = getTraceId(rec);
+      const lat = getLatencyMs(rec);
+      const ok = getSuccess(rec);
+      return (
+        <tr key={`${keyPrefix}-${runId}-${idx}`}>
+          <td className="fd-mono">{shortId(runId)}</td>
+          <td className="fd-mono fd-nowrap">{ts}</td>
+          <td>{agent}</td>
+          <td className="fd-mono fd-mono--sm">{tid ? shortId(tid, 8, 4) : "—"}</td>
+          <td>
+            <span className={`fd-badge ${ok ? "fd-badge--pass" : "fd-badge--fail"}`}>
+              {ok ? "ok" : "err"}
+            </span>
+            {lat != null ? (
+              <span className="fd-muted" style={{ marginLeft: "0.35rem", fontSize: "0.78rem" }}>
+                {lat}ms
+              </span>
+            ) : null}
+          </td>
+          <td>
+            <button
+              type="button"
+              className="fd-btn fd-btn--ghost fd-btn--sm"
+              aria-haspopup="dialog"
+              onClick={() => setDetailEvent(rec)}
+            >
+              View
+            </button>
+          </td>
+        </tr>
+      );
+    },
+    [],
+  );
+
+  const tableHead = (
+    <thead>
+      <tr>
+        <th scope="col">Run ID</th>
+        <th scope="col">Timestamp</th>
+        <th scope="col">Agent</th>
+        <th scope="col">Trace</th>
+        <th scope="col">Status</th>
+        <th scope="col">
+          <span className="fd-sr-only">Actions</span>
+        </th>
+      </tr>
+    </thead>
+  );
+
   return (
     <>
       <div className="fd-page-head">
@@ -281,12 +354,22 @@ export function RunsPage() {
 
       {result ? (
         <section className="fd-card" aria-label="Run events results" aria-busy={busy}>
-          <div className="fd-card__head">
-            <h3 className="fd-card__subtitle">Results</h3>
-            <p className="fd-card__desc">
-              matched_total={result.matched_total} returned={result.returned} truncated=
-              {String(result.truncated)} offset={result.offset}
-            </p>
+          <div className="fd-card__head fd-card__head--row">
+            <div>
+              <h3 className="fd-card__subtitle">Results</h3>
+              <p className="fd-card__desc">
+                matched_total={result.matched_total} returned={result.returned} truncated=
+                {String(result.truncated)} offset={result.offset}
+              </p>
+            </div>
+            <label className="fd-checkbox-label">
+              <input
+                type="checkbox"
+                checked={groupByTrace}
+                onChange={(e) => setGroupByTrace(e.target.checked)}
+              />
+              <span>Group by trace_id</span>
+            </label>
           </div>
 
           {result.matched_total === 0 ? (
@@ -314,84 +397,75 @@ export function RunsPage() {
           ) : null}
 
           {result.matched_total > 0 ? (
-            <div className="fd-table-wrap">
-              <table className="fd-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Run ID</th>
-                    <th scope="col">Timestamp</th>
-                    <th scope="col">Agent</th>
-                    <th scope="col">Trace</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">
-                      <span className="fd-sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.events.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="fd-empty-cell">
-                        No events in this page.
-                      </td>
-                    </tr>
-                  ) : (
-                    (() => {
-                      const rows: ReactNode[] = [];
-                      let prevTrace: string | null = null;
-                      result.events.forEach((ev, idx) => {
-                        const rec = ev as Record<string, unknown>;
-                        const tid = getTraceId(rec);
-                        if (tid && tid !== prevTrace) {
-                          rows.push(
-                            <tr key={`trace-sep-${idx}-${tid}`} className="fd-table__trace-sep">
-                              <td colSpan={6}>
-                                <span className="fd-table__trace-sep-label">Trace</span>{" "}
-                                <code className="fd-mono fd-mono--sm">{shortId(tid, 18, 10)}</code>
-                              </td>
-                            </tr>,
-                          );
-                          prevTrace = tid;
-                        }
-                        const runId = typeof rec.run_id === "string" ? rec.run_id : "";
-                        const ts = typeof rec.timestamp === "string" ? rec.timestamp : "";
-                        const agent = typeof rec.agent_id === "string" ? rec.agent_id : "";
-                        const lat = getLatencyMs(rec);
-                        const ok = getSuccess(rec);
-                        rows.push(
-                          <tr key={`${runId}-${idx}`}>
-                            <td className="fd-mono">{shortId(runId)}</td>
-                            <td className="fd-mono fd-nowrap">{ts}</td>
-                            <td>{agent}</td>
-                            <td className="fd-mono fd-mono--sm">{tid ? shortId(tid, 8, 4) : "—"}</td>
-                            <td>
-                              <span className={`fd-badge ${ok ? "fd-badge--pass" : "fd-badge--fail"}`}>
-                                {ok ? "ok" : "err"}
-                              </span>
-                              {lat != null ? (
-                                <span className="fd-muted" style={{ marginLeft: "0.35rem", fontSize: "0.78rem" }}>
-                                  {lat}ms
-                                </span>
-                              ) : null}
-                            </td>
-                            <td>
-                              <button
-                                type="button"
-                                className="fd-btn fd-btn--ghost fd-btn--sm"
-                                onClick={() => setDetailEvent(rec)}
-                              >
-                                View
-                              </button>
-                            </td>
-                          </tr>,
-                        );
-                      });
-                      return rows;
-                    })()
-                  )}
-                </tbody>
-              </table>
-            </div>
+            groupByTrace ? (
+              <div className="fd-trace-groups">
+                {result.events.length === 0 ? (
+                  <p className="fd-muted">No events in this page.</p>
+                ) : (
+                  buildTraceGroups(result.events).map((g) => (
+                    <details key={g.key} className="fd-trace-group" open>
+                      <summary className="fd-trace-group__summary">
+                        {g.key === "__none__" ? (
+                          <span>
+                            <strong>No trace_id</strong>
+                            <span className="fd-muted"> · {g.rows.length} event(s)</span>
+                          </span>
+                        ) : (
+                          <span>
+                            <span className="fd-table__trace-sep-label">Trace</span>{" "}
+                            <code className="fd-mono fd-mono--sm">{shortId(g.key, 18, 10)}</code>
+                            <span className="fd-muted"> · {g.rows.length} event(s)</span>
+                          </span>
+                        )}
+                      </summary>
+                      <div className="fd-table-wrap">
+                        <table className="fd-table">
+                          {tableHead}
+                          <tbody>{g.rows.map((rec, idx) => renderEventRow(rec, idx, g.key))}</tbody>
+                        </table>
+                      </div>
+                    </details>
+                  ))
+                )}
+              </div>
+            ) : (
+              <div className="fd-table-wrap">
+                <table className="fd-table">
+                  {tableHead}
+                  <tbody>
+                    {result.events.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="fd-empty-cell">
+                          No events in this page.
+                        </td>
+                      </tr>
+                    ) : (
+                      (() => {
+                        const rows: ReactNode[] = [];
+                        let prevTrace: string | null = null;
+                        result.events.forEach((ev, idx) => {
+                          const rec = ev as Record<string, unknown>;
+                          const tid = getTraceId(rec);
+                          if (tid && tid !== prevTrace) {
+                            rows.push(
+                              <tr key={`trace-sep-${idx}-${tid}`} className="fd-table__trace-sep">
+                                <td colSpan={6}>
+                                  <span className="fd-table__trace-sep-label">Trace</span>{" "}
+                                  <code className="fd-mono fd-mono--sm">{shortId(tid, 18, 10)}</code>
+                                </td>
+                              </tr>,
+                            );
+                            prevTrace = tid;
+                          }
+                          rows.push(renderEventRow(rec, idx, "flat"));
+                        });
+                        return rows;
+                      })()
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )
           ) : null}
 
           <JsonPanel title="Raw JSON (page)" value={JSON.stringify(result, null, 2)} defaultOpen={false} />

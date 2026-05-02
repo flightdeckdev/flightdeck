@@ -11,7 +11,13 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 - **Web Runs:** forensics UX — empty / offset / truncation messaging, export copy aligned to server limits, trace band rows, **View** drawer with structured fields and full event JSON, extra table columns (trace, status).
 - **Web Diff:** scannable sections (policy, evidence window, pricing/catalog/hints, rollups), pre-query hint, `evaluated_at` when present; **examples** index and **integration** README link **`/#/diff`** and **`POST /v1/diff`** to the end-to-end loop.
 - **Web Actions:** workspace loading skeleton; numbered steps when approval is on; pending table **Use for confirm** and **Refresh list**; clearer browser confirm copy and approval-reason placeholder.
-- **Web shell / Overview:** skeleton loading instead of plain “Loading…”; **Refresh** disabled while loading; ledger metrics line with links to **Diff** and **Runs**; Diff query card **`aria-busy`** while computing.
+- **Web shell / Overview:** skeleton loading instead of plain “Loading…”; **Refresh** disabled while loading; ledger metrics line with links to **Diff** and **Runs**; per-metric hint lines; Diff query card **`aria-busy`** while computing.
+- **Web Runs:** optional **Group by trace_id** (collapsible `<details>` per trace); **View** uses **`aria-haspopup="dialog"`**.
+- **Web Diff:** warn when imported **pricing table versions** or **providers** differ between baseline and candidate (same `pricing` block as before).
+- **Web security strip:** loading state with **`aria-busy`** while **`/health`** is fetched.
+- **Web Actions:** **Rollback** uses danger-styled button (still same confirm + API).
+- **Examples / deploy / SECURITY:** [examples/README.md](examples/README.md) step 7 and readiness row mention **`/#/runs`** grouping; [examples/deploy/README.md](examples/deploy/README.md) operator checklist; Compose **`restart: unless-stopped`** on the reference service; **[SECURITY.md](SECURITY.md)** links the deploy guide for operational hardening.
+- **Playwright:** `e2e-server.mjs` enables **`promotion_requires_approval`** only when **`PW_FORCE_APPROVAL_WORKSPACE=1`** (set from the CLI target or **`PW_WEBSERVER_APPROVAL`**); default suite no longer breaks on a stray **`FD_E2E_FORCE_APPROVAL`** shell export; **`reuseExistingServer: false`** for a clean workspace each run; **[web/README.md](web/README.md)** documents approval vs default runs.
 
 ### Added
 
