@@ -445,6 +445,15 @@ JSON array:
 ]
 ```
 
+**Edge cases:**
+
+| Scenario | Behavior |
+|----------|----------|
+| Empty file (0 bytes or whitespace only) | Succeeds with `Inserted 0 events`. Not an error. |
+| Malformed JSONL (invalid JSON on any line) | Fails with a non-zero exit code and a parse error message. |
+| JSON array file | Parsed as a list of events; each element is validated individually. |
+| Duplicate `run_id` | Silently skipped; count reflects only newly inserted rows. Re-ingesting the same file is safe. |
+
 See [http-api.md § POST /v1/events](http-api.md) for the full `RunEvent` field reference.
 
 ---
