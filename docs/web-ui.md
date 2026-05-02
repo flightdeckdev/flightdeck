@@ -152,7 +152,11 @@ Form-based interface for `POST /v1/diff`. Fields mirror the request body:
 On submit, the raw diff response is parsed and rendered as:
 
 - **Summary card:** policy badge (PASS / FAIL), failure reasons list, sample counts and
-  confidence label.
+  confidence label (including `confidence_reason` when present).
+- **Pricing change warning:** when the diff response includes a `pricing` block with
+  `pricing_or_model_changed: true`, a `fd-alert--warn` banner is shown in the summary
+  card. It names the baseline and candidate provider/version/model so the user knows the
+  cost delta includes pricing assumption changes, not just usage changes.
 - **Metric cards:** cost/run (USD), latency avg (ms), error rate — each showing baseline,
   candidate, and delta.
 - **Raw diff JSON** panel (collapsed by default via `JsonPanel`).
@@ -183,8 +187,23 @@ Both **Promote** and **Rollback** buttons are disabled while any request is in f
 any network call with an inline error.
 
 After a successful mutation:
-1. The API response JSON is shown in a `JsonPanel` (open by default).
-2. `notifyTimelineMutated()` is called, refreshing `OverviewPage` automatically.
+
+1. The response is parsed by `pickOutcome()` — a defensive coercion function that returns
+   an `ActionOutcomePayload` when the response matches the documented contract, or `null`
+   when it does not (allowing graceful fallback to the raw JSON panel).
+2. If `pickOutcome()` returns a structured value, a **outcome card** is rendered:
+   - **Policy badge**: `PASS` / `FAIL` tone from `actOutcome.policy.passed`.
+   - **Pointer badge**: `Updated` (pass tone) or `Unchanged` (neutral tone) from
+     `promoted_pointer_changed`. Shown alongside `agent_id` and `environment`.
+   - **Metric grid**: Action ID, Release ID, and Previous baseline (truncated via
+     `shortId()`; full value on `title` hover). When `baseline_release_id` is `null`
+     (first promotion), "none (first promotion)" is shown.
+   - **Policy reasons list** (`fd-reasons`): rendered only when `policy.reasons` is
+     non-empty (e.g. on a FAIL or when advisory reasons are present).
+3. The raw response JSON is always kept in a `JsonPanel` titled "Raw response JSON".
+   It opens by default **only** when `pickOutcome()` returned `null` (i.e. the outcome
+   card could not be rendered).
+4. `notifyTimelineMutated()` is called, refreshing `OverviewPage` automatically.
 
 **Auth:** When `VITE_FLIGHTDECK_LOCAL_API_TOKEN` is set in the build environment (or
 `.env.local` during dev), `fetchJson` adds `Authorization: Bearer <token>` to every request.
@@ -224,6 +243,31 @@ type HealthPayload = {
   status: string;
   /** Present on current servers; "bearer" when FLIGHTDECK_LOCAL_API_TOKEN is set. */
   mutation_auth?: "bearer" | "loopback";
+};
+
+/** Mirrors the `policy` sub-object in promote/rollback responses and diff responses. */
+type PolicyResultPayload = {
+  passed: boolean;
+  reasons: string[];
+  evaluated_at?: string;
+};
+
+/**
+ * Full HTTP 200 body for `POST /v1/promote` and `POST /v1/rollback`.
+ * Mirrors `_action_body()` in `src/flightdeck/server/routes/actions.py`.
+ *
+ * On HTTP 409 (policy blocked), the server wraps an equivalent object inside
+ * `{ detail: { message, outcome } }` where `outcome` has the same shape.
+ */
+type ActionOutcomePayload = {
+  action_id: string;
+  action: "promote" | "rollback";
+  release_id: string;
+  agent_id: string;
+  environment: string;
+  baseline_release_id: string | null;  // null on first promotion
+  promoted_pointer_changed: boolean;
+  policy: PolicyResultPayload;
 };
 ```
 
@@ -333,6 +377,9 @@ All tokens are CSS custom properties on `:root`:
 | `fd-muted` | Secondary text color |
 | `fd-nowrap` | `white-space: nowrap` for date/ID cells |
 | `fd-empty-cell` | Centered empty-state message in a table cell |
+| `fd-inline` | Inline flex row used for label + badge pairs inside card headers |
+| `fd-samples` | Muted paragraph for sample/confidence metadata in diff and action outcome cards |
+| `fd-reasons` | Small bulleted list of policy failure reasons; used in `DiffPage` and `ActionsPage` outcome cards |
 
 ---
 
