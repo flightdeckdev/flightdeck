@@ -1,0 +1,14 @@
+image:
+  # Build the same image as Compose: from examples/deploy run `docker build -t flightdeck-serve:local .`
+  repository: flightdeck-serve
+  tag: local
+  pullPolicy: Never
+
+service:
+  type: ClusterIP
+  port: 8765
+
+# Mount a workspace ConfigMap/Secret with flightdeck.yaml + optional policy; see templates.
+workspaceMountPath: /workspace
+
+resources: {}

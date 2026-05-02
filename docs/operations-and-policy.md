@@ -464,7 +464,7 @@ Exit behavior: all checks pass → `0`; any failure → prints the failed check 
 exits non-zero (`click.ClickException`).
 
 ```
-ok    schema_migrations: applied=[1, 2, 3] expected 1..3
+ok    schema_migrations: applied=[1, 2, 3, 4] expected 1..4
 ok    promoted_pointer:agent_support:production: release_id=rel_abc123 ok
 ok    audit_seq: contiguous 1..4 (4 row(s))
 Doctor: 3 check(s), all passed.
@@ -646,7 +646,7 @@ After restore, run `flightdeck doctor` to confirm integrity.
 
 | Check | Failure message | Meaning | Fix |
 |-------|----------------|---------|-----|
-| `schema_migrations` | `migrations applied=[1, 2] but expected 1..3` | A newer migration has not run (DB was created by an older version) | Run `flightdeck doctor` again (it calls `migrate()` at start); if it still fails, the DB file may be from a version with a different schema history |
+| `schema_migrations` | `migrations applied=[1, 2, 3] but expected 1..4` | A newer migration has not run (DB was created by an older version) | Run `flightdeck doctor` again (it calls `migrate()` at start); if it still fails, the DB file may be from a version with a different schema history |
 | `promoted_pointer:<agent>:<env>` | `release_id=rel_... not found in releases` | A promoted pointer references a deleted or never-registered release | Re-register the release with the same ID (not supported) or reset the promoted pointer by promoting a known good release |
 | `audit_seq` | `gap at seq=5` or `duplicate seq=3` | The `release_actions` table has a missing or duplicate `audit_seq` | Indicates a manual DB edit or incomplete write; restore from backup and reinspect the affected rows with `sqlite3` |
 

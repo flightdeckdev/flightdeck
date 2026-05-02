@@ -3,7 +3,16 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from flightdeck.operations import ActionOutcome, OperationError, compute_diff, promote_release, rollback_release
+from flightdeck.operations import (
+    ActionOutcome,
+    OperationError,
+    compute_diff,
+    confirm_promotion_request,
+    diff_outcome_to_public_dict,
+    promote_release,
+    request_promotion,
+    rollback_release,
+)
 from flightdeck.server.routes.common import ensure_app_state
 
 router = APIRouter()
@@ -25,6 +34,20 @@ class ActionRequest(BaseModel):
     environment: str
     window: str
     reason: str = Field(min_length=1)
+    actor: str = "http"
+
+
+class PromotionRequestCreate(BaseModel):
+    release_id: str
+    environment: str
+    window: str
+    reason: str = Field(min_length=1)
+    actor: str = "http"
+
+
+class PromotionConfirmRequest(BaseModel):
+    request_id: str
+    approval_reason: str = Field(min_length=1)
     actor: str = "http"
 
 
@@ -89,60 +112,7 @@ def post_diff(request: Request, req: DiffRequest) -> dict[str, object]:
     except OperationError as exc:
         raise _raise_bad_request(exc) from exc
 
-    return {
-        "window": result.window,
-        "since": result.since.isoformat(),
-        "until": result.until.isoformat(),
-        "filters": {
-            "environment": result.environment,
-            "tenant_id": result.tenant_id,
-            "task_id": result.task_id,
-        },
-        "pricing": {
-            "baseline_provider": result.baseline_pricing_provider,
-            "baseline_version": result.baseline_pricing_version,
-            "baseline_model": result.baseline_model,
-            "candidate_provider": result.candidate_pricing_provider,
-            "candidate_version": result.candidate_pricing_version,
-            "candidate_model": result.candidate_model,
-            "pricing_or_model_changed": result.pricing_or_model_changed,
-            # Per-side unit prices for the resolved model (None when the model
-            # is missing from the pricing table; cost rollup will surface its
-            # own KeyError before reaching here when events are present).
-            "prices": {
-                "baseline_input_usd_per_1k_tokens": result.baseline_input_usd_per_1k_tokens,
-                "baseline_output_usd_per_1k_tokens": result.baseline_output_usd_per_1k_tokens,
-                "baseline_cached_input_usd_per_1k_tokens": result.baseline_cached_input_usd_per_1k_tokens,
-                "candidate_input_usd_per_1k_tokens": result.candidate_input_usd_per_1k_tokens,
-                "candidate_output_usd_per_1k_tokens": result.candidate_output_usd_per_1k_tokens,
-                "candidate_cached_input_usd_per_1k_tokens": result.candidate_cached_input_usd_per_1k_tokens,
-            },
-            # Diagnostic strings when a release's resolved model has no entry
-            # in its pricing table; the cost rollup still raises if such a
-            # model appears in events. These are informational only and do
-            # not flip policy.
-            "warnings": list(result.pricing_warnings),
-        },
-        "samples": {
-            "baseline_runs": result.baseline_runs,
-            "candidate_runs": result.candidate_runs,
-            "confidence": result.confidence,
-            "confidence_reason": result.confidence_reason,
-        },
-        "metrics": {
-            "baseline_cost_per_run_usd": result.baseline_cost_per_run_usd,
-            "candidate_cost_per_run_usd": result.candidate_cost_per_run_usd,
-            "delta_cost_per_run_usd": result.delta_cost_per_run_usd,
-            "delta_cost_per_run_pct": result.delta_cost_per_run_pct,
-            "baseline_latency_ms_avg": result.baseline_latency_ms_avg,
-            "candidate_latency_ms_avg": result.candidate_latency_ms_avg,
-            "delta_latency_ms_avg": result.delta_latency_ms_avg,
-            "baseline_error_rate": result.baseline_error_rate,
-            "candidate_error_rate": result.candidate_error_rate,
-            "delta_error_rate": result.delta_error_rate,
-        },
-        "policy": result.policy.model_dump(mode="json"),
-    }
+    return diff_outcome_to_public_dict(result)
 
 
 @router.post("/v1/promote")
@@ -157,6 +127,63 @@ def post_promote(request: Request, req: ActionRequest) -> dict[str, object]:
             environment=req.environment,
             window=req.window,
             reason=req.reason,
+            actor=req.actor,
+        )
+    except OperationError as exc:
+        raise _raise_bad_request(exc) from exc
+
+    if not outcome.policy.passed:
+        raise _raise_policy_blocked("promotion", outcome)
+
+    return _action_body(outcome)
+
+
+@router.post("/v1/promote/request")
+def post_promote_request(request: Request, req: PromotionRequestCreate) -> dict[str, object]:
+    _require_mutation_access(request)
+    cfg, storage = ensure_app_state(request)
+    try:
+        record = request_promotion(
+            cfg=cfg,
+            storage=storage,
+            release_id=req.release_id,
+            environment=req.environment,
+            window=req.window,
+            reason=req.reason,
+            actor=req.actor,
+        )
+    except OperationError as exc:
+        msg = str(exc)
+        if msg.startswith("Policy does not allow"):
+            raise HTTPException(
+                status_code=409,
+                detail={"message": msg},
+            ) from exc
+        raise _raise_bad_request(exc) from exc
+
+    return {
+        "request_id": record.request_id,
+        "status": record.status,
+        "release_id": record.release_id,
+        "agent_id": record.agent_id,
+        "environment": record.environment,
+        "window": record.window,
+        "baseline_release_id": record.baseline_release_id,
+        "policy": record.policy_result.model_dump(mode="json"),
+        "created_at": record.created_at.isoformat(),
+    }
+
+
+@router.post("/v1/promote/confirm")
+def post_promote_confirm(request: Request, req: PromotionConfirmRequest) -> dict[str, object]:
+    _require_mutation_access(request)
+    cfg, storage = ensure_app_state(request)
+    try:
+        outcome = confirm_promotion_request(
+            cfg=cfg,
+            storage=storage,
+            request_id=req.request_id,
+            approval_reason=req.approval_reason,
             actor=req.actor,
         )
     except OperationError as exc:

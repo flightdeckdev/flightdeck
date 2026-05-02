@@ -10,7 +10,16 @@ from pathlib import Path
 from typing import Any, Iterable
 from uuid import uuid4
 
-from flightdeck.models import Policy, PolicyResult, PricingTable, PromotionRecord, ReleaseRecord, RunEvent, utc_now
+from flightdeck.models import (
+    Policy,
+    PolicyResult,
+    PricingTable,
+    PromotionRecord,
+    PromotionRequestRecord,
+    ReleaseRecord,
+    RunEvent,
+    utc_now,
+)
 
 
 def ensure_parent_dir(db_path: str) -> None:
@@ -18,7 +27,7 @@ def ensure_parent_dir(db_path: str) -> None:
 
 
 # Highest migration version applied by `Storage.migrate()` — keep in sync with migration blocks below.
-LATEST_SCHEMA_MIGRATION_VERSION = 3
+LATEST_SCHEMA_MIGRATION_VERSION = 4
 
 
 @dataclass(frozen=True)
@@ -203,6 +212,29 @@ class Storage:
                 )
                 conn.execute("INSERT INTO schema_migrations (version) VALUES (?)", (3,))
                 applied.add(3)
+
+            apply(
+                4,
+                [
+                    """
+                    CREATE TABLE IF NOT EXISTS promotion_requests (
+                      request_id TEXT PRIMARY KEY,
+                      status TEXT NOT NULL,
+                      release_id TEXT NOT NULL,
+                      agent_id TEXT NOT NULL,
+                      environment TEXT NOT NULL,
+                      window TEXT NOT NULL,
+                      reason TEXT NOT NULL,
+                      actor TEXT NOT NULL,
+                      baseline_release_id TEXT,
+                      policy_result_json TEXT NOT NULL,
+                      created_at TEXT NOT NULL,
+                      resolved_at TEXT,
+                      completed_action_id TEXT
+                    )
+                    """,
+                ],
+            )
 
     def backup_to(self, dest: Path) -> None:
         """Copy the workspace SQLite file to ``dest`` using SQLite's online backup API.
@@ -445,6 +477,128 @@ class Storage:
             if not row:
                 return None
             return PricingTable.model_validate_json(row["pricing_json"])
+
+    def list_pricing_versions(self, provider: str) -> list[str]:
+        with self.connect() as conn:
+            rows = conn.execute(
+                "SELECT pricing_version FROM pricing_tables WHERE provider = ? ORDER BY pricing_version",
+                (provider,),
+            ).fetchall()
+        return [str(r["pricing_version"]) for r in rows]
+
+    def insert_promotion_request(self, record: PromotionRequestRecord) -> None:
+        with self.transaction() as conn:
+            conn.execute(
+                """
+                INSERT INTO promotion_requests (
+                  request_id, status, release_id, agent_id, environment, window,
+                  reason, actor, baseline_release_id, policy_result_json, created_at,
+                  resolved_at, completed_action_id
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    record.request_id,
+                    record.status,
+                    record.release_id,
+                    record.agent_id,
+                    record.environment,
+                    record.window,
+                    record.reason,
+                    record.actor,
+                    record.baseline_release_id,
+                    record.policy_result.model_dump_json(),
+                    record.created_at.isoformat(),
+                    record.resolved_at.isoformat() if record.resolved_at else None,
+                    record.completed_action_id,
+                ),
+            )
+
+    def get_promotion_request(self, request_id: str) -> PromotionRequestRecord | None:
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM promotion_requests WHERE request_id = ?",
+                (request_id,),
+            ).fetchone()
+        if not row:
+            return None
+        return PromotionRequestRecord(
+            request_id=row["request_id"],
+            status=row["status"],
+            release_id=row["release_id"],
+            agent_id=row["agent_id"],
+            environment=row["environment"],
+            window=row["window"],
+            reason=row["reason"],
+            actor=row["actor"],
+            baseline_release_id=row["baseline_release_id"],
+            policy_result=PolicyResult.model_validate_json(row["policy_result_json"]),
+            created_at=datetime.fromisoformat(row["created_at"]),
+            resolved_at=datetime.fromisoformat(row["resolved_at"]) if row["resolved_at"] else None,
+            completed_action_id=row["completed_action_id"],
+        )
+
+    def list_promotion_requests(
+        self,
+        *,
+        status: str | None = None,
+        limit: int = 50,
+    ) -> list[PromotionRequestRecord]:
+        clauses: list[str] = []
+        params: list[Any] = []
+        if status:
+            clauses.append("status = ?")
+            params.append(status)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        lim = max(1, min(500, limit))
+        with self.connect() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT * FROM promotion_requests
+                {where}
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (*tuple(params), lim),
+            ).fetchall()
+        out: list[PromotionRequestRecord] = []
+        for row in rows:
+            out.append(
+                PromotionRequestRecord(
+                    request_id=row["request_id"],
+                    status=row["status"],
+                    release_id=row["release_id"],
+                    agent_id=row["agent_id"],
+                    environment=row["environment"],
+                    window=row["window"],
+                    reason=row["reason"],
+                    actor=row["actor"],
+                    baseline_release_id=row["baseline_release_id"],
+                    policy_result=PolicyResult.model_validate_json(row["policy_result_json"]),
+                    created_at=datetime.fromisoformat(row["created_at"]),
+                    resolved_at=datetime.fromisoformat(row["resolved_at"]) if row["resolved_at"] else None,
+                    completed_action_id=row["completed_action_id"],
+                )
+            )
+        return out
+
+    def mark_promotion_request_completed(
+        self,
+        request_id: str,
+        *,
+        completed_action_id: str,
+    ) -> None:
+        with self.transaction() as conn:
+            conn.execute(
+                """
+                UPDATE promotion_requests
+                SET status = 'completed',
+                    resolved_at = ?,
+                    completed_action_id = ?
+                WHERE request_id = ? AND status = 'pending'
+                """,
+                (utc_now().isoformat(), completed_action_id, request_id),
+            )
 
     def set_active_policy(self, policy: Policy) -> None:
         with self.connect() as conn:

@@ -21,6 +21,14 @@ class WorkspaceConfig(BaseModel):
 
     diff: DiffConfig = Field(default_factory=DiffConfig)
 
+    # Optional path (relative to cwd or absolute) to a PricingCatalog YAML for
+    # cross-vendor comparable per-run costs on diffs (additive ``pricing.catalog``).
+    pricing_catalog_path: str | None = None
+
+    # When true, ``POST /v1/promote`` and CLI ``release promote`` reject until a
+    # pending request is confirmed (``promote/request`` + ``promote/confirm``).
+    promotion_requires_approval: bool = False
+
 
 class PricingEntry(BaseModel):
     model: str
@@ -232,4 +240,22 @@ class PromotionRecord(BaseModel):
     created_at: datetime
     # Assigned by storage on insert when None; monotonic for `flightdeck doctor` gap checks.
     audit_seq: int | None = None
+
+
+class PromotionRequestRecord(BaseModel):
+    """Pending human approval before ``commit_promotion`` (Phase 1)."""
+
+    request_id: str
+    status: Literal["pending", "completed", "cancelled"] = "pending"
+    release_id: str
+    agent_id: str
+    environment: str
+    window: str
+    reason: str
+    actor: str
+    baseline_release_id: str | None = None
+    policy_result: PolicyResult
+    created_at: datetime
+    resolved_at: datetime | None = None
+    completed_action_id: str | None = None
 

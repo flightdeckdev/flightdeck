@@ -6,6 +6,21 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ## Unreleased
 
+## 1.1.0 - 2026-05-03
+
+### Added
+
+- **Pricing catalog:** optional `pricing_catalog_path` in `flightdeck.yaml` loads a `PricingCatalog` YAML; `POST /v1/diff` / `release diff` include additive `pricing.catalog` and `pricing.hints` (see `schemas/v1/pricing_catalog.schema.json`, `examples/pricing/catalog.sample.yaml`).
+- **Promotion approval:** `promotion_requires_approval` in `flightdeck.yaml`; `POST /v1/promote/request`, `POST /v1/promote/confirm`, `GET /v1/promotion-requests`, and CLI `release promote-request` / `promote-confirm`.
+- **Forensics:** `GET /v1/runs` and `flightdeck runs list` for read-only run event slices.
+- **Deploy:** optional Helm chart under `examples/deploy/chart/flightdeck/`.
+- **Examples:** `examples/fleet/README.md` and workspace template.
+- **SQLite migration v4:** `promotion_requests` table.
+
+### Changed
+
+- **Examples / CI snippets:** **`flightdeck-ai>=1.1.0`** in Docker and PyPI gate samples.
+
 ## 1.0.6 - 2026-05-02
 
 ### Added

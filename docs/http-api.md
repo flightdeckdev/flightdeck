@@ -22,14 +22,16 @@ Two access tiers:
 | Route | No token configured | `FLIGHTDECK_LOCAL_API_TOKEN` set |
 |-------|--------------------|---------------------------------|
 | `GET /health` | open | open |
-| `GET /v1/*` (reads, including `GET /v1/metrics`) | open | open |
+| `GET /v1/*` (reads, including `GET /v1/metrics`, `GET /v1/runs`, `GET /v1/promotion-requests`) | open | open |
 | `POST /v1/events` | open† | open (no Bearer required) |
 | `POST /v1/diff` | open | open |
 | `POST /v1/promote` | loopback only | `Authorization: Bearer <token>` required |
+| `POST /v1/promote/request`, `POST /v1/promote/confirm` | loopback only | `Authorization: Bearer <token>` required |
 | `POST /v1/rollback` | loopback only | `Authorization: Bearer <token>` required |
 
 †`POST /v1/events` has **no server-side loopback or token gate** in code
- (`server/routes/ingest.py`). Only `POST /v1/promote` and `POST /v1/rollback` call
+ (`server/routes/ingest.py`). Only `POST /v1/promote`, `POST /v1/promote/request`,
+ `POST /v1/promote/confirm`, and `POST /v1/rollback` call
  `_require_mutation_access`. When the server binds to `127.0.0.1` (the default), ingest is
  effectively local-only by network topology, not by application enforcement. If you bind
  `--host 0.0.0.0`, event ingest becomes reachable from any host. Protect it at the network
@@ -83,7 +85,7 @@ Read-only JSON snapshot of aggregate counts in the local SQLite ledger (releases
     "actions_total": 5,
     "actions_by_action": { "promote": 4, "rollback": 1 }
   },
-  "schema_version": 3,
+  "schema_version": 4,
   "generated_at": "2026-05-03T12:00:00+00:00"
 }
 ```
@@ -176,6 +178,77 @@ is always the first element in the array.
 
 `audit_seq` is a monotonically increasing integer assigned at insert time; `flightdeck
 doctor` checks that the sequence has no gaps.
+
+---
+
+## `GET /v1/promotion-requests`
+
+List promotion approval requests (Phase 1). Newest first.
+
+**Query parameters**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `status` | string | — | Filter by status (`pending`, `completed`, `cancelled`) |
+| `limit` | integer | 50 | Max rows (1–500) |
+
+**Response**
+
+```json
+{
+  "requests": [
+    {
+      "request_id": "prq_abc123",
+      "status": "pending",
+      "release_id": "rel_xyz",
+      "agent_id": "agent_support",
+      "environment": "production",
+      "window": "7d",
+      "reason": "rollout candidate",
+      "actor": "ci",
+      "baseline_release_id": "rel_prev",
+      "policy": { "passed": true, "reasons": [], "evaluated_at": "2026-05-02T12:00:00+00:00" },
+      "created_at": "2026-05-02T12:00:00+00:00",
+      "resolved_at": null,
+      "completed_action_id": null
+    }
+  ]
+}
+```
+
+---
+
+## `GET /v1/runs`
+
+Read-only forensics: return a slice of ingested run events for one release (newest first).
+
+**Query parameters (required in bold)**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| **`release_id`** | string | — | Registered release |
+| **`window`** | string | — | Same format as diff (`7d`, `24h`, `30m`) |
+| `environment` | string | — | Defaults to workspace `default_environment` |
+| `tenant_id` | string | — | Optional filter |
+| `task_id` | string | — | Optional filter |
+| `limit` | integer | 100 | Max events returned (1–500) |
+
+**Response**
+
+```json
+{
+  "release_id": "rel_abc",
+  "since": "2026-04-25T12:00:00+00:00",
+  "until": "2026-05-02T12:00:00+00:00",
+  "filters": { "environment": "local", "tenant_id": null, "task_id": null },
+  "matched_total": 42,
+  "returned": 10,
+  "truncated": true,
+  "events": []
+}
+```
+
+Each element of `events` is a `RunEvent` object (`schemas/v1/run_event.schema.json`).
 
 ---
 
@@ -352,7 +425,18 @@ included.
       "candidate_output_usd_per_1k_tokens": 0.0135,
       "candidate_cached_input_usd_per_1k_tokens": null
     },
-    "warnings": []
+    "warnings": [],
+    "hints": [],
+    "catalog": {
+      "enabled": false,
+      "catalog_version": null,
+      "baseline_slot_id": null,
+      "candidate_slot_id": null,
+      "baseline_cost_per_run_usd": null,
+      "candidate_cost_per_run_usd": null,
+      "delta_cost_per_run_usd": null,
+      "warnings": []
+    }
   },
   "samples": {
     "baseline_runs": 1200,
@@ -386,6 +470,14 @@ table. Per-side **`prices.*`** fields are **`null`** in that case. Warnings are 
 only** and do not change **`policy`**. If ingested run events reference a model that cannot
 be priced, the diff request still fails with HTTP 400 as before.
 
+**`pricing.hints`** — optional diagnostics (for example other imported `pricing_version`
+values for the same provider, or substring model-name hints when the exact model is missing).
+
+**`pricing.catalog`** — when `flightdeck.yaml` sets `pricing_catalog_path` to a valid
+`PricingCatalog` YAML, `enabled` is true and comparable per-run costs may appear using
+operator-defined slot tariffs (additive; existing `metrics.*` semantics unchanged). See
+`schemas/v1/pricing_catalog.schema.json` and `examples/pricing/catalog.sample.yaml`.
+
 **Confidence levels**
 
 | Label | Meaning |
@@ -409,6 +501,9 @@ Default thresholds (from `WorkspaceConfig.diff`): `min_candidate_runs=500`,
 Evaluate active policy and promote the release to the specified environment. Writes an
 audit record regardless of whether policy passes; updates the promoted pointer only when
 policy passes.
+
+When **`promotion_requires_approval: true`** in `flightdeck.yaml`, this route returns HTTP
+**400**; use **`POST /v1/promote/request`** then **`POST /v1/promote/confirm`** instead.
 
 **Requires mutation access** (loopback client or Bearer token).
 
@@ -481,6 +576,29 @@ Check `detail.outcome.policy.reasons` for the specific constraints that failed.
 - HTTP 401 — Bearer token missing or invalid (when a token is configured).
 - HTTP 403 — caller is not a loopback client and no token is configured.
 - HTTP 409 — action recorded in the audit ledger but blocked by the active policy.
+
+---
+
+## `POST /v1/promote/request`
+
+When **`promotion_requires_approval: true`** in `flightdeck.yaml`, create a **pending**
+promotion after the same policy evaluation as `/v1/promote` would run. If policy fails,
+returns HTTP **409** with a JSON `detail.message` (no `promotion_requests` row is written).
+If policy passes, returns **`request_id`** for **`POST /v1/promote/confirm`**.
+
+**Requires mutation access.** Request body matches `/v1/promote` (`release_id`, `environment`, `window`, `reason`, optional `actor`).
+
+If `promotion_requires_approval` is **false**, returns HTTP **400**.
+
+---
+
+## `POST /v1/promote/confirm`
+
+Complete a pending request from **`/v1/promote/request`**. Body: `request_id`,
+`approval_reason` (non-empty), optional `actor`. Re-runs promotion evaluation; on success
+marks the request **completed** and returns the same shape as **`POST /v1/promote`**.
+
+**Requires mutation access.**
 
 ---
 

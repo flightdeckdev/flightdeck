@@ -20,6 +20,17 @@ function pickPolicy(data: DiffJson): { passed: boolean; reasons: string[] } | nu
   };
 }
 
+type CatalogInfo = {
+  enabled: boolean;
+  version: string | null;
+  baselineSlot: string | null;
+  candidateSlot: string | null;
+  baselineCost: number | null;
+  candidateCost: number | null;
+  deltaCost: number | null;
+  warnings: string[];
+};
+
 type PricingInfo = {
   baselineProvider: string;
   baselineVersion: string;
@@ -30,6 +41,8 @@ type PricingInfo = {
   changed: boolean;
   prices: PricingPrices | null;
   warnings: string[];
+  hints: string[];
+  catalog: CatalogInfo | null;
 };
 
 type PricingPrices = {
@@ -56,6 +69,25 @@ function pickPrices(p: Record<string, unknown>): PricingPrices | null {
  * Coerces the `pricing` block from `/v1/diff` into a typed view.  The contract
  * is set by the route in `src/flightdeck/server/routes/actions.py`.
  */
+function pickCatalog(block: Record<string, unknown>): CatalogInfo {
+  const rawW = block.warnings;
+  const warnings = Array.isArray(rawW) ? rawW.filter((x): x is string => typeof x === "string") : [];
+  const numOrNull = (k: string): number | null =>
+    typeof block[k] === "number" && Number.isFinite(block[k]) ? (block[k] as number) : null;
+  const strOrNull = (k: string): string | null =>
+    typeof block[k] === "string" ? (block[k] as string) : null;
+  return {
+    enabled: block.enabled === true,
+    version: strOrNull("catalog_version"),
+    baselineSlot: strOrNull("baseline_slot_id"),
+    candidateSlot: strOrNull("candidate_slot_id"),
+    baselineCost: numOrNull("baseline_cost_per_run_usd"),
+    candidateCost: numOrNull("candidate_cost_per_run_usd"),
+    deltaCost: numOrNull("delta_cost_per_run_usd"),
+    warnings,
+  };
+}
+
 function pickPricing(data: DiffJson): PricingInfo | null {
   const p = data.pricing;
   if (!isRecord(p)) return null;
@@ -64,6 +96,10 @@ function pickPricing(data: DiffJson): PricingInfo | null {
   const warnings = Array.isArray(rawWarnings)
     ? rawWarnings.filter((x): x is string => typeof x === "string")
     : [];
+  const rawHints = p.hints;
+  const hints = Array.isArray(rawHints) ? rawHints.filter((x): x is string => typeof x === "string") : [];
+  const catRaw = p.catalog;
+  const catalog = isRecord(catRaw) ? pickCatalog(catRaw) : null;
   return {
     baselineProvider: get("baseline_provider"),
     baselineVersion: get("baseline_version"),
@@ -74,6 +110,8 @@ function pickPricing(data: DiffJson): PricingInfo | null {
     changed: p.pricing_or_model_changed === true,
     prices: pickPrices(p),
     warnings,
+    hints,
+    catalog,
   };
 }
 
@@ -237,6 +275,44 @@ export function DiffPage() {
                   <li key={w}>Pricing warning: {w}</li>
                 ))}
               </ul>
+            ) : null}
+            {pricing && pricing.hints.length > 0 ? (
+              <ul className="fd-muted fd-reasons">
+                {pricing.hints.map((h) => (
+                  <li key={h}>Hint: {h}</li>
+                ))}
+              </ul>
+            ) : null}
+            {pricing && pricing.catalog && (pricing.catalog.enabled || pricing.catalog.warnings.length > 0) ? (
+              <div className="fd-alert fd-alert--info">
+                <strong>Catalog</strong>{" "}
+                {pricing.catalog.enabled ? (
+                  <>
+                    v{pricing.catalog.version ?? "—"} · slots{" "}
+                    <code className="fd-mono fd-mono--sm">{pricing.catalog.baselineSlot ?? "—"}</code> →{" "}
+                    <code className="fd-mono fd-mono--sm">{pricing.catalog.candidateSlot ?? "—"}</code>
+                    {pricing.catalog.baselineCost !== null &&
+                    pricing.catalog.candidateCost !== null &&
+                    pricing.catalog.deltaCost !== null ? (
+                      <>
+                        <br />
+                        Comparable cost/run: {pricing.catalog.baselineCost.toFixed(6)} →{" "}
+                        {pricing.catalog.candidateCost.toFixed(6)} (Δ {pricing.catalog.deltaCost >= 0 ? "+" : ""}
+                        {pricing.catalog.deltaCost.toFixed(6)})
+                      </>
+                    ) : null}
+                  </>
+                ) : (
+                  <span className="fd-muted">disabled or incomplete</span>
+                )}
+                {pricing.catalog.warnings.length > 0 ? (
+                  <ul className="fd-reasons">
+                    {pricing.catalog.warnings.map((w) => (
+                      <li key={w}>{w}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
             ) : null}
             {pricing && pricing.changed ? (
               <p className="fd-alert fd-alert--warn">
