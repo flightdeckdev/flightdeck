@@ -1,0 +1,11 @@
+# Used only by examples/ci/ledger_gate.py (and ledger-gate.sh).
+# Quickstart candidate pricing yields ~$5/run; quickstart/policy.yaml caps at $4 and is
+# meant for promote demos, so this file loosens the ceiling for the CI diff gate.
+policy_id: ledger-gate-ci
+max_cost_per_run_usd: 10.0
+max_latency_ms: 5000
+max_error_rate: 0.99
+min_candidate_runs: 1
+min_baseline_runs: 1
+min_low_runs: 1
+require_high_diff_confidence: false
