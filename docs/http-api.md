@@ -292,7 +292,7 @@ policy passes.
 
 `reason` must be non-empty. `actor` defaults to `"http"`.
 
-**Response**
+**Response (policy passes)**
 ```json
 {
   "action_id": "act_def456",
@@ -310,31 +310,62 @@ policy passes.
 }
 ```
 
-When `promoted_pointer_changed` is `false`, policy did not pass — the release was **not**
-promoted. Check `policy.reasons` for the failure details.
-
 **First promotion** (no prior baseline for this agent/environment): policy evaluation is
 skipped and the release is promoted unconditionally with reason `"first promotion: no
 promoted baseline for agent/environment"`.
+
+**Policy-blocked response (HTTP 409)**
+
+When the active policy blocks promotion, the server returns HTTP **409 Conflict**. The
+action is still written to the audit ledger; only the promoted pointer is not updated.
+
+```json
+{
+  "detail": {
+    "message": "Promotion blocked by policy.",
+    "outcome": {
+      "action_id": "act_def456",
+      "action": "promote",
+      "release_id": "rel_abc123",
+      "agent_id": "agent_support",
+      "environment": "production",
+      "baseline_release_id": "rel_prev789",
+      "promoted_pointer_changed": false,
+      "policy": {
+        "passed": false,
+        "reasons": ["candidate cost per run USD 0.006 exceeds max 0.005"],
+        "evaluated_at": "2026-05-01T13:00:00+00:00"
+      }
+    }
+  }
+}
+```
+
+Check `detail.outcome.policy.reasons` for the specific constraints that failed.
 
 **Errors**
 - HTTP 400 — unknown release ID, missing pricing table, invalid window, or empty reason.
 - HTTP 401 — Bearer token missing or invalid (when a token is configured).
 - HTTP 403 — caller is not a loopback client and no token is configured.
+- HTTP 409 — action recorded in the audit ledger but blocked by the active policy.
 
 ---
 
 ## `POST /v1/rollback`
 
 Roll back to a prior release. Identical contract to `/v1/promote` but with `"action":
-"rollback"` in the response. A promoted baseline must already exist; rolling back when
-nothing is promoted returns HTTP 400.
+"rollback"` in the response and `"message": "Rollback blocked by policy."` in the 409
+body. A promoted baseline must already exist; rolling back when nothing is promoted
+returns HTTP 400.
 
 **Requires mutation access** (loopback client or Bearer token).
 
 **Request body** — same shape as `/v1/promote`.
 
-**Response** — same shape as `/v1/promote` with `"action": "rollback"`.
+**Response (policy passes)** — same shape as `/v1/promote` with `"action": "rollback"`.
+
+**Policy-blocked response** — same 409 shape as `/v1/promote` with `"action": "rollback"`
+and `"message": "Rollback blocked by policy."`.
 
 ---
 

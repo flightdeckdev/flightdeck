@@ -226,9 +226,16 @@ require_high_diff_confidence: false
 ### Promotion blocked by policy
 
 When policy fails, the promotion/rollback attempt is **recorded in the audit ledger**
-(the intent is captured) but the promoted pointer is **not** updated. The CLI exits with
-a non-zero code; the HTTP API returns the full response body with `promoted_pointer_changed:
-false` and `policy.passed: false`.
+(the intent is captured) but the promoted pointer is **not** updated.
+
+- **CLI:** exits with a non-zero code and prints the policy failure reasons.
+- **HTTP API:** returns **HTTP 409 Conflict** with a structured `detail` body containing
+  `message` and the full `outcome` object (including `promoted_pointer_changed: false` and
+  `policy.passed: false`). See [HTTP API reference](http-api.md#post-v1promote) for the
+  exact response shape.
+- **SDK (`post_promote` / `post_rollback`):** raises `httpx.HTTPStatusError` with
+  `response.status_code == 409`. The full `detail` body is accessible via
+  `e.response.json()["detail"]`.
 
 ---
 
