@@ -30,8 +30,8 @@ FlightDeck is **local-first** and ships as a Python CLI backed by SQLite.
 **v1.0.0** establishes **SemVer-stable public contracts** for the documented CLI
 (**[README.md](https://github.com/flightdeckdev/flightdeck/blob/main/README.md)** on `main`),
 committed **`schemas/v1/`**, and **`POST /v1/events`** with **`api_version` `v1`**. See
-**[RELEASE_NOTES.md](RELEASE_NOTES.md)** and
-**[RELEASE_NOTES.md](https://github.com/flightdeckdev/flightdeck/blob/main/RELEASE_NOTES.md)**.
+**[RELEASE_NOTES.md](RELEASE_NOTES.md)** (same narrative on
+**[`main`](https://github.com/flightdeckdev/flightdeck/blob/main/RELEASE_NOTES.md)**).
 The product scope is still intentionally narrow (release governance, not a hosted agent platform).
 
 Not implemented yet:
@@ -126,6 +126,7 @@ This clone keeps docs lightweight. Core references:
 uv sync --frozen --extra dev
 uv run python -m ruff check src tests
 uv run python -m pytest
+uv run flightdeck-quickstart-verify
 ```
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for **uv** and **pip** setup, verification, troubleshooting, and **PyPI releases** (tag-driven; not on merge to `main`).
