@@ -501,6 +501,26 @@ The operations layer reads and writes seven tables (via `src/flightdeck/storage.
 that migrations are applied through `LATEST_SCHEMA_MIGRATION_VERSION` and that
 `audit_seq` has no gaps.
 
+### `run_events` column layout
+
+The `run_events` table stores six indexed columns extracted from each `RunEvent` (used for
+filtering in diff and promote/rollback queries) plus the full serialized event:
+
+| Column | Source | Notes |
+|--------|--------|-------|
+| `run_id` | `RunEvent.run_id` | PRIMARY KEY; duplicate inserts are silently skipped (idempotent ingestion) |
+| `release_id` | `RunEvent.release_id` | Covered by the `(release_id, timestamp)` index added in migration v2 |
+| `agent_id` | `RunEvent.agent_id` | Stored for direct inspection; not used as a WHERE clause in current query paths |
+| `tenant_id` | `RunEvent.tenant_id` | Used as a filter in `query_runs` (optional `--tenant` flag on `release diff`) |
+| `task_id` | `RunEvent.task_id` | Used as a filter in `query_runs` (optional `--task` flag on `release diff`) |
+| `environment` | `RunEvent.environment` | Used as a filter in all diff and promote/rollback queries |
+| `timestamp` | `RunEvent.timestamp` | ISO-8601 string; used for time-window filtering (`since ≤ timestamp < until`) |
+| `event_json` | Full `RunEvent` serialized to JSON | Deserialized into `RunEvent` objects by `query_runs` before returning |
+
+Fields that are stored inside `event_json` but **not** in top-level columns — and therefore
+not filterable in diff queries — include `workspace_id`, `labels`, `request`, and all
+`usage.*` fields. The `usage` data is read from `event_json` during cost computation in `compute_rollup`.
+
 ### Storage connection settings
 
 Every connection is configured with four pragmas before any statement runs:

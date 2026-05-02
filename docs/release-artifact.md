@@ -196,13 +196,31 @@ flightdeck pricing show --provider openai --version 2024-05
 ```
 
 Every import — including `--replace` — writes a record to the `pricing_import_audit`
-SQLite table with fields: `import_id`, `provider`, `pricing_version`, `action`
-(`"insert"` or `"replace"`), `actor` (OS `$USER`), `reason`, `old_pricing_json` (on
-replace), `new_pricing_json`, `new_checksum`, and `created_at`. This record is retained
-even if the table is later replaced again.
+SQLite table. This record is retained even if the table is later replaced again.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `import_id` | TEXT | `pim_` + 12 random hex chars |
+| `provider` | TEXT | Matches the table's `provider` field |
+| `pricing_version` | TEXT | Matches the table's `pricing_version` field |
+| `action` | TEXT | `"insert"` (first import) or `"replace"` (with `--replace`) |
+| `actor` | TEXT | Value of `$USER` / `$USERNAME` at import time |
+| `reason` | TEXT | Rationale (required for `"replace"`, `null` for first imports) |
+| `old_pricing_json` | TEXT | Serialized previous table contents; `null` for first imports |
+| `new_pricing_json` | TEXT | Serialized new table contents |
+| `new_checksum` | TEXT | SHA-256 hex of `new_pricing_json` (deterministic serialization) |
+| `created_at` | TEXT | ISO-8601 timestamp of this audit event |
 
 `--replace` requires `--reason` to be non-empty. Importing without `--replace` when a
 table already exists returns an error.
+
+To inspect the audit trail directly:
+
+```bash
+sqlite3 .flightdeck/flightdeck.db \
+  "SELECT import_id, provider, pricing_version, action, actor, reason, created_at
+   FROM pricing_import_audit ORDER BY created_at;"
+```
 
 ### Pricing and diff accuracy
 
