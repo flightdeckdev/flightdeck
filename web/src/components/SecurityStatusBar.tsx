@@ -11,10 +11,12 @@ function resolveMutationAuth(data: HealthPayload): "bearer" | "loopback" | null 
 export function SecurityStatusBar() {
   const [auth, setAuth] = useState<"bearer" | "loopback" | null>(null);
   const [fetchErr, setFetchErr] = useState<string | null>(null);
+  const [healthLoading, setHealthLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
+      setHealthLoading(true);
       try {
         const h = await fetchHealth();
         if (!cancelled) {
@@ -26,6 +28,8 @@ export function SecurityStatusBar() {
           setAuth(null);
           setFetchErr(String(e));
         }
+      } finally {
+        if (!cancelled) setHealthLoading(false);
       }
     })();
     return () => {
@@ -43,6 +47,18 @@ export function SecurityStatusBar() {
           Read-only UI: navigation to promote and rollback is disabled (
           <code className="fd-mono fd-mono--sm">VITE_FLIGHTDECK_UI_READ_ONLY</code>).
         </p>
+      </div>
+    );
+  }
+
+  if (healthLoading) {
+    return (
+      <div className="fd-security-strip" role="status" aria-busy="true" aria-live="polite">
+        <span className="fd-sr-only">Checking server security</span>
+        <p className="fd-muted fd-security-strip__msg" style={{ margin: "0 0 0.35rem" }}>
+          Checking <code className="fd-mono fd-mono--sm">/health</code> for mutation rules…
+        </p>
+        <span className="fd-skeleton fd-skeleton--w75" style={{ maxWidth: "26rem", display: "block" }} />
       </div>
     );
   }

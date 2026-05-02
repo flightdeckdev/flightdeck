@@ -50,6 +50,7 @@ jobs:
       - name: Playwright E2E (approval workspace)
         env:
           FD_E2E_FORCE_APPROVAL: "1"
+          PW_WEBSERVER_APPROVAL: "1"
         run: |
           cd web
           npx playwright install chromium
@@ -126,6 +127,7 @@ jobs:
         shell: bash
         env:
           FD_E2E_FORCE_APPROVAL: "1"
+          PW_WEBSERVER_APPROVAL: "1"
         run: |
           cd web
           npx playwright install chromium

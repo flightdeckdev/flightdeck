@@ -342,6 +342,34 @@ export function DiffPage() {
                         </span>
                       )}
                     </p>
+                    {(() => {
+                      const bp = pricing.baselineProvider.trim();
+                      const cp = pricing.candidateProvider.trim();
+                      const bv = pricing.baselineVersion.trim();
+                      const cv = pricing.candidateVersion.trim();
+                      const providerSkew = bp.length > 0 && cp.length > 0 && bp !== cp;
+                      const versionSkew = bv.length > 0 && cv.length > 0 && bv !== cv;
+                      if (!providerSkew && !versionSkew) return null;
+                      return (
+                        <p className="fd-alert fd-alert--warn" style={{ margin: "0 0 0.65rem" }} role="status">
+                          {versionSkew ? (
+                            <>
+                              Imported <strong>pricing table versions</strong> differ (
+                              <code className="fd-mono fd-mono--sm">{bv}</code> vs{" "}
+                              <code className="fd-mono fd-mono--sm">{cv}</code>).{" "}
+                            </>
+                          ) : null}
+                          {providerSkew ? (
+                            <>
+                              <strong>Providers</strong> differ (
+                              <code className="fd-mono fd-mono--sm">{bp}</code> vs{" "}
+                              <code className="fd-mono fd-mono--sm">{cp}</code>).{" "}
+                            </>
+                          ) : null}
+                          Treat per-1k and catalog lines below as resolved per release; skew can change comparability.
+                        </p>
+                      );
+                    })()}
                     {pricing.warnings.length > 0 ? (
                       <>
                         <p className="fd-diff-section__title" style={{ marginBottom: "0.35rem" }}>

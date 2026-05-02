@@ -18,10 +18,10 @@ The app uses **HashRouter** (`react-router-dom`) so all navigation stays within 
 
 | Hash path | Component | HTTP calls | Notes |
 |-----------|-----------|-----------|-------|
-| `#/` | `OverviewPage` | `GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions`, `GET /v1/metrics` (parallel where applicable) | Ledger metrics (read-only); skeleton while loading; links to Diff/Runs |
-| `#/diff` | `DiffPage` | `POST /v1/diff` | Sections: policy gate (incl. `evaluated_at`), evidence window, pricing/catalog/hints, per-1k prices when present, cost/quality rollups; raw JSON panel |
-| `#/runs` | `RunsPage` | `GET /v1/releases` (for datalist), `GET /v1/runs`, `GET /v1/runs/export` | Forensics: filters, table (trace/status, trace band rows), **View** drawer, empty/offset/truncation hints, NDJSON download |
-| `#/actions` | `ActionsPage` | `GET /v1/workspace`, `GET /v1/promotion-requests` (when `promotion_requires_approval`), `POST /v1/promote` **or** `POST /v1/promote/request` + `POST /v1/promote/confirm`, `POST /v1/rollback` | Workspace skeleton then strip; approval path: numbered steps, pending **Refresh list** / **Use for confirm**; see **ActionsPage** below |
+| `#/` | `OverviewPage` | `GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions`, `GET /v1/metrics` (parallel where applicable) | Ledger metrics (read-only); short per-counter hints; skeleton while loading; links to Diff/Runs |
+| `#/diff` | `DiffPage` | `POST /v1/diff` | Sections: policy gate (incl. `evaluated_at`), evidence window, pricing/catalog/hints (incl. provider/version skew callout when sides differ), per-1k prices when present, cost/quality rollups; raw JSON panel |
+| `#/runs` | `RunsPage` | `GET /v1/releases` (for datalist), `GET /v1/runs`, `GET /v1/runs/export` | Forensics: filters, table (trace/status, trace band rows or **Group by trace_id**), **View** drawer, empty/offset/truncation hints, NDJSON download |
+| `#/actions` | `ActionsPage` | `GET /v1/workspace`, `GET /v1/promotion-requests` (when `promotion_requires_approval`), `POST /v1/promote` **or** `POST /v1/promote/request` + `POST /v1/promote/confirm`, `POST /v1/rollback` | Workspace skeleton then strip; approval path: numbered steps, pending **Refresh list** / **Use for confirm**; **Rollback** danger-styled; see **ActionsPage** below |
 | `#/*` (any other) | — | Redirects to `#/` | |
 
 `App.tsx` declares the route tree. `AppShell` is the layout wrapper rendered for all routes.
@@ -112,6 +112,7 @@ warning strip:
 | Condition | What is shown |
 |-----------|---------------|
 | `UI_READ_ONLY=true` | Info banner: "Read-only UI: navigation to promote and rollback is disabled." |
+| `/health` in flight | Muted line + skeleton; **`aria-busy="true"`** on the strip |
 | `/health` fetch failed | Warning banner: "Could not load server security mode." (with error detail) |
 | `mutation_auth === null` (unknown value) | Nothing (renders `null`) |
 | Server `"bearer"` + client has no token | **Warning**: token mismatch — promote/rollback will be rejected until the UI token matches the server |

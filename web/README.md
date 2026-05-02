@@ -50,7 +50,7 @@ npm run test:e2e
 
 **`playwright.config.ts`** starts **`scripts/e2e-server.mjs`**: a fresh workspace under **`.tmp/playwright-fd-workspace/`**, then **`flightdeck serve`** on **`http://127.0.0.1:9876`**. On GitHub Actions the server uses **`uv run flightdeck …`**; locally it uses **`python -m flightdeck.cli.main`** or **`py -3`**.
 
-Set **`FD_E2E_FORCE_APPROVAL=1`** before Playwright to rewrite **`flightdeck.yaml`** with **`promotion_requires_approval: true`** (used by **`e2e/actions-approval.spec.ts`**; CI runs it as a second step after the default suite).
+The default **`npm run test:e2e`** suite expects **`promotion_requires_approval: false`** in that workspace. A stray shell **`FD_E2E_FORCE_APPROVAL=1`** alone does **not** flip the server: **`e2e-server.mjs`** only patches YAML when **`PW_FORCE_APPROVAL_WORKSPACE=1`**, which Playwright sets when the CLI targets **`e2e/actions-approval.spec.ts`** or when **`PW_WEBSERVER_APPROVAL=1`** (CI’s second Playwright step sets both). Run approval tests with **`FD_E2E_FORCE_APPROVAL=1 npx playwright test e2e/actions-approval.spec.ts`** (or the same env vars as CI); do not combine **`FD_E2E_FORCE_APPROVAL=1`** with the full default suite unless you intend the approval-only assertions to run against a non-approval workspace (they will fail or skip).
 
 Run **`npm`** commands from this **`web/`** directory (repo root is one level up: **`cd web`**).
 

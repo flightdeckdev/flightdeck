@@ -385,7 +385,7 @@ export function ActionsPage() {
           )}
           <button
             type="button"
-            className="fd-btn fd-btn--ghost"
+            className="fd-btn fd-btn--danger"
             disabled={!canMutate || busy !== null}
             onClick={() => void runAction("/v1/rollback")}
           >

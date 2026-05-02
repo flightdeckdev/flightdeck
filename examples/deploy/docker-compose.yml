@@ -4,6 +4,7 @@ services:
   flightdeck:
     build: .
     init: true
+    restart: unless-stopped
     volumes:
       - fd_workspace:/workspace
     ports:

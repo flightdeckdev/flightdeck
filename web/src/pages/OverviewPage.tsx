@@ -117,24 +117,28 @@ export function OverviewPage() {
               <div className="fd-metric__row">
                 <span className="fd-metric__bc">{metrics.counters.releases_total}</span>
               </div>
+              <p className="fd-metric__hint">Registered <code className="fd-mono fd-mono--sm">release.yaml</code> bundles in this workspace.</p>
             </div>
             <div className="fd-metric">
               <div className="fd-metric__label">Pricing tables</div>
               <div className="fd-metric__row">
                 <span className="fd-metric__bc">{metrics.counters.pricing_tables_total}</span>
               </div>
+              <p className="fd-metric__hint">Imported pricing CSV snapshots used for diff economics.</p>
             </div>
             <div className="fd-metric">
               <div className="fd-metric__label">Run events</div>
               <div className="fd-metric__row">
                 <span className="fd-metric__bc">{metrics.counters.run_events_total}</span>
               </div>
+              <p className="fd-metric__hint">Ingested runtime evidence rows (CLI ingest or POST /v1/events).</p>
             </div>
             <div className="fd-metric">
               <div className="fd-metric__label">Promoted pointers</div>
               <div className="fd-metric__row">
                 <span className="fd-metric__bc">{metrics.counters.promoted_pointers_total}</span>
               </div>
+              <p className="fd-metric__hint">Active promoted release pointers per agent/environment pair.</p>
             </div>
             <div className="fd-metric">
               <div className="fd-metric__label">Actions</div>
@@ -149,6 +153,7 @@ export function OverviewPage() {
                     .join(" · ")}
                 </div>
               ) : null}
+              <p className="fd-metric__hint">Ledger audit rows for promote/rollback attempts (policy outcome recorded).</p>
             </div>
           </div>
           <p className="fd-inline-nav">

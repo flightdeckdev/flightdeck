@@ -38,7 +38,9 @@ if (inCi) {
   await run("python", ["-m", "flightdeck.cli.main", "init"], { cwd: ws });
 }
 
-if (process.env.FD_E2E_FORCE_APPROVAL === "1") {
+// Set by `playwright.config.ts` only when the approval spec (or PW_WEBSERVER_APPROVAL) runs —
+// not when a shell leaks `FD_E2E_FORCE_APPROVAL=1` during the default full suite.
+if (process.env.PW_FORCE_APPROVAL_WORKSPACE === "1") {
   const cfgPath = path.join(ws, "flightdeck.yaml");
   let text = fs.readFileSync(cfgPath, "utf8");
   if (/promotion_requires_approval:\s*false/.test(text)) {
