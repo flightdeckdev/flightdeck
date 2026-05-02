@@ -20,6 +20,35 @@ function pickPolicy(data: DiffJson): { passed: boolean; reasons: string[] } | nu
   };
 }
 
+type PricingInfo = {
+  baselineProvider: string;
+  baselineVersion: string;
+  baselineModel: string;
+  candidateProvider: string;
+  candidateVersion: string;
+  candidateModel: string;
+  changed: boolean;
+};
+
+/**
+ * Coerces the `pricing` block from `/v1/diff` into a typed view.  The contract
+ * is set in `_diff_body()` in `src/flightdeck/server/routes/actions.py`.
+ */
+function pickPricing(data: DiffJson): PricingInfo | null {
+  const p = data.pricing;
+  if (!isRecord(p)) return null;
+  const get = (k: string): string => (typeof p[k] === "string" ? (p[k] as string) : "");
+  return {
+    baselineProvider: get("baseline_provider"),
+    baselineVersion: get("baseline_version"),
+    baselineModel: get("baseline_model"),
+    candidateProvider: get("candidate_provider"),
+    candidateVersion: get("candidate_version"),
+    candidateModel: get("candidate_model"),
+    changed: p.pricing_or_model_changed === true,
+  };
+}
+
 function Metric({
   label,
   baseline,
@@ -92,6 +121,7 @@ export function DiffPage() {
   const metrics = isRecord(m) ? m : null;
   const samples = isRecord(s) ? s : null;
   const policy = diffOut ? pickPolicy(diffOut) : null;
+  const pricing = diffOut ? pickPricing(diffOut) : null;
 
   const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? String(v) : "—");
   const pct = (v: unknown) =>
@@ -171,6 +201,19 @@ export function DiffPage() {
                 Samples: baseline={num(samples.baseline_runs)} · candidate={num(samples.candidate_runs)} ·
                 confidence: <strong>{String(samples.confidence ?? "—")}</strong>
                 {typeof samples.confidence_reason === "string" ? ` — ${samples.confidence_reason}` : null}
+              </p>
+            ) : null}
+            {pricing && pricing.changed ? (
+              <p className="fd-alert fd-alert--warn">
+                Pricing/model changed:{" "}
+                <code className="fd-mono fd-mono--sm">
+                  {pricing.baselineProvider}/{pricing.baselineVersion} {pricing.baselineModel}
+                </code>{" "}
+                →{" "}
+                <code className="fd-mono fd-mono--sm">
+                  {pricing.candidateProvider}/{pricing.candidateVersion} {pricing.candidateModel}
+                </code>
+                . Cost delta includes pricing and model assumption changes.
               </p>
             ) : null}
             {metrics ? (

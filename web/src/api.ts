@@ -39,6 +39,30 @@ export type HealthPayload = {
   mutation_auth?: "bearer" | "loopback";
 };
 
+export type PolicyResultPayload = {
+  passed: boolean;
+  reasons: string[];
+  evaluated_at?: string;
+};
+
+/**
+ * Response shape for `POST /v1/promote` and `POST /v1/rollback` (HTTP 200).
+ * Mirrors `_action_body()` in `src/flightdeck/server/routes/actions.py`.
+ *
+ * On policy block, the server returns HTTP 409 with `{ detail: { message, outcome } }`
+ * where `outcome` matches this shape.
+ */
+export type ActionOutcomePayload = {
+  action_id: string;
+  action: "promote" | "rollback";
+  release_id: string;
+  agent_id: string;
+  environment: string;
+  baseline_release_id: string | null;
+  promoted_pointer_changed: boolean;
+  policy: PolicyResultPayload;
+};
+
 export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   const token = import.meta.env.VITE_FLIGHTDECK_LOCAL_API_TOKEN;

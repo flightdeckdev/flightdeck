@@ -19,6 +19,12 @@ This roadmap is meant to be clear from **what is already shipped** to **near-ter
 
 ---
 
+## Next release
+
+**v1.0.3** (patch): Phase 0 hardening — expanded **pytest** coverage for diff confidence (MEDIUM/LOW, policy on latency and error rate), **runs ingest** edge cases (empty file, malformed JSONL, JSON array payload), and **multi-provider / cross-model** `release diff` paths; web UI structured **promote/rollback** outcome plus a **pricing/model changed** banner on **Run diff** when the API reports it. See **[CHANGELOG.md](CHANGELOG.md)** and **[RELEASE_NOTES.md](RELEASE_NOTES.md)**. No breaking changes to stable CLI, HTTP, or **`api_version` `v1`** contracts.
+
+---
+
 ## Production readiness gaps (why it can feel standalone)
 
 These are current gaps between "works locally" and "easy to use across production services."
@@ -46,6 +52,17 @@ Goal: prove the wedge with real teams using FlightDeck as release governance sou
 - Improve pricing normalization for multiple provider inputs while keeping diff semantics stable.
 - Strengthen local security ergonomics: explicit token/env status in UI, mutation guardrails, optional read-only UX.
 - Continue UI productization for current scope (structured views over raw JSON where stable).
+
+### Phase 0 progress (toward v1.0.3)
+
+Shipped on **`main`** for the next patch:
+
+- **Policy / diff tests:** `diff_releases` coverage for MEDIUM confidence vs `require_high_diff_confidence`, LOW sample floor boundaries, `max_latency_ms` (including skip when latency is absent), `max_error_rate`, and stacked policy failure reasons; CLI integration for MEDIUM blocking a second promotion after a baseline is established.
+- **Ingest tests:** empty JSONL (zero inserts), malformed line (non-zero exit), JSON array file accepted.
+- **Multi-provider pricing:** integration tests that diff baseline vs candidate releases with different **`pricing_reference`** providers (and same-provider different models), including parity checks on **`POST /v1/diff`** `pricing.pricing_or_model_changed`.
+- **Web UI:** structured outcome card after promote/rollback (policy, pointer, IDs) with raw JSON in a collapsible panel; Diff summary shows pricing/model change when the server marks it.
+
+**Still open in Phase 0** (see gaps table and Phase 1 for larger items): richer **pricing normalization** product semantics (beyond per-side tables + flags), broader **integration** and **deployment** narrative in docs, and **observability** paths remain roadmap-sized rather than single-patch work.
 
 ### Phase-0 success signals
 

@@ -37,7 +37,7 @@ uv run python examples/ci/ledger_gate.py
 Example (**PyPI** install):
 
 ```bash
-pip install "flightdeck-ai>=1.0.2"
+pip install "flightdeck-ai>=1.0.3"
 export WORKSPACE="$(mktemp -d)"
 export QUICKSTART_ROOT=/path/to/flightdeck/examples/quickstart
 python /path/to/flightdeck/examples/ci/ledger_gate.py

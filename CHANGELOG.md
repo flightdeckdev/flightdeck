@@ -6,6 +6,17 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ## Unreleased
 
+## 1.0.3 - 2026-05-03
+
+### Added
+
+- **Tests:** **`tests/test_ledger.py`** — MEDIUM vs **`require_high_diff_confidence`**, LOW sample-floor boundary, **`max_latency_ms`** (and skip when latency absent), **`max_error_rate`**, multiple simultaneous policy failure reasons; **`tests/test_spine.py`** — MEDIUM confidence blocks second **`release promote`**, **`runs ingest`** on empty file / malformed JSONL / JSON array payload, **`release diff`** across different pricing providers and across different models on one provider table (plus **`POST /v1/diff`** `pricing.pricing_or_model_changed` assertion).
+- **Web UI:** structured **Promote & rollback** outcome (policy badge, pointer status, action/release/baseline IDs, reason list) with raw response in a collapsed **`JsonPanel`**; **Run diff** shows a pricing/model-change callout when **`pricing.pricing_or_model_changed`** is true.
+
+### Changed
+
+- **Roadmap:** **Phase 0 progress** subsection and **Next release** pointer for **v1.0.3**; docs aligned with the patch scope above.
+
 ## 1.0.2 - 2026-05-02
 
 ### Added
