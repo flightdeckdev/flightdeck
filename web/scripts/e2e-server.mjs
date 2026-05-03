@@ -30,12 +30,14 @@ function run(cmd, args, opts) {
 fs.rmSync(ws, { recursive: true, force: true });
 fs.mkdirSync(ws, { recursive: true });
 
+// Minimal workspace for UI/e2e: no bundled catalog path so GET /v1/workspace matches
+// smoke.spec.ts (pricing_catalog_configured: false) and actions approval tests stay predictable.
 if (inCi) {
-  await run("uv", ["run", "flightdeck", "init"], { cwd: ws });
+  await run("uv", ["run", "flightdeck", "init", "--no-bundled-pricing"], { cwd: ws });
 } else if (process.platform === "win32") {
-  await run("py", ["-3", "-m", "flightdeck.cli.main", "init"], { cwd: ws });
+  await run("py", ["-3", "-m", "flightdeck.cli.main", "init", "--no-bundled-pricing"], { cwd: ws });
 } else {
-  await run("python", ["-m", "flightdeck.cli.main", "init"], { cwd: ws });
+  await run("python", ["-m", "flightdeck.cli.main", "init", "--no-bundled-pricing"], { cwd: ws });
 }
 
 // Set by `playwright.config.ts` only when the Playwright CLI targets `e2e/actions-approval.spec.ts`
