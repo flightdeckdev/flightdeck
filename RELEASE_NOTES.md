@@ -4,6 +4,10 @@ High-level notes for **shipping FlightDeck**. Detailed history: **[CHANGELOG.md]
 
 Narrative docs (including the CLI reference) are maintained on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** `main`; this file and **`schemas/`** ship in minimal clones.
 
+## Upcoming — Bundled pricing on `init`
+
+Patch-line behavior: **`flightdeck init`** now seeds **bundled** OpenAI, Anthropic, and Google (**Gemini-class**, provider key **`google`**) **PricingTable** imports at **`flightdeck-bundled-2026-05`**, copies a default **PricingCatalog** to **`.flightdeck/pricing-catalog.yaml`**, and sets **`pricing_catalog_path`**. **`flightdeck init --no-bundled-pricing`** preserves the previous config-only behavior. **Stable contracts:** additive CLI flags and workspace defaults for **new** workspaces only; existing **`flightdeck.yaml`** files are unchanged until edited.
+
 ## Upcoming — Optional Python integrations (experimental)
 
 Patch-line documentation: optional **`flightdeck.integrations`** mappers behind **`integrations-*`**

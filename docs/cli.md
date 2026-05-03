@@ -16,8 +16,8 @@ serve` see [http-api.md](http-api.md).
 | `--help` | Print help for any command or subcommand |
 
 All commands require a `flightdeck.yaml` in the working directory (or the default path
-`./flightdeck.yaml`). Run `flightdeck init` to create one. The only exception is
-`flightdeck init` itself — it writes the file and does not call `load_config`.
+`./flightdeck.yaml`). Run `flightdeck init` to create one. **`flightdeck init`** writes the
+config, then loads it to migrate the ledger and (by default) import bundled pricing.
 
 ## Actor resolution
 
@@ -44,28 +44,35 @@ field in the request body (defaults to `"http"` when omitted).
 
 ## `flightdeck init`
 
-Create a default `flightdeck.yaml` workspace config in the current directory.
+Create a default `flightdeck.yaml` workspace config in the current directory. By default
+this also **migrates the ledger**, **imports bundled** OpenAI / Anthropic / Google pricing
+tables (snapshot **`flightdeck-bundled-2026-05`**), writes **`.flightdeck/pricing-catalog.yaml`**,
+and sets **`pricing_catalog_path`** so diffs can show **catalog** rollups without a manual
+**`pricing import`**. Use **`--no-bundled-pricing`** for an empty ledger (air-gapped or
+custom-only).
 
 ```bash
-flightdeck init [--path PATH]
+flightdeck init [--path PATH] [--no-bundled-pricing]
 ```
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--path` | `flightdeck.yaml` | Target path for the config file |
+| `--no-bundled-pricing` | off | Skip bundled pricing import and catalog; omit `pricing_catalog_path` from the new config |
 
 Fails with exit 1 if the file already exists.
 
-**Example output:**
+**Example output (default):**
 ```
 Wrote flightdeck.yaml
+Bundled pricing snapshot (flightdeck-bundled-2026-05): imported openai, anthropic, google; wrote catalog to .flightdeck/pricing-catalog.yaml
 ```
 
-The generated file uses all defaults. Edit `diff.*` thresholds or `db_path` before using
-in a shared repo. For **PostgreSQL**, set **`database_url`** to a `postgresql://…` (or
-`postgres://…`) DSN and install **`psycopg`** (`uv sync --extra postgres`); **`db_path`**
-is ignored when **`database_url`** is set. **`flightdeck doctor --backup`** remains
-SQLite-only. See [release-artifact.md § Workspace config](release-artifact.md).
+The generated file uses defaults except **`pricing_catalog_path`** when bundled pricing is
+enabled. Edit `diff.*` thresholds or `db_path` before using in a shared repo. For **PostgreSQL**,
+set **`database_url`** to a `postgresql://…` (or `postgres://…`) DSN and install **`psycopg`**
+(`uv sync --extra postgres`); **`db_path`** is ignored when **`database_url`** is set.
+**`flightdeck doctor --backup`** remains SQLite-only. See [release-artifact.md § Workspace config](release-artifact.md) and [pricing-catalog.md](pricing-catalog.md) (bundled snapshot).
 
 ---
 

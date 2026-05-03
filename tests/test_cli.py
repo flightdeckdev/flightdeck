@@ -25,7 +25,7 @@ def test_cli_version() -> None:
 def test_doctor_backup_writes_valid_sqlite(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     dest = tmp_path / "snap" / "ledger.db"
     res = runner.invoke(cli, ["doctor", "--backup", str(dest)])
     assert res.exit_code == 0

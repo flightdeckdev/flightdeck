@@ -17,7 +17,7 @@ def test_release_verify_ok(tmp_path: Path, monkeypatch) -> None:
     bundle = tmp_path / "bundle"
     shutil.copytree(FIXTURE, bundle)
 
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     pricing = {
         "provider": "openai",
         "pricing_version": "p",
@@ -39,7 +39,7 @@ def test_release_verify_exit_2_on_mismatch(tmp_path: Path, monkeypatch) -> None:
     bundle = tmp_path / "bundle"
     shutil.copytree(FIXTURE, bundle)
 
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     pricing = {
         "provider": "openai",
         "pricing_version": "p",

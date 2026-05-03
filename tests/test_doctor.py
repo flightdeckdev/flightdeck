@@ -16,7 +16,7 @@ from tests.test_spine import write_events, write_policy, write_pricing, write_re
 def test_doctor_passes_after_init(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     res = runner.invoke(cli, ["doctor"])
     assert res.exit_code == 0
     assert "schema_migrations" in res.output
@@ -26,7 +26,7 @@ def test_doctor_passes_after_init(tmp_path: Path, monkeypatch) -> None:
 def test_doctor_audit_seq_ok_after_two_promotions(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     policy = write_policy(tmp_path, max_cost_per_run_usd=10.0)
     assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
@@ -152,7 +152,7 @@ def test_insert_promotion_record_uses_immediate_transaction(tmp_path: Path) -> N
 def test_doctor_fails_when_promoted_release_missing(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     assert runner.invoke(cli, ["doctor"]).exit_code == 0
 
     db_path = tmp_path / ".flightdeck" / "flightdeck.db"
@@ -176,7 +176,7 @@ def test_doctor_fails_when_promoted_release_missing(tmp_path: Path, monkeypatch)
 def test_release_actions_audit_seq_is_contiguous_direct_check(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     policy = write_policy(tmp_path, max_cost_per_run_usd=10.0)
     assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")

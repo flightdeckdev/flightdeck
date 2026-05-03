@@ -6,6 +6,10 @@ Contributions are accepted under the **Apache License, Version 2.0** (see **`LIC
 
 Human and AI contributors: follow **[AGENTS.md](AGENTS.md)** (full rules). For a short index, see **[CLAUDE.md](CLAUDE.md)**. In **Cursor**, the project rule **[`.cursor/rules/flightdeck-ci-artifacts.mdc`](.cursor/rules/flightdeck-ci-artifacts.mdc)** (`alwaysApply`) summarizes the **web `static/`** and **`schemas/`** drift gates CI enforces.
 
+## Who we are building for
+
+The product ICP is **platform or ML engineering teams** (often about **5–30** people) at **Series B+**-style companies shipping **at least two** **LLM-backed agents** to production—teams that have already been burned by a **cost spike** or **quality regression** tied to a **prompt** or **model** change. Contributions should shorten their path to **versioned releases**, **ingested evidence**, **economic diffs**, and **policy-gated promote**—not broaden scope into orchestration or hosted tracing (see **[AGENTS.md](AGENTS.md)** non-goals).
+
 ## Local Setup
 
 Recommended (**[uv](https://docs.astral.sh/uv/)** — see **`DEVELOPMENT.md`**):

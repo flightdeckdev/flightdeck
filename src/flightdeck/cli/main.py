@@ -14,6 +14,11 @@ from click.exceptions import Exit as ClickExit
 
 from flightdeck import __version__
 from flightdeck.bundle import bundle_checksum
+from flightdeck.bundled_pricing_bootstrap import (
+    BUNDLED_PRICING_VERSION,
+    DEFAULT_CATALOG_RELATIVE_PATH,
+    bootstrap_bundled_pricing,
+)
 from flightdeck.config import DEFAULT_CONFIG_FILENAME, load_config, write_default_config
 from flightdeck.doctor import run_doctor
 from flightdeck.models import (
@@ -74,13 +79,31 @@ def cli() -> None:
 
 @cli.command()
 @click.option("--path", "path_", default=DEFAULT_CONFIG_FILENAME, show_default=True)
-def init(path_: str) -> None:
+@click.option(
+    "--no-bundled-pricing",
+    is_flag=True,
+    default=False,
+    help="Skip bundled OpenAI/Anthropic/Google pricing import and catalog (air-gapped or custom-only).",
+)
+def init(path_: str, no_bundled_pricing: bool) -> None:
     """Create a local `flightdeck.yaml` workspace config."""
     p = Path(path_)
     if p.exists():
         raise click.ClickException(f"{p} already exists")
-    written = write_default_config(p)
+    catalog_rel: str | None = None if no_bundled_pricing else DEFAULT_CATALOG_RELATIVE_PATH
+    written = write_default_config(p, pricing_catalog_path=catalog_rel)
     click.echo(f"Wrote {written}")
+    cfg = load_config(written)
+    storage = storage_from_config(cfg)
+    storage.migrate()
+    if not no_bundled_pricing:
+        rel = cfg.pricing_catalog_path or DEFAULT_CATALOG_RELATIVE_PATH
+        catalog_dest = (Path.cwd() / Path(rel)).resolve()
+        bootstrap_bundled_pricing(storage=storage, actor=actor_name(), catalog_dest=catalog_dest)
+        click.echo(
+            f"Bundled pricing snapshot ({BUNDLED_PRICING_VERSION}): imported openai, anthropic, google; "
+            f"wrote catalog to {rel}"
+        )
 
 
 @cli.command("doctor")

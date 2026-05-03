@@ -206,7 +206,7 @@ def test_bundle_checksum_order_independent(tmp_path: Path) -> None:
 def test_release_diff_invalid_window(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
 
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
     assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0
@@ -224,7 +224,7 @@ def test_release_diff_invalid_window(tmp_path: Path, monkeypatch) -> None:
 def test_pricing_replace_requires_reason(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
 
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
     assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0
@@ -241,7 +241,7 @@ def test_rollback_promotes_prior_release(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     assert runner.invoke(cli, ["policy", "set", str(write_policy(tmp_path))]).exit_code == 0
 
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
@@ -317,7 +317,7 @@ def test_end_to_end_local_diff(tmp_path: Path, monkeypatch) -> None:
     runner = CliRunner()
 
     # init workspace config
-    res = runner.invoke(cli, ["init"])
+    res = runner.invoke(cli, ["init", "--no-bundled-pricing"])
     assert res.exit_code == 0
     assert (tmp_path / "flightdeck.yaml").exists()
 
@@ -373,7 +373,7 @@ def test_diff_rejects_cross_agent(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
-    res = runner.invoke(cli, ["init"])
+    res = runner.invoke(cli, ["init", "--no-bundled-pricing"])
     assert res.exit_code == 0
 
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
@@ -393,7 +393,7 @@ def test_pricing_show_and_missing_table_error(tmp_path: Path, monkeypatch) -> No
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
-    res = runner.invoke(cli, ["init"])
+    res = runner.invoke(cli, ["init", "--no-bundled-pricing"])
     assert res.exit_code == 0
 
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
@@ -420,7 +420,7 @@ def test_diff_reports_missing_baseline_pricing_table(tmp_path: Path, monkeypatch
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
-    res = runner.invoke(cli, ["init"])
+    res = runner.invoke(cli, ["init", "--no-bundled-pricing"])
     assert res.exit_code == 0
 
     candidate_pricing = write_pricing(tmp_path, provider="openai", pricing_version="candidate-pricing")
@@ -453,7 +453,7 @@ def test_diff_reports_missing_candidate_pricing_table(tmp_path: Path, monkeypatc
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
-    res = runner.invoke(cli, ["init"])
+    res = runner.invoke(cli, ["init", "--no-bundled-pricing"])
     assert res.exit_code == 0
 
     baseline_pricing = write_pricing(tmp_path, provider="openai", pricing_version="baseline-pricing")
@@ -486,7 +486,7 @@ def test_diff_reports_missing_model_entry_in_pricing_table(tmp_path: Path, monke
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
-    res = runner.invoke(cli, ["init"])
+    res = runner.invoke(cli, ["init", "--no-bundled-pricing"])
     assert res.exit_code == 0
 
     pricing = write_pricing(
@@ -551,7 +551,7 @@ def test_diff_uses_separate_baseline_and_candidate_pricing_tables(
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
-    res = runner.invoke(cli, ["init"])
+    res = runner.invoke(cli, ["init", "--no-bundled-pricing"])
     assert res.exit_code == 0
 
     baseline_pricing = write_pricing(
@@ -606,7 +606,7 @@ def test_policy_set_and_show(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
-    res = runner.invoke(cli, ["init"])
+    res = runner.invoke(cli, ["init", "--no-bundled-pricing"])
     assert res.exit_code == 0
 
     policy = write_policy(tmp_path, max_cost_per_run_usd=1.5)
@@ -624,7 +624,7 @@ def test_first_promotion_requires_reason_and_records_history(tmp_path: Path, mon
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
     assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0
 
@@ -674,7 +674,7 @@ def test_second_promotion_fails_when_policy_fails_and_keeps_current_release(
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     policy = write_policy(tmp_path, max_cost_per_run_usd=1.0)
     assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
@@ -753,7 +753,7 @@ def test_passing_second_promotion_replaces_current_release(tmp_path: Path, monke
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     policy = write_policy(tmp_path, max_cost_per_run_usd=10.0)
     assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
@@ -825,7 +825,7 @@ def test_diff_medium_confidence_blocks_promotion(tmp_path: Path, monkeypatch) ->
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     policy = write_policy(tmp_path, require_high_diff_confidence=True)
     assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
 
@@ -882,7 +882,7 @@ def test_diff_medium_confidence_blocks_promotion(tmp_path: Path, monkeypatch) ->
 def test_runs_ingest_empty_file(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
 
     empty = tmp_path / "empty.jsonl"
     empty.write_text("", encoding="utf-8")
@@ -895,7 +895,7 @@ def test_runs_ingest_empty_file(tmp_path: Path, monkeypatch) -> None:
 def test_runs_ingest_rejects_malformed_jsonl(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
 
     bad = tmp_path / "bad.jsonl"
     bad.write_text("{not valid json}\n", encoding="utf-8")
@@ -907,7 +907,7 @@ def test_runs_ingest_rejects_malformed_jsonl(tmp_path: Path, monkeypatch) -> Non
 def test_runs_ingest_accepts_json_array(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
 
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
     assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0
@@ -960,7 +960,7 @@ def test_diff_cross_provider_releases(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
 
     openai_pricing = write_pricing(
         tmp_path,
@@ -1058,7 +1058,7 @@ def test_diff_cross_model_same_provider(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
 
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
 
     pricing_path = tmp_path / "pricing_openai_multi.yaml"
     pricing_data = {
@@ -1144,7 +1144,7 @@ def test_diff_cross_model_same_provider(tmp_path: Path, monkeypatch) -> None:
 def test_release_diff_output_json_shape(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     policy = write_policy(
         tmp_path,
         min_candidate_runs=0,
@@ -1178,7 +1178,7 @@ def test_release_diff_output_json_shape(tmp_path: Path, monkeypatch) -> None:
 def test_release_diff_pricing_warnings_when_model_not_in_table(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     policy = write_policy(
         tmp_path,
         min_candidate_runs=0,

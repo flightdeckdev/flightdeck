@@ -85,7 +85,7 @@ Full command flags and exit codes: [README.md](https://github.com/flightdeckdev/
 `flightdeck-quickstart-verify` (entry point for `src/flightdeck/quickstart_smoke.py`) runs the full
 quickstart workflow end-to-end in an isolated temp directory:
 
-1. `flightdeck init`
+1. `flightdeck init` (bundled OpenAI / Anthropic / Google snapshot + catalog; additive with the imports below)
 2. Import both pricing tables from `examples/quickstart/`
 3. `flightdeck policy set`
 4. Register baseline and candidate releases — capture the `release_id` printed to stdout

@@ -18,6 +18,7 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ### Added
 
+- **`flightdeck init`** (default): migrates the ledger, imports **bundled** OpenAI / Anthropic / Google pricing tables (**`pricing_version` `flightdeck-bundled-2026-05`**, illustrative snapshot), writes **`.flightdeck/pricing-catalog.yaml`**, and sets **`pricing_catalog_path`** in **`flightdeck.yaml`** so diffs can show cost signals without manual **`pricing import`**. Opt out with **`--no-bundled-pricing`**. Bundled YAML ships under **`src/flightdeck/bundled_pricing/`** (wheel package data).
 - **`GET /health`:** **`read_auth`** (`open` vs `bearer`) describes whether **`GET /v1/*`** requires **`Authorization: Bearer`** when **`FLIGHTDECK_LOCAL_API_TOKEN`** is set (aligned with writes).
 - **SQLite:** bounded retries on **`database is locked` / busy** for ledger **`execute`** paths; **`flightdeck serve --sqlite-lock-timeout`** / **`--retry-sqlite-lock`** (and env **`FLIGHTDECK_SQLITE_*`**) plus **`docs/operations-and-policy.md`** concurrency notes.
 - **CI / dev:** **`pytest-cov`** with **`--cov-fail-under=80`** on **`src/flightdeck`** (**`integrations/*`**, **`quickstart_smoke`**, and **`sdk/client.py`** omitted from the denominator — see **`[tool.coverage.run]`** in **`pyproject.toml`**).

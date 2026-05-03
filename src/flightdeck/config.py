@@ -28,8 +28,13 @@ def load_config(path: str | Path = DEFAULT_CONFIG_FILENAME) -> WorkspaceConfig:
     return WorkspaceConfig.model_validate(data)
 
 
-def write_default_config(path: str | Path = DEFAULT_CONFIG_FILENAME) -> Path:
-    cfg = WorkspaceConfig()
+def write_default_config(
+    path: str | Path = DEFAULT_CONFIG_FILENAME,
+    *,
+    pricing_catalog_path: str | None = None,
+) -> Path:
+    """Write a new ``flightdeck.yaml``. Pass ``pricing_catalog_path`` to enable bundled catalog layout."""
+    cfg = WorkspaceConfig(pricing_catalog_path=pricing_catalog_path)
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
 

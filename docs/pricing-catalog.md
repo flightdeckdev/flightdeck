@@ -10,6 +10,18 @@ Imported **pricing tables** (`flightdeck pricing import …`) drive per-model to
 `POST /v1/diff` / `release diff`) and diagnostics in **`pricing.hints`** when multiple pricing table versions or naming
 patterns appear in the evidence window.
 
+## Bundled snapshot (`flightdeck init`)
+
+Unless you pass **`--no-bundled-pricing`**, **`flightdeck init`** imports three convenience tables
+(**`openai`**, **`anthropic`**, **`google`**) at **`pricing_version` `flightdeck-bundled-2026-05`**
+(illustrative USD/1k token rates, **not** live vendor APIs). It copies the matching **PricingCatalog**
+to **`.flightdeck/pricing-catalog.yaml`** and sets **`pricing_catalog_path`** in **`flightdeck.yaml`**.
+
+Pin **`spec.pricing_reference`** in **`release.yaml`** to **`provider` + `flightdeck-bundled-2026-05`**
+for the side you want priced. For **Gemini-class** models, use **`provider: google`** in both the
+release runtime and pricing reference. For production accuracy, **`flightdeck pricing import`**
+your own YAML (and optionally **`--replace`** with **`--reason`**).
+
 ## Relationship to `pricing.prices`
 
 On a diff, **`pricing.prices`** (when present) reflects **per-side imported tables** for the resolved baseline/candidate

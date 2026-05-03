@@ -13,7 +13,7 @@ from tests.test_spine import write_events, write_policy, write_pricing, write_re
 def test_release_verify_checksum_mismatch_exits_2(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
     assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0
     rel_dir = write_release(
@@ -35,7 +35,7 @@ def test_release_verify_checksum_mismatch_exits_2(tmp_path: Path, monkeypatch) -
 def test_release_diff_fail_on_policy_exits_1(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     policy = write_policy(tmp_path, max_cost_per_run_usd=0.000001)
     assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
@@ -116,7 +116,7 @@ def test_release_diff_fail_on_policy_exits_1(tmp_path: Path, monkeypatch) -> Non
 def test_release_diff_contract_invalid_window_is_nonzero(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
     assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0
 
@@ -144,7 +144,7 @@ def test_release_diff_contract_invalid_window_is_nonzero(tmp_path: Path, monkeyp
 def test_release_promote_policy_fail_contract(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     policy = write_policy(tmp_path, max_cost_per_run_usd=0.0001)
     assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
@@ -190,7 +190,7 @@ def test_release_promote_policy_fail_contract(tmp_path: Path, monkeypatch) -> No
 def test_release_verify_ok_exits_zero(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
     assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0
     rel_dir = write_release(
@@ -209,7 +209,7 @@ def test_release_verify_ok_exits_zero(tmp_path: Path, monkeypatch) -> None:
 def test_release_diff_unknown_baseline_nonzero(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
     assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0
     cand = write_release(
@@ -228,7 +228,7 @@ def test_release_diff_unknown_baseline_nonzero(tmp_path: Path, monkeypatch) -> N
 def test_release_history_shows_promote_line(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     policy = write_policy(tmp_path, max_cost_per_run_usd=10.0)
     assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
@@ -272,7 +272,7 @@ def test_release_history_shows_promote_line(tmp_path: Path, monkeypatch) -> None
 def test_release_rollback_exits_zero_and_history_shows_rollback(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     policy = write_policy(tmp_path, max_cost_per_run_usd=10.0)
     assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
