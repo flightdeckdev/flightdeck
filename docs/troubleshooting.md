@@ -8,16 +8,16 @@ interpreting `doctor` failures) see [operations-and-policy.md](operations-and-po
 
 ## Developer environment
 
-### `uv sync` or `pip install` fails on CPython 3.13 or earlier
+### `uv sync` or `pip install` fails on CPython 3.10 or earlier
 
-FlightDeck requires **CPython 3.14**. The `requires-python` constraint in `pyproject.toml`
-and the `.python-version` pin for `uv` both enforce this.
+FlightDeck requires **CPython 3.11+** (see `requires-python` in `pyproject.toml` and the
+`.python-version` pin for `uv`).
 
 ```
-ERROR: Package 'flightdeck-ai' requires a different Python: 3.13.x not in '>=3.14'
+ERROR: Package 'flightdeck-ai' requires a different Python: 3.10.x not in '>=3.11'
 ```
 
-Install CPython 3.14 using `uv python install 3.14` (if using uv) or from
+Install a supported CPython (for example `uv python install 3.12`) or from
 [python.org](https://www.python.org/downloads/). Confirm the active interpreter:
 
 ```bash

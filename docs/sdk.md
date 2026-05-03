@@ -76,9 +76,12 @@ method is a coroutine. Call `await client.aclose()` instead of `client.close()`.
 
 ## Authentication
 
-When `flightdeck serve` is started with `FLIGHTDECK_LOCAL_API_TOKEN` set, every mutation
-request (`POST /v1/promote`, `POST /v1/rollback`) requires the matching Bearer token. Read
-routes and event ingest do **not** require the token in the default local setup.
+When `flightdeck serve` is started with `FLIGHTDECK_LOCAL_API_TOKEN` set, every **ledger write**
+— **`POST /v1/promote`**, **`POST /v1/promote/request`**, **`POST /v1/promote/confirm`**,
+**`POST /v1/rollback`**, and **`POST /v1/events`** (`ingest_run_events`) — requires the
+matching Bearer token on the `FlightdeckClient` (`api_token=…`). With no token configured
+on the server, those routes accept only **loopback** callers; read routes and **`POST /v1/diff`**
+stay open.
 
 ```python
 client = FlightdeckClient(
@@ -93,7 +96,7 @@ See [SECURITY.md](../SECURITY.md) for the full access model.
 
 ### `health() -> dict`
 
-`GET /health` — returns `{"status": "ok", "mutation_auth": "loopback"|"bearer"}` when the server is up (`mutation_auth` describes promote/rollback auth; see **HTTP API**).
+`GET /health` — returns `{"status": "ok", "mutation_auth": "loopback"|"bearer"}` when the server is up (`mutation_auth` describes ledger-write auth, including event ingest; see **HTTP API**).
 
 ### `get_workspace() -> dict`
 
@@ -272,7 +275,7 @@ a no-op for the injected client.
 
 ## Constraints
 
-- The SDK targets the same CPython version as the CLI (`>=3.14` from v1.0).
+- The SDK targets the same CPython version range as the CLI (`>=3.11,<4` from **v1.2**).
 - `httpx` is a required dependency of `flightdeck-ai`; it is not optional.
 - `RunEvent` instances must have `api_version = "v1"` (the default). The server rejects
   other values with HTTP 400.

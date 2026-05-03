@@ -8,10 +8,20 @@ Narrative docs (including the CLI reference) are maintained on **[github.com/fli
 
 Patch-line documentation: optional **`flightdeck.integrations`** mappers behind **`integrations-*`**
 extras (see **`pyproject.toml`**, **`docs/sdk-integrations.md`**, **`examples/integration/adoption/`**).
-**Stable contracts unchanged:** **`RunEvent`** JSON / **`POST /v1/events`**. **`AGENTS.md`** clarifies
+**Stable payload contract:** **`RunEvent`** JSON for **`POST /v1/events`** (shape unchanged; **v1.2.0** tightens **HTTP access** for ingest — see **v1.2.0** notes below). **`AGENTS.md`** clarifies
 that these adapters are adoption glue, not in-product orchestration or a plugin registry. CI adds
 an **`integrations`** job (**`uv sync --frozen --extra dev --extra integrations-ci`**) for LangChain
 callback coverage.
+
+## v1.2.0 — Python 3.11+ floor and protected event ingest
+
+Minor release (see **[CHANGELOG.md](CHANGELOG.md)**): **`requires-python`** is **`>=3.11,<4`** so
+installs work on common production interpreters (**3.11–3.14**). **`POST /v1/events`** is a **ledger
+write** and now matches the promote/rollback access model: **loopback-only** when
+**`FLIGHTDECK_LOCAL_API_TOKEN`** is unset; **Bearer required** when it is set (covers Docker **`--host
+0.0.0.0`** and private LANs). **`POST /v1/diff`** remains read-only and ungated. Migration: remote
+emitters must send **`Authorization: Bearer`** whenever the server uses a local API token; loopback
+scripts without a token are unchanged.
 
 ## v1.1.2 — Forensics filters, JSONL export, productization closure slice
 

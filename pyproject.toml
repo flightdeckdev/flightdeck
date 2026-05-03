@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "flightdeck-ai"
-version = "1.1.2"
+version = "1.2.0"
 description = "Ship AI agents safely with release diffs, runtime evidence, and policy gates."
 readme = "README.md"
 license = "Apache-2.0"
-requires-python = ">=3.14,<3.15"
+requires-python = ">=3.11,<4"
 authors = [{ name = "FlightDeck" }]
 keywords = ["ai", "agents", "control-plane", "finops", "deployment", "policy", "operations"]
 classifiers = [
@@ -16,6 +16,9 @@ classifiers = [
     "Intended Audience :: Developers",
     "Topic :: System :: Monitoring",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
@@ -80,7 +83,7 @@ packages = ["src/flightdeck"]
 # dependencies or optional extras, run `uv lock` and commit `uv.lock`.
 
 [tool.ruff]
-target-version = "py314"
+target-version = "py311"
 line-length = 100
 
 [tool.pytest.ini_options]

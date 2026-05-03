@@ -13,11 +13,10 @@ from flightdeck.operations import (
     request_promotion,
     rollback_release,
 )
+from flightdeck.server.mutation_access import require_ledger_write_access
 from flightdeck.server.routes.common import ensure_app_state
 
 router = APIRouter()
-
-_LOCAL_CLIENT_HOSTS = {"127.0.0.1", "::1", "localhost", "testclient"}
 
 
 class DiffRequest(BaseModel):
@@ -78,23 +77,6 @@ def _raise_policy_blocked(action: str, outcome: ActionOutcome) -> HTTPException:
     )
 
 
-def _require_mutation_access(request: Request) -> None:
-    ensure_app_state(request)
-    expected_token: str | None = request.app.state.local_api_token
-    auth_header = request.headers.get("authorization", "")
-    if expected_token:
-        if auth_header != f"Bearer {expected_token}":
-            raise HTTPException(status_code=401, detail="Missing or invalid API token for mutation route.")
-        return
-
-    host = request.client.host if request.client else ""
-    if host not in _LOCAL_CLIENT_HOSTS:
-        raise HTTPException(
-            status_code=403,
-            detail="Mutation routes are restricted to local clients unless FLIGHTDECK_LOCAL_API_TOKEN is configured.",
-        )
-
-
 @router.post("/v1/diff")
 def post_diff(request: Request, req: DiffRequest) -> dict[str, object]:
     cfg, storage = ensure_app_state(request)
@@ -117,7 +99,7 @@ def post_diff(request: Request, req: DiffRequest) -> dict[str, object]:
 
 @router.post("/v1/promote")
 def post_promote(request: Request, req: ActionRequest) -> dict[str, object]:
-    _require_mutation_access(request)
+    require_ledger_write_access(request)
     cfg, storage = ensure_app_state(request)
     try:
         outcome = promote_release(
@@ -140,7 +122,7 @@ def post_promote(request: Request, req: ActionRequest) -> dict[str, object]:
 
 @router.post("/v1/promote/request")
 def post_promote_request(request: Request, req: PromotionRequestCreate) -> dict[str, object]:
-    _require_mutation_access(request)
+    require_ledger_write_access(request)
     cfg, storage = ensure_app_state(request)
     try:
         record = request_promotion(
@@ -176,7 +158,7 @@ def post_promote_request(request: Request, req: PromotionRequestCreate) -> dict[
 
 @router.post("/v1/promote/confirm")
 def post_promote_confirm(request: Request, req: PromotionConfirmRequest) -> dict[str, object]:
-    _require_mutation_access(request)
+    require_ledger_write_access(request)
     cfg, storage = ensure_app_state(request)
     try:
         outcome = confirm_promotion_request(
@@ -197,7 +179,7 @@ def post_promote_confirm(request: Request, req: PromotionConfirmRequest) -> dict
 
 @router.post("/v1/rollback")
 def post_rollback(request: Request, req: ActionRequest) -> dict[str, object]:
-    _require_mutation_access(request)
+    require_ledger_write_access(request)
     cfg, storage = ensure_app_state(request)
     try:
         outcome = rollback_release(

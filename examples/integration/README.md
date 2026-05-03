@@ -50,6 +50,7 @@ TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 curl -sS -X POST "$BASE/v1/events" \
   -H 'Content-Type: application/json' \
+  ${FLIGHTDECK_LOCAL_API_TOKEN:+-H "Authorization: Bearer $FLIGHTDECK_LOCAL_API_TOKEN"} \
   -d "$(jq -n \
     --arg rid "$REL_ID" \
     --arg aid "$AGENT" \
@@ -65,6 +66,8 @@ curl -sS -X POST "$BASE/v1/events" \
     }]}')"
 ```
 
+The **`Authorization`** line is omitted when **`FLIGHTDECK_LOCAL_API_TOKEN`** is unset (loopback-only ingest). When the server uses a token, export it (or pass an explicit **`-H 'Authorization: Bearer …'`**).
+
 Without **`jq`**, paste a static JSON file or use the Node script below.
 
 ### Node (`emit_sample_events.node.mjs`)
@@ -75,9 +78,16 @@ Uses built-in **`fetch`** (Node **18+**). No npm dependencies:
 node examples/integration/emit_sample_events.node.mjs \
   --base-url http://127.0.0.1:8765 \
   --release-id rel_yourregisteredid \
-  --agent-id agent_support
+  --agent-id agent_support \
+  ${FLIGHTDECK_LOCAL_API_TOKEN:+--api-token "$FLIGHTDECK_LOCAL_API_TOKEN"}
 ```
 
 ### Trust boundaries
 
-Anyone who can reach **`POST /v1/events`** can append ledger rows for a `release_id` they guess. Keep **`serve`** on loopback or a private network, or front it with your own controls. See **[SECURITY.md](../../SECURITY.md)**.
+**`POST /v1/events`** is a ledger write: without **`FLIGHTDECK_LOCAL_API_TOKEN`**, only **loopback**
+callers may ingest; with a token set, callers must send **`Authorization: Bearer`** (the Python
+SDK uses **`api_token=`**). Treat remote access like any other sensitive control plane. See
+**[SECURITY.md](../../SECURITY.md)** and **[docs/http-api.md](../../docs/http-api.md)**.
+
+When using **`curl`**, add **`-H "Authorization: Bearer $FLIGHTDECK_LOCAL_API_TOKEN"`** if the
+server is configured with a local API token.

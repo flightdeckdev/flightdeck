@@ -4,7 +4,8 @@
  *   node examples/integration/emit_sample_events.node.mjs \
  *     --base-url http://127.0.0.1:8765 \
  *     --release-id rel_yourregisteredid \
- *     --agent-id agent_support
+ *     --agent-id agent_support \
+ *     [--api-token "$FLIGHTDECK_LOCAL_API_TOKEN"]
  *
  * Same envelope as emit_sample_events.py: { "events": [ RunEvent, ... ] }.
  */
@@ -18,9 +19,12 @@ const baseUrl = (arg("--base-url", "http://127.0.0.1:8765") ?? "http://127.0.0.1
 const releaseId = arg("--release-id");
 const agentId = arg("--agent-id");
 const environment = arg("--environment", "local") ?? "local";
+const apiToken = arg("--api-token", process.env.FLIGHTDECK_LOCAL_API_TOKEN ?? null);
 
 if (!releaseId || !agentId) {
-  console.error("Usage: node emit_sample_events.node.mjs --release-id REL --agent-id AGENT [--base-url URL] [--environment ENV]");
+  console.error(
+    "Usage: node emit_sample_events.node.mjs --release-id REL --agent-id AGENT [--base-url URL] [--environment ENV] [--api-token TOKEN]",
+  );
   process.exit(2);
 }
 
@@ -55,9 +59,13 @@ const event = {
 const body = JSON.stringify({ events: [event] });
 
 const url = `${baseUrl}/v1/events`;
+const headers = { "Content-Type": "application/json" };
+if (apiToken) {
+  headers.Authorization = `Bearer ${apiToken}`;
+}
 const res = await fetch(url, {
   method: "POST",
-  headers: { "Content-Type": "application/json" },
+  headers,
   body,
 });
 
