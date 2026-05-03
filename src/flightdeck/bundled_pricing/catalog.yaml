@@ -1,0 +1,23 @@
+# Bundled PricingCatalog — maps bundled pricing tables to one comparable slot per tier.
+# api_version / kind per schemas/v1/pricing_catalog.schema.json
+api_version: v1
+kind: PricingCatalog
+catalog_version: flightdeck-bundled-2026-05
+mappings:
+  - provider: openai
+    pricing_version: flightdeck-bundled-2026-05
+    model: gpt-4o-mini
+    catalog_slot_id: comparable_flash_tier
+  - provider: anthropic
+    pricing_version: flightdeck-bundled-2026-05
+    model: claude-3-5-haiku-20241022
+    catalog_slot_id: comparable_flash_tier
+  - provider: google
+    pricing_version: flightdeck-bundled-2026-05
+    model: gemini-2.0-flash
+    catalog_slot_id: comparable_flash_tier
+tariffs:
+  comparable_flash_tier:
+    input_usd_per_1k_tokens: 0.12
+    output_usd_per_1k_tokens: 0.45
+    cached_input_usd_per_1k_tokens: 0.03

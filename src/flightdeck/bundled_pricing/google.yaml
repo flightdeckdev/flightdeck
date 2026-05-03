@@ -1,0 +1,16 @@
+# FlightDeck bundled snapshot — illustrative public list prices, not live vendor APIs.
+# Provider key "google" is the supported convention for Gemini-class models in release.yaml.
+# For production accuracy, run: flightdeck pricing import <your_authoritative.yaml>
+# Snapshot id: flightdeck-bundled-2026-05 (see README / docs/pricing-catalog.md).
+provider: google
+pricing_version: flightdeck-bundled-2026-05
+entries:
+  - model: gemini-2.0-flash
+    input_usd_per_1k_tokens: 0.10
+    output_usd_per_1k_tokens: 0.40
+  - model: gemini-2.0-flash-001
+    input_usd_per_1k_tokens: 0.10
+    output_usd_per_1k_tokens: 0.40
+  - model: gemini-1.5-pro
+    input_usd_per_1k_tokens: 1.25
+    output_usd_per_1k_tokens: 5.0
