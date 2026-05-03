@@ -22,6 +22,13 @@ def test_health_includes_mutation_auth_loopback_when_no_token(monkeypatch: pytes
     assert r.json() == {"status": "ok", "mutation_auth": "loopback", "read_auth": "open"}
 
 
+def test_ui_icon_png_served() -> None:
+    with TestClient(create_app()) as client:
+        r = client.get("/flightdeck-icon.png")
+    assert r.status_code == 200
+    assert r.headers.get("content-type", "").startswith("image/png")
+
+
 def test_health_includes_mutation_auth_bearer_when_token_set(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("FLIGHTDECK_LOCAL_API_TOKEN", "test-secret-token")
     with TestClient(create_app()) as client:

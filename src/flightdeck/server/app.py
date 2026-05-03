@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -51,5 +51,13 @@ def create_app() -> FastAPI:
     @app.get("/")
     def ui_index() -> FileResponse:
         return FileResponse(static_dir / "index.html")
+
+    @app.get("/flightdeck-icon.png")
+    def ui_app_icon() -> FileResponse:
+        """Shipped UI favicon / sidebar mark (copied from ``web/public`` at build time)."""
+        path = static_dir / "flightdeck-icon.png"
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail="UI icon not found (rebuild web bundle)")
+        return FileResponse(path, media_type="image/png")
 
     return app

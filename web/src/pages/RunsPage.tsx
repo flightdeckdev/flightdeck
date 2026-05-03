@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import type { ReleaseRow, RunsListPayload } from "../api";
 import { fetchRuns, fetchRunsExportBlob, loadTimeline } from "../api";
 import { JsonPanel } from "../components/JsonPanel";
@@ -359,16 +360,16 @@ export function RunsPage() {
 
   return (
     <>
-      <div className="fd-page-head">
+      <header className="fd-page-head">
         <div>
           <h2 className="fd-page-title">Run events</h2>
           <p className="fd-page-sub">
             Read-only slice of ingested runs (<code className="fd-mono fd-mono--sm">GET /v1/runs</code>). Newest
-            first; offset pages through the match set. Use a row&apos;s <strong>View</strong> action for structured
-            detail (same payload as export lines).
+            first; offset pages through the match set.             Paste a release ID from <Link to="/">Overview</Link> (or the CLI), then load. Use a row&apos;s <strong>View</strong> action for structured detail (same payload
+            as export lines).
           </p>
         </div>
-      </div>
+      </header>
 
       <section className="fd-card">
         <div className="fd-card__head">

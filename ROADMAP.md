@@ -58,7 +58,14 @@ These map to **What is next** items **1**, **2**, and **5**; ship notes stay in 
 
 **Explicit UI deferrals**
 
-Out of scope for the near-term web app: custom themes or theme marketplaces; embedded arbitrary log viewers; full observability or fleet consoles in the browser; multi-workspace UI (follows conditional **Fleet / cross-workspace** in **What is next**).
+Out of scope for the near-term web app: arbitrary third-party themes or theme marketplaces; embedded arbitrary log viewers; full observability or fleet consoles in the browser; multi-workspace UI (follows conditional **Fleet / cross-workspace** in **What is next**). A **single built-in dark palette** (plus system preference) aligned with operator ergonomics and brand art is **not** a “custom theme product”—see **[docs/web-ui.md — Theming and brand alignment](docs/web-ui.md#theming-and-brand-alignment)** for the phased plan vs the marketing composite.
+
+**Deferred until APIs or contracts exist (then revisit UX)**
+
+- **Identity for HTTP and UI beyond shared-secret Bearer:** today **`FLIGHTDECK_LOCAL_API_TOKEN`** / **`VITE_FLIGHTDECK_LOCAL_API_TOKEN`** are an **operator-chosen static secret** for this server’s JSON API (and the bundled UI when configured). **OAuth2/OIDC**, per-user sessions, API key rotation, and enterprise SSO in front of **`flightdeck serve`** are **not** shipped in core; expect **reverse-proxy or gateway** patterns until a future design explicitly extends the trust model. Revisit when there is a concrete contract (token issuance, audience, rotation) that fits local-first operation.
+- **Environment / promotion pipeline visualization** (for example DEV → STAGING → PROD lanes with per-stage policy state): today the ledger uses a single `environment` string and CLI/API fields—not a first-class multi-stage graph. Revisit when the server exposes enough structure to render without inventing state.
+- **Dense “evidence-first release card”** on Diff (token deltas, tool lists, synthetic safety rows): ship only fields the diff and catalog payloads actually provide; expand the card when optional aggregates or provenance hooks land in the API.
+- **README / social preview hero** (marketing composites, category positioning): tracked with docs and release comms, not as a substitute for honest in-app surfaces.
 
 ---
 
@@ -71,7 +78,7 @@ Gaps between “works locally” and “easy to use across production services.�
 | **Event pipeline** | Reliable `RunEvent` emission from app/agent runtimes. | Near term: reference integration examples; operator owns final runtime wiring. |
 | **CI/GitOps flow** | Register → ingest → diff → gate → promote in pipelines. | Near term: maintained CI examples/templates. |
 | **Deployment unit** | Repeatable `serve` packaging, health checks, process supervision. | Near term: container/compose guidance; still local-first by default. |
-| **Identity and access** | Strong auth beyond loopback + optional bearer token. | Mid term: documented hardened patterns; first-class enterprise auth is a longer arc. |
+| **Identity and access** | Strong auth beyond loopback + optional static Bearer (operator-chosen secret for HTTP API). | Mid term: documented proxy/gateway patterns; interactive OAuth/OIDC for the bundled UI is a **longer / conditional** arc (see **Deferred until APIs** above). |
 | **Storage/availability** | Backup/restore, scaling, HA story. | Operator-owned today; improve docs and patterns. |
 | **Observability integration** | Correlated telemetry export and operational visibility. | Mid term: OTLP-oriented integration paths (not an APM/dashboard product). |
 | **Multi-workspace/fleet** | Cross-workspace views and policy coordination. | Long term and conditional; one workspace = one ledger today. |

@@ -10,17 +10,54 @@ For setup, dev workflow, build commands, and Playwright E2E instructions see
 
 ---
 
+## Theming and brand alignment
+
+### Desired state (disclaimer)
+
+The **[README product overview](../README.md#product-overview)** image is a **marketing composite**: dark chrome, dense “dashboard” cards, and narrative labels that **do not** map one-to-one to shipped pages. The bundled **hex mark** (`web/public/flightdeck-icon.png`) matches that art direction (cyan–purple accent, dark ground). **This document and the operator UI** stay grounded in real **`/v1/*`** data—visual work should **not** invent panels (for example a synthetic “release blocked” hero) until the APIs and product decisions exist.
+
+### What we can borrow from the art (incremental)
+
+| Art direction | Application in this repo |
+|---------------|---------------------------|
+| Dark navy / near-black shell | **`html[data-theme="dark"]`** in `web/src/index.css` mirrors semantic tokens; **Appearance** control in the sidebar defaults to **Light** (stored under **`localStorage`** key **`flightdeck-theme`**). |
+| Cyan → purple gradient | CSS variables (for example `--fd-accent-gradient`) for **active nav**, **primary buttons**, and **focus-visible** accents—used sparingly so trust/safety UI stays calm. |
+| High-contrast titles | Tune `--fd-type-*` and weights under dark mode; avoid shrinking body text for density. |
+| “Neon” feel | Reserve for **interactive** states, not large background fills. |
+| Geometric sans | **Shipped:** offline **system UI stack** in `index.css` (`--fd-font`). Optional: install **Inter** locally if you want that face without bundling remote CSS. |
+
+### Phased implementation plan
+
+1. **Token foundation** — Extend `:root` with any missing semantics (`--fd-surface-elevated`, gradient stops, optional `--fd-bg-subtle`). Replace scattered literals in `web/src/index.css` (for example warning callout backgrounds) with variables so dark mode does not require hunting hex values.
+2. **`[data-theme="dark"]` block** — Mirror every semantic token used by `.fd-shell`, sidebar, cards, tables, `Badge`, drawers, and `JsonPanel`; set `color-scheme: dark` on `html` when active. Validate **WCAG AA** for body text and links.
+3. **Preference UI** — **`/#/settings`** (and room for more prefs later): **Light** / **Dark** / **System**; listen to `prefers-color-scheme` when System is selected. Persist `localStorage` key **`flightdeck-theme`** (`light` \| `dark` \| `system`).
+4. **Brand accents** — Apply the gradient token to **active** `.fd-nav__link--active` (left rail) and primary submit-style buttons; keep destructive actions on existing red semantics.
+5. **Light theme polish** — Even before dark ships: align spacing rhythm and card shadows with the same tokens so both themes stay maintainable.
+6. **Verification** — From `web/`: **`npm ci`**, **`npm run build`**, commit **`src/flightdeck/server/static/`**; **`npm run test:e2e`** (includes **`e2e/theme.spec.ts`**: default light, dark persistence, system / `prefers-color-scheme`, overview smoke in dark). Manually smoke **Diff** and **Actions** in both themes (policy panels, JSON drawer, rollback affordances).
+
+### Explicit deferrals (still)
+
+- **Multi-theme marketplaces**, per-user arbitrary color pickers, or third-party skin systems — off mission.
+- **Infographic-only widgets** (staged DEV→STAGING→PROD pipeline strip, sparkline grids) — wait for real APIs and **[ROADMAP](ROADMAP.md)** operator outcomes, not decorative parity with the poster.
+
+---
+
 ## Routing
 
 The app uses **HashRouter** (`react-router-dom`) so all navigation stays within the single
 `index.html` that FastAPI's static file mount serves. URLs look like
 `http://127.0.0.1:8765/#/diff`. No server-side route matching is required.
 
+**Static UI assets:** hashed bundles are mounted at **`/assets/`**. The sidebar mark and tab icons use the **bundled** URL from `web/src/assets/flightdeck-icon.png` (emitted as **`/assets/flightdeck-icon-<hash>.png`**; `main.tsx` sets `<link rel="icon">` at runtime). A **stable** duplicate remains at **`GET /flightdeck-icon.png`** (from `web/public/` at build time + FastAPI `FileResponse`) for bookmarks, probes, and **`web/e2e/smoke.spec.ts`**.
+
+**Typography:** the UI uses an **offline-first system font stack** (no Google Fonts or other remote CSS). Install **Inter** locally if you want that face in dev tools without changing the bundle.
+
 | Hash path | Component | HTTP calls | Notes |
 |-----------|-----------|-----------|-------|
 | `#/` | `OverviewPage` | `GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions`, `GET /v1/metrics` (parallel where applicable) | Ledger metrics (read-only); short per-counter hints; skeleton on first load; **auto-refresh** every 30s when the tab is visible + on timeline **`generation`** bump; links to Diff/Runs |
 | `#/diff` | `DiffPage` | `POST /v1/diff` | Sections: policy gate (incl. `evaluated_at`), evidence window, pricing/catalog/hints (incl. provider/version skew callout when sides differ), per-1k prices when present, cost/quality rollups; raw JSON panel |
 | `#/runs` | `RunsPage` | `GET /v1/releases` (for datalist), `GET /v1/runs`, `GET /v1/runs/export` | Forensics: filters, table (trace/status, trace band rows or **Group by trace_id**), **View** drawer (focus trap, session/span ids), typed **run-query error** card with **Retry**, empty/offset/truncation hints, NDJSON download |
+| `#/settings` | `SettingsPage` | *(none)* | **Color theme** (Light / Dark / System) via `ThemeToggle`; more preferences later. |
 | `#/actions` | `ActionsPage` | `GET /v1/workspace`, `GET /v1/promotion-requests` (when `promotion_requires_approval`), `POST /v1/promote` **or** `POST /v1/promote/request` + `POST /v1/promote/confirm`, `POST /v1/rollback` | Workspace skeleton then strip; approval path: numbered steps, pending **Refresh list** / **Use for confirm**; **Rollback** danger-styled; see **ActionsPage** below |
 | `#/*` (any other) | — | Redirects to `#/` | |
 
@@ -36,25 +73,25 @@ promote/rollback capability should be unavailable regardless of network placemen
 ## Component tree
 
 ```
-App (HashRouter)
-└── AppShell (layout: left sidebar + main column)
-    └── TimelineRefreshProvider (context)
-        └── div.fd-shell
-            ├── aside.fd-sidebar (brand + primary nav)
-            └── div.fd-shell__content
-                ├── SecurityStatusBar
-                └── main#main-content → OverviewPage | DiffPage | RunsPage | ActionsPage
+ThemePreferenceProvider (`App.tsx`)
+└── HashRouter
+    └── Routes / AppShell layout route
+        └── TimelineRefreshProvider
+            └── div.fd-shell
+                ├── aside.fd-sidebar (brand, collapse chevron, primary nav, footer nav → Settings)
+                └── div.fd-shell__content
+                    ├── SecurityStatusBar
+                    └── main#main-content → OverviewPage | DiffPage | RunsPage | ActionsPage | SettingsPage
 ```
 
 ---
 
 ## `AppShell` (`web/src/components/AppShell.tsx`)
 
-Renders a fixed-width **left sidebar** (`aside.fd-sidebar`) with brand and vertical primary
-nav (Langfuse-style rail), then a **`fd-shell__content`** column with `SecurityStatusBar` and
+Renders a fixed-width **left sidebar** (`aside.fd-sidebar`) with brand (gradient **FlightDeck** wordmark, mark in a **raised tile**), a **collapse** control (SVG chevrons, `localStorage` **`flightdeck-sidebar-collapsed`**), a **primary** nav (inline SVG icons + labels; icon-only when collapsed), and a **footer** nav pinned to the bottom of the rail with **Settings** → `#/settings`. Then a **`fd-shell__content`** column with `SecurityStatusBar` and
 `<main>` wrapping an `<Outlet>` for the active page. On narrow viewports the sidebar stacks
-above the content with a horizontal nav row. Wraps the subtree in `TimelineRefreshProvider`
-so any descendant can access the refresh context.
+above the content with a horizontal nav row; a **collapsed** rail is expanded back to full labels in that breakpoint. Wraps the subtree in `TimelineRefreshProvider`
+so any descendant can access the refresh context. `ThemePreferenceProvider` (from `App.tsx`) wraps the router so `ThemeToggle` on **Settings** can read and update **`flightdeck-theme`**; `main.tsx` applies the effective theme before the first paint to avoid a flash of the wrong scheme.
 
 A **Skip to main content** link (class `fd-skip-link`) appears first in the shell; it uses
 `preventDefault` + `focus()` on `#main-content` so **HashRouter** hash URLs (`#/…`) are not
@@ -233,7 +270,7 @@ After a successful **promote** or **rollback** (or **confirm**):
 2. Outcome card shows policy badge, pointer badge, metric grid, and reasons list when applicable.
 3. `notifyTimelineMutated()` runs so `OverviewPage` refetches.
 
-**Auth:** `VITE_FLIGHTDECK_LOCAL_API_TOKEN` is sent on every `fetchJson` call, including **`POST /v1/promote/request`** and **`POST /v1/promote/confirm`**. See [http-api.md § Authentication](http-api.md#authentication-and-access-control).
+**Auth:** `VITE_FLIGHTDECK_LOCAL_API_TOKEN` is sent on every `fetchJson` call, including **`POST /v1/promote/request`** and **`POST /v1/promote/confirm`**. It must **match** `FLIGHTDECK_LOCAL_API_TOKEN` on the server when the server enforces Bearer (see [http-api.md § Authentication](http-api.md#authentication-and-access-control)). FlightDeck does **not** mint this value: the operator chooses a shared secret for **HTTP API** access. It is baked in at **build time** for the committed static bundle; local Bearer testing normally uses **`web/.env.local`** + **`npm run dev`**. It is **not** OAuth or end-user SSO — see [SECURITY.md](../SECURITY.md) (**Local HTTP API**).
 
 **HTTP errors:** `fetchJson` formats FastAPI **`detail`** strings, validation arrays, and `{ message: … }` objects into a single `Error` message for the alert line.
 
