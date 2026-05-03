@@ -1,4 +1,3 @@
-import type { MouseEvent } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { TimelineRefreshProvider } from "../context/TimelineRefreshContext";
 import { SecurityStatusBar } from "./SecurityStatusBar";
@@ -7,8 +6,7 @@ import { UI_READ_ONLY } from "../uiConfig";
 const navCls = ({ isActive }: { isActive: boolean }) =>
   `fd-nav__link${isActive ? " fd-nav__link--active" : ""}`;
 
-function skipToMain(e: MouseEvent<HTMLAnchorElement>) {
-  e.preventDefault();
+function skipToMain() {
   document.getElementById("main-content")?.focus({ preventScroll: false });
 }
 
@@ -16,9 +14,9 @@ export function AppShell() {
   return (
     <TimelineRefreshProvider>
       <div className="fd-shell">
-        <a href="#" className="fd-skip-link" onClick={skipToMain}>
+        <button type="button" className="fd-skip-link" onClick={skipToMain}>
           Skip to main content
-        </a>
+        </button>
         <aside className="fd-sidebar" aria-label="Application">
           <div className="fd-sidebar__brand">
             <h1 className="fd-sidebar__title">FlightDeck</h1>

@@ -395,7 +395,7 @@ export function ActionsPage() {
             {clientTokenOn ? "is configured for this UI build." : "is not set in this UI build."}
           </p>
         )}
-        <div className="fd-actions" style={{ alignItems: "center" }}>
+        <div className="fd-actions fd-actions--align-center">
           {approvalOn ? (
             <button
               type="button"
@@ -424,7 +424,7 @@ export function ActionsPage() {
             {busy === "rollback" ? "Rolling back…" : "Rollback"}
           </button>
           {showBearerTokenHint ? (
-            <span className="fd-muted fd-samples" style={{ flex: "1 1 12rem", minWidth: 0 }}>
+            <span className="fd-muted fd-samples fd-grow-soft">
               Server uses Bearer for mutations — set{" "}
               <code className="fd-mono fd-mono--sm">VITE_FLIGHTDECK_LOCAL_API_TOKEN</code> to match the server.
             </span>

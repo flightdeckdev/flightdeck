@@ -320,17 +320,14 @@ export function RunsPage() {
             <span className={`fd-badge ${ok ? "fd-badge--pass" : "fd-badge--fail"}`}>
               {ok ? "ok" : "err"}
             </span>
-            {lat != null ? (
-              <span className="fd-muted" style={{ marginLeft: "0.35rem", fontSize: "0.78rem" }}>
-                {lat}ms
-              </span>
-            ) : null}
+            {lat != null ? <span className="fd-muted-xs fd-ml-sm">{lat}ms</span> : null}
           </td>
           <td>
             <button
               type="button"
               className="fd-btn fd-btn--ghost fd-btn--sm"
               aria-haspopup="dialog"
+              aria-label={`View run details for ${shortId(runId, 14, 8)}`}
               onClick={(e) => {
                 drawerReturnFocusRef.current = e.currentTarget;
                 setDetailEvent(rec);
@@ -431,7 +428,7 @@ export function RunsPage() {
             <input className="fd-input" value={limit} onChange={(e) => setLimit(e.target.value)} />
           </label>
         </div>
-        <p className="fd-inline fd-muted" style={{ marginTop: "0.75rem" }}>
+        <p className="fd-inline fd-muted fd-mt-xl">
           <strong>Export</strong> uses the same filters and <strong>limit</strong> as this form (server cap 500 rows
           per download). Truncation warnings apply to the returned page, not necessarily the whole ledger.
         </p>
@@ -476,10 +473,10 @@ export function RunsPage() {
                 <>Something went wrong while loading run events. Details appear below.</>
               )}
             </p>
-            <p className="fd-muted fd-mono fd-mono--sm" style={{ wordBreak: "break-word", marginTop: "0.5rem" }}>
+            <p className="fd-muted fd-mono fd-mono--sm fd-break-word fd-mt-md">
               {runsQueryError.detail}
             </p>
-            <div className="fd-actions" style={{ marginTop: "1rem" }}>
+            <div className="fd-actions fd-mt-1">
               <button type="button" className="fd-btn fd-btn--primary" disabled={busy} onClick={() => void runQuery()}>
                 {busy ? "Retrying…" : "Retry"}
               </button>
@@ -493,9 +490,9 @@ export function RunsPage() {
           <div className="fd-card__head fd-card__head--row">
             <div>
               <h3 className="fd-card__subtitle">Results</h3>
-              <p className="fd-card__desc">
-                matched_total={result.matched_total} returned={result.returned} truncated=
-                {String(result.truncated)} offset={result.offset}
+              <p className="fd-card__desc fd-results-meta">
+                matched_total={result.matched_total} · returned={result.returned} · truncated={String(result.truncated)}{" "}
+                · offset={result.offset}
               </p>
             </div>
             <label className="fd-checkbox-label">
@@ -608,7 +605,7 @@ export function RunsPage() {
         </section>
       ) : runsQueryError ? null : (
         <section className="fd-card fd-card--hint" aria-label="Getting started">
-          <p className="fd-empty" style={{ margin: 0 }}>
+          <p className="fd-empty fd-m-0">
             Choose a <strong>Release ID</strong> (datalist is filled from registered releases when the server is
             reachable), then <strong>Load runs</strong> to query <code className="fd-mono fd-mono--sm">GET /v1/runs</code>
             .
