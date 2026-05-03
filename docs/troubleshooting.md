@@ -68,8 +68,8 @@ Set `FLIGHTDECK_USE_SYSTEM_TEMP=1` to force pytest to use the OS default path ag
 Run `uv run python -m ruff check --fix src tests` to apply auto-fixable issues. For
 remaining errors, read the rule code (e.g. `E501`, `F401`) in the output and fix manually.
 
-Check what ruff version CI uses: `uv run python -m ruff --version` (must match `ruff==0.15.12`
-pinned in `pyproject.toml [project.optional-dependencies] dev`).
+Check what ruff version CI uses: `uv run python -m ruff --version` (CI resolves **`ruff>=0.15,<0.16`**
+from `pyproject.toml [project.optional-dependencies] dev`; see **`uv.lock`** for the exact wheel).
 
 ---
 

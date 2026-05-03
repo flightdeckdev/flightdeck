@@ -18,6 +18,7 @@ This document is **strategy and ordering**, not a second changelog. It goes from
 - **Evidence ingestion:** `runs ingest` from JSONL/JSON arrays plus stable `POST /v1/events` (`schemas/v1/`); **`GET /v1/runs`**, **`runs list`**, optional **`trace_id`** filter, and **`runs export`** (JSONL) for operator forensics.
 - **Local API + UI:** `flightdeck serve` routes and shipped web bundle under `src/flightdeck/server/static/`; surfaces summarized in **Web UI and operator experience** below.
 - **SDK and tooling:** Python sync/async clients with retries/batching and `flightdeck-quickstart-verify`.
+- **Bundled default pricing:** convenience **`flightdeck-bundled-YYYY-MM`** tables from **`flightdeck init`**; **refreshed on each minor release** when upstream public list pricing changes materially, with **`flightdeck pricing check`** / diff **`pricing.warnings`** guarding silent staleness (operators still **`pricing import`** for production truth).
 - **Operator references:** CI examples, deploy/Compose guidance, Helm and fleet examples under `examples/`.
 
 ---

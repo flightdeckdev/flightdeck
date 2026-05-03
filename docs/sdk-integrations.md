@@ -26,9 +26,31 @@ product surface for orchestration.
 | **`integrations-temporal`** | Install **`temporalio`** next to FlightDeck when your worker shares a venv |
 | **`integrations-openai-agents`** | **`openai-agents`** for result-shape experiments |
 | **`integrations-ci`** | Meta-extra for CI: LangChain + Temporal + OpenAI Agents resolution |
+| **`telemetry`** | OpenTelemetry SDK + OTLP exporter packages; wire with **`flightdeck.integrations.telemetry.configure_otel_tracing()`** (see below) |
+| **`all`** | Convenience bundle including **`telemetry`** |
 
 There is **no** **`crewai`** extra on the distribution. Use **`crewai_bridge.run_event_from_crew_token_totals`**
 with totals you collect from CrewAI (or install **`crewai`** only in your application environment).
+
+## OpenTelemetry (`telemetry` extra)
+
+Install **`flightdeck-ai[telemetry]`** (or **`uv sync --extra telemetry`**), then once per process:
+
+```python
+from flightdeck.integrations.telemetry import configure_otel_tracing
+
+configure_otel_tracing()
+```
+
+This registers an OpenTelemetry **SDK** `TracerProvider` with an **OTLP HTTP** span exporter and
+batch processor. Set **`OTEL_EXPORTER_OTLP_ENDPOINT`** (for example
+`http://127.0.0.1:4318/v1/traces`) and optional **`OTEL_EXPORTER_OTLP_HEADERS`** /
+**`OTEL_SERVICE_NAME`** as documented for **`opentelemetry-exporter-otlp`**. Spans are sent to
+**your** collector, not to FlightDeck as a vendor. A second call is a no-op unless you pass
+**`force=True`** (rebinds the provider—use sparingly in tests).
+
+FlightDeck does not auto-instrument **`httpx`** or the Python SDK; create spans in your app or
+attach upstream auto-instrumentation if you need request-level traces.
 
 ## Trust boundaries
 

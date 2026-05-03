@@ -9,6 +9,7 @@ from uuid import uuid4
 import yaml
 from pydantic import ValidationError
 
+from flightdeck.bundled_pricing_age import bundled_pricing_stale_warning
 from flightdeck.catalog import (
     catalog_tariff_as_table,
     load_pricing_catalog,
@@ -310,6 +311,16 @@ def compute_diff(
             model_in_table=cand_entry is not None,
         )
     )
+
+    _warned_versions: set[str] = set()
+    for ref, role in ((base_ref, "baseline"), (cand_ref, "candidate")):
+        pv = ref.pricing_version
+        if pv in _warned_versions:
+            continue
+        _warned_versions.add(pv)
+        stale = bundled_pricing_stale_warning(pv, role=role)
+        if stale:
+            pricing_warnings.append(stale)
 
     catalog_enabled = False
     catalog_version: str | None = None

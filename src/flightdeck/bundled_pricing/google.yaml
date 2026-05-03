@@ -2,6 +2,7 @@
 # Provider key "google" is the supported convention for Gemini-class models in release.yaml.
 # For production accuracy, run: flightdeck pricing import <your_authoritative.yaml>
 # Snapshot id: flightdeck-bundled-2026-05 (see README / docs/pricing-catalog.md).
+# Official vendor list pricing (verify before trusting this file): https://ai.google.dev/gemini-api/docs/pricing
 provider: google
 pricing_version: flightdeck-bundled-2026-05
 entries:

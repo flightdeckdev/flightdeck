@@ -1,6 +1,7 @@
 # FlightDeck bundled snapshot — illustrative public list prices, not live vendor APIs.
 # For production accuracy, run: flightdeck pricing import <your_authoritative.yaml>
 # Snapshot id: flightdeck-bundled-2026-05 (see README / docs/pricing-catalog.md).
+# Official vendor list pricing (verify before trusting this file): https://openai.com/api/pricing/
 provider: openai
 pricing_version: flightdeck-bundled-2026-05
 entries:

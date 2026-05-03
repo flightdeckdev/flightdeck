@@ -289,7 +289,7 @@ def release_verify(release_id: str, artifact_path: Path) -> None:
 
 @cli.group()
 def pricing() -> None:
-    """Import and view pricing tables."""
+    """Import, inspect, and check staleness of pricing tables."""
 
 
 @pricing.command("import")
@@ -330,6 +330,64 @@ def pricing_show(provider: str, pricing_version: str) -> None:
     if not table:
         raise click.ClickException(f"Pricing table not found: {provider}/{pricing_version}")
     click.echo(table.model_dump_json(indent=2))
+
+
+@pricing.command("check")
+@click.option(
+    "--max-age-days",
+    default=90,
+    show_default=True,
+    type=int,
+    help="Warn when a bundled snapshot anchor is older than this many days.",
+)
+@click.option(
+    "--fail",
+    is_flag=True,
+    default=False,
+    help="Exit with code 1 if any bundled snapshot exceeds --max-age-days.",
+)
+def pricing_check(max_age_days: int, fail: bool) -> None:
+    """Check age of ``flightdeck-bundled-*`` pricing tables in the ledger (UTC anchor month)."""
+    from flightdeck.bundled_pricing_age import (
+        bundled_pricing_age_days,
+        bundled_pricing_anchor_date,
+        is_flightdeck_bundled_pricing_version,
+        pricing_stale_check_date,
+    )
+
+    if max_age_days < 0:
+        raise click.ClickException("--max-age-days must be non-negative")
+
+    cfg = load_config()
+    storage = storage_from_config(cfg)
+    storage.migrate()
+
+    today = pricing_stale_check_date()
+    bundled = [
+        v
+        for v in storage.list_distinct_pricing_versions()
+        if is_flightdeck_bundled_pricing_version(v)
+    ]
+    if not bundled:
+        click.echo("No flightdeck-bundled-* pricing tables in the ledger.")
+        return
+
+    stale_any = False
+    for v in bundled:
+        anchor = bundled_pricing_anchor_date(v)
+        age = bundled_pricing_age_days(v, today=today)
+        assert anchor is not None and age is not None
+        if age > max_age_days:
+            stale_any = True
+            click.echo(
+                f"STALE  {v}  (anchor {anchor.isoformat()}, ~{age} days old; max {max_age_days})",
+                err=True,
+            )
+        else:
+            click.echo(f"OK     {v}  (~{age} days old; max {max_age_days})")
+
+    if fail and stale_any:
+        raise ClickExit(1)
 
 
 @cli.group()
