@@ -2,6 +2,10 @@
 
 Source for the local UI served by **`flightdeck serve`** at **`/`**. Production bundles are emitted to **`../src/flightdeck/server/static/`** (FastAPI serves **`index.html`** and hashed files under **`/assets/`**).
 
+**App mark:** keep **`web/public/flightdeck-icon.png`** in sync with **`web/src/assets/flightdeck-icon.png`** (same bytes). The bundled copy is what the React shell and favicon use in production; the public copy is copied to **`static/flightdeck-icon.png`** for the stable **`/flightdeck-icon.png`** URL.
+
+**Theming and brand:** the README overview image is **desired-state art**, not a UI spec. Incremental plan (tokens, optional dark mode, cyan–purple accents) lives under **[Theming and brand alignment](../docs/web-ui.md#theming-and-brand-alignment)** in **`docs/web-ui.md`**.
+
 ## Commands
 
 ```bash

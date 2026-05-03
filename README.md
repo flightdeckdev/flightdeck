@@ -4,6 +4,14 @@
 
 FlightDeck is **local-first** (CLI + SQLite + optional **`flightdeck serve`** UI): run evidence, pricing tables, and the ledger **stay on disk in your environment** by default—**no data leaves your infrastructure** for FlightDeck’s own product telemetry (there is no vendor backend that ingests your runs or tariffs). **No trace or billing payload is sent to FlightDeck as a vendor.** That posture matters for **regulated**, **air-gapped**, and **data-sovereignty** teams that cannot ship telemetry to a third-party SaaS observability backend. It is not an agent framework, prompt IDE, tracing dashboard, or gateway — it is where **what shipped**, **what ran**, **what it cost**, and **whether promote is allowed** are recorded and compared.
 
+## Product overview
+
+![FlightDeck — AI release governance (illustrative)](docs/images/flightdeck-overview.png)
+
+*Illustrative composite, not a screenshot of the shipped UI.* The bundled **`flightdeck serve`** app is **light-themed** today ([docs/web-ui.md](docs/web-ui.md)). **`flightdeck release diff`** always needs **`--window`** (for example **`7d`**). Policy gates are **threshold-based** on rollups from ingested runs (cost per run, optional **average** latency, error rate, diff sample confidence) — not built-in PII or content-safety scanners. **Prompt drift** shows up indirectly via token usage and pricing; there is no separate “prompt diff +N tokens” line in **`release diff`** output. Releases are **checksum-addressed** bundles at registration (`release verify`); there is no separate cryptographic signing step.
+
+*Visual north star vs code:* we treat the poster and hex mark as **desired-state art**, then improve the real UI incrementally toward that palette (optional dark theme, accent tokens)—see **[Theming and brand alignment](docs/web-ui.md#theming-and-brand-alignment)**.
+
 ## In ~20 seconds
 
 1. **Register** immutable agent releases (`release.yaml` + bundle checksum).

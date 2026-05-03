@@ -58,7 +58,7 @@ These map to **What is next** items **1**, **2**, and **5**; ship notes stay in 
 
 **Explicit UI deferrals**
 
-Out of scope for the near-term web app: custom themes or theme marketplaces; embedded arbitrary log viewers; full observability or fleet consoles in the browser; multi-workspace UI (follows conditional **Fleet / cross-workspace** in **What is next**).
+Out of scope for the near-term web app: arbitrary third-party themes or theme marketplaces; embedded arbitrary log viewers; full observability or fleet consoles in the browser; multi-workspace UI (follows conditional **Fleet / cross-workspace** in **What is next**). A **single built-in dark palette** (plus system preference) aligned with operator ergonomics and brand art is **not** a “custom theme product”—see **[docs/web-ui.md — Theming and brand alignment](docs/web-ui.md#theming-and-brand-alignment)** for the phased plan vs the marketing composite.
 
 ---
 
