@@ -120,9 +120,34 @@ def doctor_cmd(backup_path: Path | None) -> None:
 @click.option("--host", default="127.0.0.1", show_default=True)
 @click.option("--port", default=8765, show_default=True)
 @click.option("--reload", is_flag=True, default=False)
-def serve(host: str, port: int, reload: bool) -> None:
+@click.option(
+    "--sqlite-lock-timeout",
+    type=float,
+    default=30.0,
+    show_default=True,
+    help=(
+        "Seconds to retry SQLite 'database is locked' / 'busy' errors on ledger statements "
+        "(0 disables timed retries; PRAGMA busy_timeout still uses FLIGHTDECK_SQLITE_BUSY_TIMEOUT_MS)."
+    ),
+)
+@click.option(
+    "--retry-sqlite-lock/--no-retry-sqlite-lock",
+    default=True,
+    show_default=True,
+    help="Retry SQLite locked/busy errors until --sqlite-lock-timeout elapses.",
+)
+def serve(
+    host: str,
+    port: int,
+    reload: bool,
+    sqlite_lock_timeout: float,
+    retry_sqlite_lock: bool,
+) -> None:
     """Start the local FlightDeck HTTP service (ingest + local release operations)."""
     import uvicorn
+
+    os.environ["FLIGHTDECK_SQLITE_LOCK_TIMEOUT_S"] = str(sqlite_lock_timeout)
+    os.environ["FLIGHTDECK_SQLITE_RETRY_ON_LOCK"] = "1" if retry_sqlite_lock else "0"
 
     loopback_hosts = {"127.0.0.1", "::1", "localhost"}
     if host.strip() not in loopback_hosts:

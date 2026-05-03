@@ -32,6 +32,8 @@ uv run flightdeck-quickstart-verify
 uv run flightdeck --help
 ```
 
+CI runs **`pytest --cov=flightdeck --cov-fail-under=80`** (see **`AGENTS.md`** / **`pyproject.toml`**).
+
 If you changed **Pydantic / wire models** affecting **`schemas/`**: **`uv run python scripts/generate_schemas.py`**, then **`git diff --exit-code schemas/`** must be clean—commit **`schemas/`** updates with the PR.
 
 If you changed **`web/`** (React UI): from **`web/`**, run **`npm ci`** then **`npm run build`**, then from the repo root **`git diff --exit-code src/flightdeck/server/static/`** must be clean—commit all updates under that path (CI fails otherwise). When behavior changes, run **`npm run test:e2e`** from **`web/`**.

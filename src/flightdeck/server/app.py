@@ -33,18 +33,20 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     def health(request: Request) -> dict[str, str]:
-        """Liveness plus safe ledger-write auth hints (no secrets).
+        """Liveness plus safe API auth hints (no secrets).
 
         ``mutation_auth`` applies to **POST /v1/events** as well as promote/rollback:
         ``bearer`` when ``FLIGHTDECK_LOCAL_API_TOKEN`` is set (Bearer required for those
         routes from any client host), else ``loopback`` (writes allowed only from
-        loopback unless the token is configured). ``POST /v1/diff`` is not a ledger write
-        and stays unauthenticated.
+        loopback unless the token is configured). ``read_auth`` applies to **GET /v1/***
+        (workspace, metrics, runs, …): ``bearer`` when the same token is set (Bearer
+        required), else ``open``. ``POST /v1/diff`` is not gated by these fields.
         """
         token = getattr(request.app.state, "local_api_token", None)
         token_s = token.strip() if isinstance(token, str) else ""
         mutation_auth = "bearer" if token_s else "loopback"
-        return {"status": "ok", "mutation_auth": mutation_auth}
+        read_auth = "bearer" if token_s else "open"
+        return {"status": "ok", "mutation_auth": mutation_auth, "read_auth": read_auth}
 
     @app.get("/")
     def ui_index() -> FileResponse:

@@ -112,7 +112,7 @@ Build-time configuration helpers read from `import.meta.env`:
 
 Mounted by `AppShell` at the top of the main content column (below the sidebar on wide
 layouts). Fetches `GET /health`
-on mount to read `mutation_auth` (`"bearer"` or `"loopback"`), then renders an info or
+on mount to read `mutation_auth` and `read_auth` (`"bearer"` / `"loopback"` and `"bearer"` / `"open"`), then renders an info or
 warning strip:
 
 | Condition | What is shown |
@@ -127,8 +127,8 @@ warning strip:
 The component never displays the token value itself. It uses the `role="status"` ARIA role
 for live-region accessibility.
 
-**Token mismatch detection:** when `mutation_auth` is `"bearer"` and
-`clientMutationTokenConfigured()` is `false`, the strip warns that mutation requests will
+**Token mismatch detection:** when the server uses a Bearer token (`mutation_auth` is `"bearer"`) and
+`clientMutationTokenConfigured()` is `false`, the strip warns that API requests will
 fail. This is a configuration hint only — the server enforces the actual gate.
 
 ---
@@ -266,6 +266,7 @@ type HealthPayload = {
   status: string;
   /** Present on current servers; "bearer" when FLIGHTDECK_LOCAL_API_TOKEN is set. */
   mutation_auth?: "bearer" | "loopback";
+  read_auth?: "bearer" | "open";
 };
 
 /** Mirrors the `policy` sub-object in promote/rollback responses and diff responses. */

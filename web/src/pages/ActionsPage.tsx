@@ -279,9 +279,10 @@ export function ActionsPage() {
         <div>
           <h2 className="fd-page-title">Promote & rollback</h2>
           <p className="fd-page-sub">
-            Mutations use the same HTTP contract as the CLI. When{" "}
+            Writes use the same HTTP contract as the CLI. When{" "}
             <code className="fd-mono fd-mono--sm">FLIGHTDECK_LOCAL_API_TOKEN</code> is set, include it via{" "}
-            <code className="fd-mono fd-mono--sm">VITE_FLIGHTDECK_LOCAL_API_TOKEN</code> for local dev.
+            <code className="fd-mono fd-mono--sm">VITE_FLIGHTDECK_LOCAL_API_TOKEN</code> so reads and mutations
+            send <code className="fd-mono fd-mono--sm">Authorization: Bearer</code>.
           </p>
         </div>
       </div>

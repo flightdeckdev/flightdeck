@@ -33,7 +33,7 @@ After any change under **`web/src/`** (or **`vite.config.ts`**, **`package.json`
 
 **Vite** proxies **`/v1/*`** and **`/health`** to **`http://127.0.0.1:8765`** (override with **`VITE_DEV_PROXY_TARGET`** in **`.env.local`** or the environment). The React app calls relative **`/v1/...`** URLs so the browser talks to the Vite dev server only.
 
-**Auth:** when the server has **`FLIGHTDECK_LOCAL_API_TOKEN`** set, set **`VITE_FLIGHTDECK_LOCAL_API_TOKEN`** in **`.env.local`** to the same value so promote/rollback requests include **`Authorization: Bearer …`**.
+**Auth:** when the server has **`FLIGHTDECK_LOCAL_API_TOKEN`** set, set **`VITE_FLIGHTDECK_LOCAL_API_TOKEN`** in **`.env.local`** to the same value so **`GET /v1/*`** and promote/rollback requests include **`Authorization: Bearer …`**.
 
 **Read-only UI:** set **`VITE_FLIGHTDECK_UI_READ_ONLY=true`** to hide the Promote nav entry and block **`#/actions`** (demos / wall displays). The shell still loads **`/health`** and shows a read-only banner.
 
