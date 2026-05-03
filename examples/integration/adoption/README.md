@@ -8,11 +8,13 @@ emit them with **`FlightdeckClient.ingest_run_events`** (same contract as
 Installable helpers live under **`src/flightdeck/integrations/`** with optional **`pyproject.toml`**
 extras; see **[docs/sdk-integrations.md](../../../docs/sdk-integrations.md)**.
 
-## Python 3.14
+## Python version
 
-This repository targets **CPython 3.14** only. Third-party wheels may lag; if an extra does not
-install, run your agent in a **supported Python sidecar** and POST JSON to **`POST /v1/events`**
-using the same **`RunEvent`** shape (**`schemas/v1/run_event.schema.json`**).
+The **`flightdeck-ai`** package supports **CPython 3.11+** (`requires-python` in **`pyproject.toml`**).
+Third-party wheels may lag on the newest interpreters; if an extra does not install, run your
+agent in another supported Python and POST JSON to **`POST /v1/events`** using the same
+**`RunEvent`** shape (**`schemas/v1/run_event.schema.json`**), with **`Authorization: Bearer`**
+when the server uses **`FLIGHTDECK_LOCAL_API_TOKEN`**.
 
 ## Layout
 

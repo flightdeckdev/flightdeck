@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from flightdeck.models import RunEvent
+from flightdeck.server.mutation_access import require_ledger_write_access
 from flightdeck.server.routes.common import ensure_app_state
 
 router = APIRouter()
@@ -17,6 +18,7 @@ class IngestEventsRequest(BaseModel):
 
 @router.post("/v1/events")
 def ingest_events(request: Request, req: IngestEventsRequest) -> dict[str, int]:
+    require_ledger_write_access(request)
     _, storage = ensure_app_state(request)
 
     events: list[RunEvent] = []

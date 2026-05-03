@@ -23,19 +23,18 @@ Two access tiers:
 |-------|--------------------|---------------------------------|
 | `GET /health` | open | open |
 | `GET /v1/*` (reads, including `GET /v1/workspace`, `GET /v1/metrics`, `GET /v1/runs`, `GET /v1/runs/export`, `GET /v1/promotion-requests`) | open | open |
-| `POST /v1/events` | open† | open (no Bearer required) |
+| `POST /v1/events` | loopback only | `Authorization: Bearer <token>` required |
 | `POST /v1/diff` | open | open |
 | `POST /v1/promote` | loopback only | `Authorization: Bearer <token>` required |
 | `POST /v1/promote/request`, `POST /v1/promote/confirm` | loopback only | `Authorization: Bearer <token>` required |
 | `POST /v1/rollback` | loopback only | `Authorization: Bearer <token>` required |
 
-†`POST /v1/events` has **no server-side loopback or token gate** in code
- (`server/routes/ingest.py`). Only `POST /v1/promote`, `POST /v1/promote/request`,
- `POST /v1/promote/confirm`, and `POST /v1/rollback` call
- `_require_mutation_access`. When the server binds to `127.0.0.1` (the default), ingest is
- effectively local-only by network topology, not by application enforcement. If you bind
- `--host 0.0.0.0`, event ingest becomes reachable from any host. Protect it at the network
- layer (firewall / reverse proxy) if that is a concern.
+`POST /v1/events` uses the **same** loopback / Bearer gate as promote and rollback
+(`require_ledger_write_access` in `server/mutation_access.py`). Remote agents must set
+`FLIGHTDECK_LOCAL_API_TOKEN` on the server and send matching `Authorization: Bearer` headers
+(including the Python SDK’s `api_token=`). When no token is configured, only loopback
+callers (`127.0.0.1`, `::1`, `localhost`) may append run events, so binding `--host 0.0.0.0`
+does not leave ingest open to arbitrary clients on the network.
 
 ```bash
 export FLIGHTDECK_LOCAL_API_TOKEN="$(openssl rand -hex 32)"
@@ -62,8 +61,8 @@ Health probe. Always returns HTTP 200 while the server is up.
 
 `mutation_auth` is always present on current servers:
 
-- `"loopback"` — `FLIGHTDECK_LOCAL_API_TOKEN` is not set; promote and rollback are allowed only from loopback clients (no Bearer gate).
-- `"bearer"` — `FLIGHTDECK_LOCAL_API_TOKEN` is set; promote and rollback require `Authorization: Bearer <that value>`.
+- `"loopback"` — `FLIGHTDECK_LOCAL_API_TOKEN` is not set; ledger writes (including **`POST /v1/events`**) are allowed only from loopback clients (no Bearer gate).
+- `"bearer"` — `FLIGHTDECK_LOCAL_API_TOKEN` is set; ledger writes require `Authorization: Bearer <that value>` from any client host.
 
 This field never includes secret material.
 
@@ -294,6 +293,9 @@ Response headers (non-secret hints for clients):
 ## `POST /v1/events`
 
 Ingest `RunEvent` records (runtime evidence for diff and policy evaluation).
+
+**Auth:** Same as promote/rollback — loopback-only when `FLIGHTDECK_LOCAL_API_TOKEN` is unset;
+otherwise `Authorization: Bearer <token>` required (see [Authentication and access control](#authentication-and-access-control)).
 
 **Request body**
 ```json

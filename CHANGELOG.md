@@ -6,6 +6,15 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ## Unreleased
 
+### Breaking
+
+- **`POST /v1/events`:** uses the same **`FLIGHTDECK_LOCAL_API_TOKEN`** / loopback policy as promotion and rollback. Remote unauthenticated ingest is no longer accepted; set the env var and send **`Authorization: Bearer`** (Python SDK **`api_token=`**, or **`--api-token`** / env in **[examples/integration/emit_sample_events.node.mjs](examples/integration/emit_sample_events.node.mjs)**).
+- **Python:** **`requires-python`** is **`>=3.11,<4`** (replaces **`>=3.14,<3.15`**). **`[tool.ruff] target-version`** is **`py311`**. CI follows **`.python-version`** (currently **3.12**).
+
+### Changed
+
+- **Docs / examples:** **`DEVELOPMENT.md`**, **`AGENTS.md`**, **`docs/sdk.md`**, **`docs/troubleshooting.md`**, **`examples/integration/README.md`**, **`examples/integration/adoption/README.md`**, **`examples/deploy/README.md`** — align with the Python range and ledger-write ingest model.
+
 ### Added
 
 - **Experimental `flightdeck.integrations`:** optional extras **`integrations-langchain`**, **`integrations-temporal`**, **`integrations-openai-agents`**, and meta **`integrations-ci`** (CI job); thin mappers from OpenAI chat completions, Anthropic messages, OpenAI Agents–style results, LangChain callbacks, CrewAI-style manual totals, and Temporal-oriented **`labels`**. Docs: **`docs/sdk-integrations.md`**; examples: **`examples/integration/adoption/`**. Contributor policy updates in **`AGENTS.md`** / **`CLAUDE.md`**.
@@ -149,7 +158,7 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 - **Slim distribution:** this repository ships a focused in-tree **`docs/`** tree (CLI, HTTP API, SDK, operations/policy, release artifact, web UI references); org mirror scripts and **`verify-repo-standards`** wrappers are not included. Extended maintainer runbooks and the canonical README live on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)**; in-repo links now point there where applicable.
 - **`pyproject.toml`:** OpenTelemetry packages are **optional** only (**`telemetry`** / **`all`** extras); the default install matches the **1.0.0** dependency story (core does not import OpenTelemetry).
 - **`.pre-commit-config.yaml`:** **ruff** replaces **black** / **isort**; **`ruff-pre-commit`** pinned to **v0.15.12** to match **`dev`** (**`ruff==0.15.12`**).
-- **CI:** Python **3.13** and **3.14** added to the Ubuntu and Windows matrices (superseded by **3.14**-only policy as of **1.0.2**).
+- **CI:** Python **3.13** and **3.14** added to the Ubuntu and Windows matrices (superseded by **3.14**-only policy as of **1.0.2**, then relaxed to **3.11+** as of **1.2.0**).
 - **`pyproject.toml`:** default **`pytest --basetemp=.tmp/pytest`** so local runs avoid Windows **`PermissionError`** on **`%TEMP%\pytest-of-*`**.
 - **`pre-commit-hooks`:** bumped to **v5.0.0**.
 

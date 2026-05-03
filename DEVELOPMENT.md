@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- **CPython 3.14.x** only (`requires-python` in **`pyproject.toml`**; **`.python-version`** pins **3.14** for **uv**). CI runs **3.14** on Ubuntu and Windows.
+- **CPython 3.11+** (`requires-python` in **`pyproject.toml`** is **`>=3.11,<4`**; **`.python-version`** pins a contributor default for **uv**, currently **3.12**). CI runs that pinned release on Ubuntu and Windows.
 - Git
 - **[uv](https://docs.astral.sh/uv/)** (recommended): single tool for venvs, installs, and **`uv run`** ([installation](https://docs.astral.sh/uv/getting-started/installation/)). On Windows you can use `py -3 -m pip install uv` if you do not use the standalone installer.
 

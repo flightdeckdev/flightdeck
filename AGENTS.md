@@ -98,7 +98,7 @@ Fallback (activated **venv** or global tools): the same steps with **`python -m 
 
 On **Windows**, use `py -3` in place of `python` if that is how your environment is set up. If pytest temp dirs fail with permissions, see **`DEVELOPMENT.md`** / **`tests/conftest.py`**.
 
-**CI bar** (mirrors **`.github/workflows/ci.yml`** on **CPython 3.14**): see the workflow for the exact sequence; includes **`uv sync --frozen --extra dev`**, **`web/`** **`npm ci`** + **`npm run build`** + **`git diff --exit-code`** on **`static/`**, Playwright **`npm run test:e2e`**, **ruff**, **pytest**, schema drift check, **`flightdeck-quickstart-verify`**, **`flightdeck --help`**. When you change **`pyproject.toml`** optional extras (including **`flightdeck.integrations`** extras), run **`uv lock`** and commit **`uv.lock`**. The workflow may include a separate **integrations** job that **`uv sync`**s **`dev`** plus selected integration extras and runs targeted tests.
+**CI bar** (mirrors **`.github/workflows/ci.yml`** on the **`.python-version`** interpreter): see the workflow for the exact sequence; includes **`uv sync --frozen --extra dev`**, **`web/`** **`npm ci`** + **`npm run build`** + **`git diff --exit-code`** on **`static/`**, Playwright **`npm run test:e2e`**, **ruff**, **pytest**, schema drift check, **`flightdeck-quickstart-verify`**, **`flightdeck --help`**. When you change **`pyproject.toml`** optional extras (including **`flightdeck.integrations`** extras), run **`uv lock`** and commit **`uv.lock`**. The workflow may include a separate **integrations** job that **`uv sync`**s **`dev`** plus selected integration extras and runs targeted tests.
 
 Use a repo-local temp directory if the OS temp directory is restricted.
 

@@ -38,7 +38,7 @@ Inside the Compose stack, **`exec`** into the running container with **`/workspa
 
 ### Optional mutation token
 
-Set **`FLIGHTDECK_LOCAL_API_TOKEN`** in your environment before `docker compose up` (or in an `.env` file beside `docker-compose.yml`). Clients must send **`Authorization: Bearer …`** for **`POST /v1/promote`** and **`POST /v1/rollback`**. Ingest and diff are **not** behind this Bearer gate by default—treat network placement accordingly.
+Set **`FLIGHTDECK_LOCAL_API_TOKEN`** in your environment before `docker compose up` (or in an `.env` file beside `docker-compose.yml`). Clients must send **`Authorization: Bearer …`** for **ledger writes**: **`POST /v1/promote*`**, **`POST /v1/rollback`**, and **`POST /v1/events`**. With no token configured, those routes accept only **loopback** callers. **`POST /v1/diff`** stays unauthenticated (read-only); still treat network placement as a trust boundary.
 
 ## Helm (optional single-replica chart)
 
