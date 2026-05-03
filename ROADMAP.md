@@ -6,7 +6,7 @@ This document is **strategy and ordering**, not a second changelog. It goes from
 
 **Reality check:** FlightDeck is intentionally **local-first** (CLI + SQLite + optional `flightdeck serve`). That keeps trust boundaries explicit; teams still supply integration glue to run it broadly in production.
 
-**Version detail:** The current shipping line is **v1.1.2**. For SemVer-by-SemVer behavior and migrations, use **[RELEASE_NOTES.md](RELEASE_NOTES.md)** and **[CHANGELOG.md](CHANGELOG.md)**.
+**Version detail:** The current shipping line is **v1.2.0**. For SemVer-by-SemVer behavior and migrations, use **[RELEASE_NOTES.md](RELEASE_NOTES.md)** and **[CHANGELOG.md](CHANGELOG.md)**.
 
 ---
 
@@ -89,7 +89,7 @@ Each item ties to the core promise: **release integrity**, **runtime evidence**,
 6. **Outcome:** correlated **infra** telemetry can sit **next to** ledger evidence without becoming an APM product — **OTLP-oriented integration (mid term):** documented or thin adapter-style paths for correlated telemetry; not a commitment to an in-product APM.
 7. **Outcome (conditional):** multi-team governance **without** breaking one-ledger trust — **Fleet / cross-workspace (conditional):** broader governance surfaces only after the signals in **Horizons and conditions** below; default remains one workspace, one ledger.
 
-Optional milestone framing (headline only): a **v1.2** line might emphasize **forensics + catalog diagnostics**; ship notes still land in **RELEASE_NOTES** / **CHANGELOG**.
+**v1.2.0** ships the Python **3.11+** floor, **HTTP access** tightening for ingest and read APIs when a local token is set, **bundled default pricing** on **`flightdeck init`**, optional **PostgreSQL**, **runs export** / filters, substantial **web** operator UX, and experimental **`flightdeck.integrations`**. Deeper **catalog diagnostics** and **forensics** workstreams continue under **What is next**; ship notes live in **RELEASE_NOTES** / **CHANGELOG**.
 
 ---
 

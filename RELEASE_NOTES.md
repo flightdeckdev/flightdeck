@@ -4,28 +4,19 @@ High-level notes for **shipping FlightDeck**. Detailed history: **[CHANGELOG.md]
 
 Narrative docs (including the CLI reference) are maintained on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** `main`; this file and **`schemas/`** ship in minimal clones.
 
-## Upcoming — Bundled pricing on `init`
+## v1.2.0 — Python 3.11+, protected ingest and reads, bundled pricing, Postgres, integrations
 
-Patch-line behavior: **`flightdeck init`** now seeds **bundled** OpenAI, Anthropic, and Google (**Gemini-class**, provider key **`google`**) **PricingTable** imports at **`flightdeck-bundled-2026-05`**, copies a default **PricingCatalog** to **`.flightdeck/pricing-catalog.yaml`**, and sets **`pricing_catalog_path`**. **`flightdeck init --no-bundled-pricing`** preserves the previous config-only behavior. **Stable contracts:** additive CLI flags and workspace defaults for **new** workspaces only; existing **`flightdeck.yaml`** files are unchanged until edited.
+Minor release (see **[CHANGELOG.md](CHANGELOG.md)** for the full list).
 
-## Upcoming — Optional Python integrations (experimental)
+- **Python floor:** **`requires-python`** is **`>=3.11,<4`** so installs work on common production interpreters (**3.11–3.14**). **`[tool.ruff] target-version`** is **`py311`**.
+- **HTTP / trust:** **`POST /v1/events`** is a **ledger write** and matches the promote/rollback access model: **loopback-only** when **`FLIGHTDECK_LOCAL_API_TOKEN`** is unset; **Bearer required** when it is set. When a token is set, **`GET /v1/*`** read APIs require the same **Bearer** header (previously only mutations were gated). **`POST /v1/diff`** stays read-only and ungated. **`GET /health`** adds **`read_auth`** (`open` vs `bearer`). **Migration:** remote emitters must send **`Authorization: Bearer`** whenever the server uses a local API token; loopback scripts without a token are unchanged.
+- **`flightdeck init`:** by default seeds **bundled** OpenAI / Anthropic / Google (**`google`** = Gemini-class) pricing at **`flightdeck-bundled-2026-05`**, writes **`.flightdeck/pricing-catalog.yaml`**, and sets **`pricing_catalog_path`** (additive for **new** workspaces). **`flightdeck init --no-bundled-pricing`** restores config-only init.
+- **Ledger backends:** optional **`database_url`** (**PostgreSQL**) with **`psycopg`** extra; SQLite busy retries and **`flightdeck serve`** SQLite tuning flags.
+- **Evidence / UI:** **`GET /v1/runs/export`**, **`session_id`** / **`span_id`** filters and **`offset`** on run listings; bundled **Web Runs** page and substantial **Runs / Diff / Actions / shell** UX improvements (see changelog).
+- **Experimental `flightdeck.integrations`:** optional **`integrations-*`** extras and CI **`integrations`** job; **`RunEvent`** wire shape unchanged — adapters are adoption glue per **`AGENTS.md`**.
+- **Quality:** **`pytest-cov`** with **`--cov-fail-under=80`** on core **`flightdeck`**; Playwright **`e2e-server.mjs`** uses **`init --no-bundled-pricing`** for stable default **`GET /v1/workspace`** expectations.
 
-Patch-line documentation: optional **`flightdeck.integrations`** mappers behind **`integrations-*`**
-extras (see **`pyproject.toml`**, **`docs/sdk-integrations.md`**, **`examples/integration/adoption/`**).
-**Stable payload contract:** **`RunEvent`** JSON for **`POST /v1/events`** (shape unchanged; **v1.2.0** tightens **HTTP access** for ingest — see **v1.2.0** notes below). **`AGENTS.md`** clarifies
-that these adapters are adoption glue, not in-product orchestration or a plugin registry. CI adds
-an **`integrations`** job (**`uv sync --frozen --extra dev --extra integrations-ci`**) for LangChain
-callback coverage.
-
-## v1.2.0 — Python 3.11+ floor and protected event ingest
-
-Minor release (see **[CHANGELOG.md](CHANGELOG.md)**): **`requires-python`** is **`>=3.11,<4`** so
-installs work on common production interpreters (**3.11–3.14**). **`POST /v1/events`** is a **ledger
-write** and now matches the promote/rollback access model: **loopback-only** when
-**`FLIGHTDECK_LOCAL_API_TOKEN`** is unset; **Bearer required** when it is set (covers Docker **`--host
-0.0.0.0`** and private LANs). **`POST /v1/diff`** remains read-only and ungated. Migration: remote
-emitters must send **`Authorization: Bearer`** whenever the server uses a local API token; loopback
-scripts without a token are unchanged.
+**Stable contracts:** breaking items are the **Python range**, **ingest + read Bearer** rules when a token is set, and the new **default init** workspace layout; HTTP and **`v1`** payload shapes remain additive aside from those access changes.
 
 ## v1.1.2 — Forensics filters, JSONL export, productization closure slice
 

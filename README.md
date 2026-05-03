@@ -73,7 +73,7 @@ FlightDeck is **local-first** and ships as a Python CLI backed by SQLite.
 **v1.0.0** froze **SemVer-stable public contracts** for the documented CLI, committed **`schemas/v1/`**,
 and **`POST /v1/events`** with **`api_version` `v1`**. **v1.1.x** adds catalog-aware diffs, approval flows, and forensics slices (optional pricing catalog on diffs,
 promotion request/confirm, read-only runs listing, **`GET /v1/workspace`** for UI and automation, Helm/fleet examples)
-without breaking those v1.0 shapes. See **[RELEASE_NOTES.md](RELEASE_NOTES.md)** and **[CHANGELOG.md](CHANGELOG.md)**.
+without breaking those v1.0 shapes. **v1.2.0** raises the Python floor to **3.11+**, tightens **Bearer** gating for **`POST /v1/events`** and **`GET /v1/*`** when **`FLIGHTDECK_LOCAL_API_TOKEN`** is set, adds optional **PostgreSQL**, **bundled default pricing** on **`flightdeck init`**, and experimental **`flightdeck.integrations`**. See **[RELEASE_NOTES.md](RELEASE_NOTES.md)** and **[CHANGELOG.md](CHANGELOG.md)**.
 The product scope is still intentionally narrow (release governance, not a hosted agent platform).
 
 **Maintenance and sustainability:** the project is **Apache-2.0** with **no required commercial license**. If FlightDeck matters to your production stack, use **[SUPPORT.md](SUPPORT.md)** for security, commercial, and sponsorship pointers, and the **Sponsor** affordance on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** when it is enabled—signals like that answer “what happens if maintenance stops?” more credibly than roadmap prose alone.
