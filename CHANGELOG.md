@@ -6,6 +6,17 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ## Unreleased
 
+### Added
+
+- **`flightdeck pricing check`** — reports **`flightdeck-bundled-*`** snapshot age vs **`--max-age-days`** (default **90**); **`--fail`** for CI. **`release diff`** / **`POST /v1/diff`** append **`pricing.warnings`** when bundled snapshots exceed the same age threshold.
+- **`flightdeck.integrations.telemetry.configure_otel_tracing()`** — optional OTLP HTTP **`TracerProvider`** wiring when the **`telemetry`** extra is installed (see **`docs/sdk-integrations.md`**).
+- **SDK:** **`flightdeck.sdk.http_common`** shared serializers and retry policy; parity tests keep sync/async clients aligned. **`pytest-cov`** no longer omits **`sdk/client.py`**.
+
+### Changed
+
+- **`[project.optional-dependencies] dev`:** **`ruff`** is **`>=0.15,<0.16`** (was an exact patch pin) so **`pip install`** / shared venvs can resolve alongside other tools; **`uv sync --frozen`** still follows **`uv.lock`**. **`docs/troubleshooting.md`** notes checking **`uv.lock`** for the resolved **`0.15.x`** wheel.
+- **Docs / positioning:** README local-first and ICP copy; bundled pricing cadence, vendor pricing URLs in YAML comments, and **`docs/pricing-catalog.md`** / **ROADMAP** / **RELEASE_NOTES** staleness commitments.
+
 ## 1.2.0 - 2026-05-03
 
 ### Breaking

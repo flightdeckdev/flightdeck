@@ -536,6 +536,14 @@ class Storage:
             ).fetchall()
         return [str(r["pricing_version"]) for r in rows]
 
+    def list_distinct_pricing_versions(self) -> list[str]:
+        """All distinct ``pricing_version`` values present in the ledger."""
+        with self.connect() as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT pricing_version FROM pricing_tables ORDER BY pricing_version",
+            ).fetchall()
+        return [str(r["pricing_version"]) for r in rows]
+
     def insert_promotion_request(self, record: PromotionRequestRecord) -> None:
         with self.transaction() as conn:
             conn.execute(

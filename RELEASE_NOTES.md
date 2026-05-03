@@ -4,6 +4,12 @@ High-level notes for **shipping FlightDeck**. Detailed history: **[CHANGELOG.md]
 
 Narrative docs (including the CLI reference) are maintained on **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** `main`; this file and **`schemas/`** ship in minimal clones.
 
+## Unreleased (in development)
+
+- **Bundled pricing hygiene:** **`flightdeck pricing check`** reports **`flightdeck-bundled-*`** snapshot age vs **`--max-age-days`** (default **90**); **`--fail`** exits non-zero for CI. **`release diff`** / **`POST /v1/diff`** append **`pricing.warnings`** for the same staleness rule so cost signals do not go silently wrong. Bundled YAML gains vendor **official pricing** URL comments; docs and **ROADMAP** state a **minor-release refresh** cadence for the bundled snapshot when list prices move materially.
+- **Contributor tooling:** **`[project.optional-dependencies] dev`** uses **`ruff>=0.15,<0.16`** (see **`CHANGELOG.md`**).
+- **Telemetry extra:** optional **`flightdeck.integrations.telemetry.configure_otel_tracing()`** wires OTLP span export to **your** backend (see **`docs/sdk-integrations.md`**).
+
 ## v1.2.0 — Python 3.11+, protected ingest and reads, bundled pricing, Postgres, integrations
 
 Minor release (see **[CHANGELOG.md](CHANGELOG.md)** for the full list).

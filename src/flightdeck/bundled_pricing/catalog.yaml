@@ -1,5 +1,7 @@
 # Bundled PricingCatalog — maps bundled pricing tables to one comparable slot per tier.
 # api_version / kind per schemas/v1/pricing_catalog.schema.json
+# Compare bundled rows with vendor pages: https://openai.com/api/pricing/
+# https://www.anthropic.com/pricing https://ai.google.dev/gemini-api/docs/pricing
 api_version: v1
 kind: PricingCatalog
 catalog_version: flightdeck-bundled-2026-05

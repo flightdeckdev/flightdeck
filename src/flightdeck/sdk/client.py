@@ -1,12 +1,25 @@
 from __future__ import annotations
 
-import asyncio
-import time
 from typing import Any, Iterable
 
 import httpx
 
 from flightdeck.models import RunEvent
+from flightdeck.sdk.http_common import (
+    ClientHttpCore,
+    HttpRetryPolicy,
+    actions_params,
+    async_request_with_retry,
+    diff_request_body,
+    events_ingest_json,
+    export_headers_from_response,
+    promote_confirm_body,
+    promote_like_body,
+    promotion_requests_params,
+    rollback_body,
+    runs_list_params,
+    sync_request_with_retry,
+)
 
 
 class FlightdeckClient:
@@ -20,24 +33,29 @@ class FlightdeckClient:
         api_token: str | None = None,
         client: httpx.Client | None = None,
     ) -> None:
-        self._base_url = base_url.rstrip("/")
+        self._core = ClientHttpCore(base_url, api_token)
         self._owns_client = client is None
         self._client = client or httpx.Client(timeout=timeout_s)
-        self._max_retries = max(0, max_retries)
-        self._retry_backoff_s = max(0.0, retry_backoff_s)
-        self._api_token = api_token
+        self._retry = HttpRetryPolicy(max(0, max_retries), max(0.0, retry_backoff_s))
 
     def close(self) -> None:
         if self._owns_client:
             self._client.close()
 
     def _auth_headers(self) -> dict[str, str]:
-        if self._api_token:
-            return {"Authorization": f"Bearer {self._api_token}"}
-        return {}
+        return self._core.auth_headers()
 
     def _json_headers(self) -> dict[str, str]:
-        return {"Content-Type": "application/json", **self._auth_headers()}
+        return self._core.json_headers()
+
+    def _request_with_retry(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
+        return sync_request_with_retry(
+            self._client,
+            url=self._core.abs_url(path),
+            policy=self._retry,
+            method=method,
+            **kwargs,
+        )
 
     def health(self) -> dict[str, Any]:
         resp = self._request_with_retry("GET", "/health", headers=self._auth_headers() or None)
@@ -66,11 +84,7 @@ class FlightdeckClient:
         environment: str | None = None,
         limit: int = 50,
     ) -> dict[str, Any]:
-        params: dict[str, str | int] = {"limit": limit}
-        if agent_id is not None:
-            params["agent"] = agent_id
-        if environment is not None:
-            params["env"] = environment
+        params = actions_params(agent_id=agent_id, environment=environment, limit=limit)
         resp = self._request_with_retry(
             "GET",
             "/v1/actions",
@@ -90,14 +104,14 @@ class FlightdeckClient:
         tenant_id: str | None = None,
         task_id: str | None = None,
     ) -> dict[str, Any]:
-        body: dict[str, Any] = {
-            "baseline_release_id": baseline_release_id,
-            "candidate_release_id": candidate_release_id,
-            "window": window,
-            "environment": environment,
-            "tenant_id": tenant_id,
-            "task_id": task_id,
-        }
+        body = diff_request_body(
+            baseline_release_id=baseline_release_id,
+            candidate_release_id=candidate_release_id,
+            window=window,
+            environment=environment,
+            tenant_id=tenant_id,
+            task_id=task_id,
+        )
         resp = self._request_with_retry("POST", "/v1/diff", json=body, headers=self._json_headers())
         resp.raise_for_status()
         return resp.json()
@@ -111,13 +125,13 @@ class FlightdeckClient:
         reason: str,
         actor: str = "sdk",
     ) -> dict[str, Any]:
-        body = {
-            "release_id": release_id,
-            "environment": environment,
-            "window": window,
-            "reason": reason,
-            "actor": actor,
-        }
+        body = promote_like_body(
+            release_id=release_id,
+            environment=environment,
+            window=window,
+            reason=reason,
+            actor=actor,
+        )
         resp = self._request_with_retry("POST", "/v1/promote", json=body, headers=self._json_headers())
         resp.raise_for_status()
         return resp.json()
@@ -131,13 +145,13 @@ class FlightdeckClient:
         reason: str,
         actor: str = "sdk",
     ) -> dict[str, Any]:
-        body = {
-            "release_id": release_id,
-            "environment": environment,
-            "window": window,
-            "reason": reason,
-            "actor": actor,
-        }
+        body = promote_like_body(
+            release_id=release_id,
+            environment=environment,
+            window=window,
+            reason=reason,
+            actor=actor,
+        )
         resp = self._request_with_retry("POST", "/v1/promote/request", json=body, headers=self._json_headers())
         resp.raise_for_status()
         return resp.json()
@@ -149,11 +163,7 @@ class FlightdeckClient:
         approval_reason: str,
         actor: str = "sdk",
     ) -> dict[str, Any]:
-        body = {
-            "request_id": request_id,
-            "approval_reason": approval_reason,
-            "actor": actor,
-        }
+        body = promote_confirm_body(request_id=request_id, approval_reason=approval_reason, actor=actor)
         resp = self._request_with_retry("POST", "/v1/promote/confirm", json=body, headers=self._json_headers())
         resp.raise_for_status()
         return resp.json()
@@ -164,9 +174,7 @@ class FlightdeckClient:
         status: str | None = None,
         limit: int = 50,
     ) -> dict[str, Any]:
-        params: dict[str, str | int] = {"limit": limit}
-        if status is not None:
-            params["status"] = status
+        params = promotion_requests_params(status=status, limit=limit)
         resp = self._request_with_retry(
             "GET",
             "/v1/promotion-requests",
@@ -190,24 +198,18 @@ class FlightdeckClient:
         offset: int = 0,
         limit: int = 100,
     ) -> dict[str, Any]:
-        params: dict[str, str | int] = {
-            "release_id": release_id,
-            "window": window,
-            "limit": limit,
-            "offset": offset,
-        }
-        if environment is not None:
-            params["environment"] = environment
-        if tenant_id is not None:
-            params["tenant_id"] = tenant_id
-        if task_id is not None:
-            params["task_id"] = task_id
-        if trace_id is not None:
-            params["trace_id"] = trace_id
-        if session_id is not None:
-            params["session_id"] = session_id
-        if span_id is not None:
-            params["span_id"] = span_id
+        params = runs_list_params(
+            release_id=release_id,
+            window=window,
+            environment=environment,
+            tenant_id=tenant_id,
+            task_id=task_id,
+            trace_id=trace_id,
+            session_id=session_id,
+            span_id=span_id,
+            offset=offset,
+            limit=limit,
+        )
         resp = self._request_with_retry(
             "GET",
             "/v1/runs",
@@ -232,24 +234,18 @@ class FlightdeckClient:
         limit: int = 500,
     ) -> tuple[bytes, dict[str, str]]:
         """GET /v1/runs/export — returns raw NDJSON body and selected response headers."""
-        params: dict[str, str | int] = {
-            "release_id": release_id,
-            "window": window,
-            "limit": limit,
-            "offset": offset,
-        }
-        if environment is not None:
-            params["environment"] = environment
-        if tenant_id is not None:
-            params["tenant_id"] = tenant_id
-        if task_id is not None:
-            params["task_id"] = task_id
-        if trace_id is not None:
-            params["trace_id"] = trace_id
-        if session_id is not None:
-            params["session_id"] = session_id
-        if span_id is not None:
-            params["span_id"] = span_id
+        params = runs_list_params(
+            release_id=release_id,
+            window=window,
+            environment=environment,
+            tenant_id=tenant_id,
+            task_id=task_id,
+            trace_id=trace_id,
+            session_id=session_id,
+            span_id=span_id,
+            offset=offset,
+            limit=limit,
+        )
         resp = self._request_with_retry(
             "GET",
             "/v1/runs/export",
@@ -257,17 +253,7 @@ class FlightdeckClient:
             headers=self._auth_headers() or None,
         )
         resp.raise_for_status()
-        hdrs = {
-            k: resp.headers[k]
-            for k in (
-                "X-Flightdeck-Matched-Total",
-                "X-Flightdeck-Returned",
-                "X-Flightdeck-Offset",
-                "X-Flightdeck-Truncated",
-            )
-            if k in resp.headers
-        }
-        return (resp.content, hdrs)
+        return (resp.content, export_headers_from_response(resp))
 
     def post_rollback(
         self,
@@ -278,20 +264,20 @@ class FlightdeckClient:
         reason: str,
         actor: str = "sdk",
     ) -> dict[str, Any]:
-        body = {
-            "release_id": release_id,
-            "environment": environment,
-            "window": window,
-            "reason": reason,
-            "actor": actor,
-        }
+        body = rollback_body(
+            release_id=release_id,
+            environment=environment,
+            window=window,
+            reason=reason,
+            actor=actor,
+        )
         resp = self._request_with_retry("POST", "/v1/rollback", json=body, headers=self._json_headers())
         resp.raise_for_status()
         return resp.json()
 
     def ingest_run_events(self, events: Iterable[RunEvent]) -> int:
-        payload = {"events": [e.model_dump(mode="json") for e in events]}
-        if not payload["events"]:
+        payload = events_ingest_json(events)
+        if payload is None:
             return 0
         resp = self._request_with_retry("POST", "/v1/events", json=payload, headers=self._json_headers())
         resp.raise_for_status()
@@ -312,19 +298,6 @@ class FlightdeckClient:
             total += self.ingest_run_events(chunk)
         return total
 
-    def _request_with_retry(self, method: str, path: str, **kwargs) -> httpx.Response:
-        last_exc: httpx.RequestError | None = None
-        for attempt in range(self._max_retries + 1):
-            try:
-                return self._client.request(method, f"{self._base_url}{path}", **kwargs)
-            except httpx.RequestError as exc:
-                last_exc = exc
-                if attempt >= self._max_retries:
-                    raise
-                time.sleep(self._retry_backoff_s * (2**attempt))
-        assert last_exc is not None
-        raise last_exc
-
 
 class AsyncFlightdeckClient:
     def __init__(
@@ -337,24 +310,29 @@ class AsyncFlightdeckClient:
         api_token: str | None = None,
         client: httpx.AsyncClient | None = None,
     ) -> None:
-        self._base_url = base_url.rstrip("/")
+        self._core = ClientHttpCore(base_url, api_token)
         self._owns_client = client is None
         self._client = client or httpx.AsyncClient(timeout=timeout_s)
-        self._max_retries = max(0, max_retries)
-        self._retry_backoff_s = max(0.0, retry_backoff_s)
-        self._api_token = api_token
+        self._retry = HttpRetryPolicy(max(0, max_retries), max(0.0, retry_backoff_s))
 
     async def aclose(self) -> None:
         if self._owns_client:
             await self._client.aclose()
 
     def _auth_headers(self) -> dict[str, str]:
-        if self._api_token:
-            return {"Authorization": f"Bearer {self._api_token}"}
-        return {}
+        return self._core.auth_headers()
 
     def _json_headers(self) -> dict[str, str]:
-        return {"Content-Type": "application/json", **self._auth_headers()}
+        return self._core.json_headers()
+
+    async def _request_with_retry(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
+        return await async_request_with_retry(
+            self._client,
+            url=self._core.abs_url(path),
+            policy=self._retry,
+            method=method,
+            **kwargs,
+        )
 
     async def health(self) -> dict[str, Any]:
         resp = await self._request_with_retry("GET", "/health", headers=self._auth_headers() or None)
@@ -383,11 +361,7 @@ class AsyncFlightdeckClient:
         environment: str | None = None,
         limit: int = 50,
     ) -> dict[str, Any]:
-        params: dict[str, str | int] = {"limit": limit}
-        if agent_id is not None:
-            params["agent"] = agent_id
-        if environment is not None:
-            params["env"] = environment
+        params = actions_params(agent_id=agent_id, environment=environment, limit=limit)
         resp = await self._request_with_retry(
             "GET",
             "/v1/actions",
@@ -407,14 +381,14 @@ class AsyncFlightdeckClient:
         tenant_id: str | None = None,
         task_id: str | None = None,
     ) -> dict[str, Any]:
-        body: dict[str, Any] = {
-            "baseline_release_id": baseline_release_id,
-            "candidate_release_id": candidate_release_id,
-            "window": window,
-            "environment": environment,
-            "tenant_id": tenant_id,
-            "task_id": task_id,
-        }
+        body = diff_request_body(
+            baseline_release_id=baseline_release_id,
+            candidate_release_id=candidate_release_id,
+            window=window,
+            environment=environment,
+            tenant_id=tenant_id,
+            task_id=task_id,
+        )
         resp = await self._request_with_retry("POST", "/v1/diff", json=body, headers=self._json_headers())
         resp.raise_for_status()
         return resp.json()
@@ -428,13 +402,13 @@ class AsyncFlightdeckClient:
         reason: str,
         actor: str = "sdk",
     ) -> dict[str, Any]:
-        body = {
-            "release_id": release_id,
-            "environment": environment,
-            "window": window,
-            "reason": reason,
-            "actor": actor,
-        }
+        body = promote_like_body(
+            release_id=release_id,
+            environment=environment,
+            window=window,
+            reason=reason,
+            actor=actor,
+        )
         resp = await self._request_with_retry("POST", "/v1/promote", json=body, headers=self._json_headers())
         resp.raise_for_status()
         return resp.json()
@@ -448,13 +422,13 @@ class AsyncFlightdeckClient:
         reason: str,
         actor: str = "sdk",
     ) -> dict[str, Any]:
-        body = {
-            "release_id": release_id,
-            "environment": environment,
-            "window": window,
-            "reason": reason,
-            "actor": actor,
-        }
+        body = promote_like_body(
+            release_id=release_id,
+            environment=environment,
+            window=window,
+            reason=reason,
+            actor=actor,
+        )
         resp = await self._request_with_retry("POST", "/v1/promote/request", json=body, headers=self._json_headers())
         resp.raise_for_status()
         return resp.json()
@@ -466,11 +440,7 @@ class AsyncFlightdeckClient:
         approval_reason: str,
         actor: str = "sdk",
     ) -> dict[str, Any]:
-        body = {
-            "request_id": request_id,
-            "approval_reason": approval_reason,
-            "actor": actor,
-        }
+        body = promote_confirm_body(request_id=request_id, approval_reason=approval_reason, actor=actor)
         resp = await self._request_with_retry("POST", "/v1/promote/confirm", json=body, headers=self._json_headers())
         resp.raise_for_status()
         return resp.json()
@@ -481,9 +451,7 @@ class AsyncFlightdeckClient:
         status: str | None = None,
         limit: int = 50,
     ) -> dict[str, Any]:
-        params: dict[str, str | int] = {"limit": limit}
-        if status is not None:
-            params["status"] = status
+        params = promotion_requests_params(status=status, limit=limit)
         resp = await self._request_with_retry(
             "GET",
             "/v1/promotion-requests",
@@ -507,24 +475,18 @@ class AsyncFlightdeckClient:
         offset: int = 0,
         limit: int = 100,
     ) -> dict[str, Any]:
-        params: dict[str, str | int] = {
-            "release_id": release_id,
-            "window": window,
-            "limit": limit,
-            "offset": offset,
-        }
-        if environment is not None:
-            params["environment"] = environment
-        if tenant_id is not None:
-            params["tenant_id"] = tenant_id
-        if task_id is not None:
-            params["task_id"] = task_id
-        if trace_id is not None:
-            params["trace_id"] = trace_id
-        if session_id is not None:
-            params["session_id"] = session_id
-        if span_id is not None:
-            params["span_id"] = span_id
+        params = runs_list_params(
+            release_id=release_id,
+            window=window,
+            environment=environment,
+            tenant_id=tenant_id,
+            task_id=task_id,
+            trace_id=trace_id,
+            session_id=session_id,
+            span_id=span_id,
+            offset=offset,
+            limit=limit,
+        )
         resp = await self._request_with_retry(
             "GET",
             "/v1/runs",
@@ -548,24 +510,18 @@ class AsyncFlightdeckClient:
         offset: int = 0,
         limit: int = 500,
     ) -> tuple[bytes, dict[str, str]]:
-        params: dict[str, str | int] = {
-            "release_id": release_id,
-            "window": window,
-            "limit": limit,
-            "offset": offset,
-        }
-        if environment is not None:
-            params["environment"] = environment
-        if tenant_id is not None:
-            params["tenant_id"] = tenant_id
-        if task_id is not None:
-            params["task_id"] = task_id
-        if trace_id is not None:
-            params["trace_id"] = trace_id
-        if session_id is not None:
-            params["session_id"] = session_id
-        if span_id is not None:
-            params["span_id"] = span_id
+        params = runs_list_params(
+            release_id=release_id,
+            window=window,
+            environment=environment,
+            tenant_id=tenant_id,
+            task_id=task_id,
+            trace_id=trace_id,
+            session_id=session_id,
+            span_id=span_id,
+            offset=offset,
+            limit=limit,
+        )
         resp = await self._request_with_retry(
             "GET",
             "/v1/runs/export",
@@ -573,17 +529,7 @@ class AsyncFlightdeckClient:
             headers=self._auth_headers() or None,
         )
         resp.raise_for_status()
-        hdrs = {
-            k: resp.headers[k]
-            for k in (
-                "X-Flightdeck-Matched-Total",
-                "X-Flightdeck-Returned",
-                "X-Flightdeck-Offset",
-                "X-Flightdeck-Truncated",
-            )
-            if k in resp.headers
-        }
-        return (resp.content, hdrs)
+        return (resp.content, export_headers_from_response(resp))
 
     async def post_rollback(
         self,
@@ -594,20 +540,20 @@ class AsyncFlightdeckClient:
         reason: str,
         actor: str = "sdk",
     ) -> dict[str, Any]:
-        body = {
-            "release_id": release_id,
-            "environment": environment,
-            "window": window,
-            "reason": reason,
-            "actor": actor,
-        }
+        body = rollback_body(
+            release_id=release_id,
+            environment=environment,
+            window=window,
+            reason=reason,
+            actor=actor,
+        )
         resp = await self._request_with_retry("POST", "/v1/rollback", json=body, headers=self._json_headers())
         resp.raise_for_status()
         return resp.json()
 
     async def ingest_run_events(self, events: Iterable[RunEvent]) -> int:
-        payload = {"events": [e.model_dump(mode="json") for e in events]}
-        if not payload["events"]:
+        payload = events_ingest_json(events)
+        if payload is None:
             return 0
         resp = await self._request_with_retry("POST", "/v1/events", json=payload, headers=self._json_headers())
         resp.raise_for_status()
@@ -627,16 +573,3 @@ class AsyncFlightdeckClient:
         if chunk:
             total += await self.ingest_run_events(chunk)
         return total
-
-    async def _request_with_retry(self, method: str, path: str, **kwargs) -> httpx.Response:
-        last_exc: httpx.RequestError | None = None
-        for attempt in range(self._max_retries + 1):
-            try:
-                return await self._client.request(method, f"{self._base_url}{path}", **kwargs)
-            except httpx.RequestError as exc:
-                last_exc = exc
-                if attempt >= self._max_retries:
-                    raise
-                await asyncio.sleep(self._retry_backoff_s * (2**attempt))
-        assert last_exc is not None
-        raise last_exc

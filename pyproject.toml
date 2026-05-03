@@ -51,7 +51,7 @@ all = [
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
-    "ruff==0.15.12",
+    "ruff>=0.15,<0.16",
 ]
 postgres = [
     "psycopg[binary]>=3.2",
@@ -98,8 +98,6 @@ source = ["src/flightdeck"]
 omit = [
     "src/flightdeck/quickstart_smoke.py",
     "src/flightdeck/integrations/*",
-    # Thin HTTP wrapper; core policy/diff/storage coverage is the governance bar.
-    "src/flightdeck/sdk/client.py",
 ]
 
 [tool.coverage.report]

@@ -2,7 +2,9 @@
 
 `flightdeck.sdk` is a thin HTTP client for emitting runtime evidence and triggering release
 actions against a running `flightdeck serve` instance. It ships with the same SemVer as the
-CLI; see [RELEASE_NOTES.md](../RELEASE_NOTES.md) for stability expectations.
+CLI; see [RELEASE_NOTES.md](../RELEASE_NOTES.md) for stability expectations. Internally,
+**`flightdeck.sdk.http_common`** holds shared URL/header helpers, JSON/query serializers, and
+retry loops so **`FlightdeckClient`** (sync) and **`AsyncFlightdeckClient`** stay wire-identical.
 
 For most workflows the CLI is sufficient. Use the SDK when you need to:
 

@@ -2,7 +2,7 @@
 
 **Ship AI agents safely with release diffs, runtime evidence, and policy gates.**
 
-FlightDeck is **local-first** (CLI + SQLite + optional **`flightdeck serve`** UI): run evidence, pricing tables, and the ledger **stay on disk in your environment** by default—**no trace or billing payload is sent to FlightDeck as a vendor**. That posture matters for **regulated**, **air-gapped**, and **data-sovereignty** teams that cannot ship telemetry to a third-party SaaS observability backend. It is not an agent framework, prompt IDE, tracing dashboard, or gateway — it is where **what shipped**, **what ran**, **what it cost**, and **whether promote is allowed** are recorded and compared.
+FlightDeck is **local-first** (CLI + SQLite + optional **`flightdeck serve`** UI): run evidence, pricing tables, and the ledger **stay on disk in your environment** by default—**no data leaves your infrastructure** for FlightDeck’s own product telemetry (there is no vendor backend that ingests your runs or tariffs). **No trace or billing payload is sent to FlightDeck as a vendor.** That posture matters for **regulated**, **air-gapped**, and **data-sovereignty** teams that cannot ship telemetry to a third-party SaaS observability backend. It is not an agent framework, prompt IDE, tracing dashboard, or gateway — it is where **what shipped**, **what ran**, **what it cost**, and **whether promote is allowed** are recorded and compared.
 
 ## In ~20 seconds
 
@@ -17,10 +17,10 @@ You ship a candidate whose **system prompt drifts by a handful of tokens**; unde
 
 ## Who should use this?
 
-- **Primary buyer / ICP:** **Platform or ML engineering teams** (often **5–30** people) at **growth-stage** companies shipping **two or more** **LLM agents** to production—especially teams that already had a **cost** or **regression** incident from a **prompt** or **model** change and need a **governed** promote path.
+- **Growth-stage ICP:** **Platform or ML engineering teams** (often **5–30** people) at companies shipping **two or more** **LLM agents** to production—especially after a **cost** or **regression** incident from a **prompt** or **model** change—who need a **fast, governed** promote path without standing up a hosted observability product.
+- **Regulated / enterprise ICP:** **Platform and SRE teams** in **healthcare, fintech, and similar** environments where buying criteria center on **data residency**, **audit trails**, and **provable control** over evidence and pricing data—**local-first** defaults and optional self-hosted **`flightdeck serve`** match a compliance-led evaluation, not only a velocity-led one.
 - Teams that **version agent builds** (prompts, tools, model pins) and need a **durable audit trail**.
 - Engineers who want **one command** to answer “is this candidate safe to roll forward?” with **numbers**, not gut feel.
-- **Healthcare, fintech, and enterprise** operators who **cannot** default to sending traces or cost data to a **hosted** observability vendor—**local-first** evidence and pricing imports are the default integration model.
 - Anyone who has outgrown **ad hoc** folder diffs or **spreadsheet** promote checklists.
 
 ## How FlightDeck fits your stack
@@ -83,7 +83,7 @@ Not implemented yet:
 - hosted control plane
 - automated traffic routing
 - tool-cost pricing
-- OpenTelemetry import/export mapping (optional **`uv sync --extra telemetry`** or **`pip install 'flightdeck-ai[telemetry]'`** for future work)
+- OpenTelemetry: optional **`telemetry`** extra installs OTLP-capable SDK packages; call **`flightdeck.integrations.telemetry.configure_otel_tracing()`** once to wire an OTLP span exporter to **your** collector (see **[docs/sdk-integrations.md](docs/sdk-integrations.md)**)
 
 Shipped locally:
 
@@ -128,7 +128,7 @@ Or use the bash wrapper (Git Bash / WSL on Windows):
 ./scripts/smoke.sh
 ```
 
-**Bundled pricing (default `init`):** **`flightdeck init`** migrates the ledger, imports **OpenAI**, **Anthropic**, and **Google** (Gemini-class) tables at **`pricing_version` `flightdeck-bundled-2026-05`**, and writes **`.flightdeck/pricing-catalog.yaml`** with **`pricing_catalog_path`** set in **`flightdeck.yaml`**. In **`release.yaml`**, set **`spec.pricing_reference`** to `{ provider: openai | anthropic | google, pricing_version: flightdeck-bundled-2026-05 }` to get **per-table** and **catalog** cost lines on diffs without authoring YAML. These rates are a **convenience snapshot**, not live vendor billing—**`flightdeck pricing import`** your own files for production. Use **`flightdeck init --no-bundled-pricing`** for an empty ledger.
+**Bundled pricing (default `init`):** **`flightdeck init`** migrates the ledger, imports **OpenAI**, **Anthropic**, and **Google** (Gemini-class) tables at **`pricing_version` `flightdeck-bundled-2026-05`**, and writes **`.flightdeck/pricing-catalog.yaml`** with **`pricing_catalog_path`** set in **`flightdeck.yaml`**. In **`release.yaml`**, set **`spec.pricing_reference`** to `{ provider: openai | anthropic | google, pricing_version: flightdeck-bundled-2026-05 }` to get **per-table** and **catalog** cost lines on diffs without authoring YAML. These rates are a **convenience snapshot**, not live vendor billing—**`flightdeck pricing import`** your own files for production. Use **`flightdeck init --no-bundled-pricing`** for an empty ledger. Official list-pricing URLs are referenced in comments atop the bundled YAML under **`src/flightdeck/bundled_pricing/`**. **`flightdeck pricing check`** flags bundled snapshots older than **90 days** (use **`--fail`** in CI); **`release diff`** adds **`pricing.warnings`** for the same condition so cost lines do not go silently stale. **Release policy:** bundled tables are **refreshed with each minor release** when vendor public list pricing changes materially (see **[ROADMAP.md](ROADMAP.md)**).
 
 Or walk through the **full quickstart** (policy + **two** custom tariffs for the **~31%** narrative—same flow CI runs):
 
