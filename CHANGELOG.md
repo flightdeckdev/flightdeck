@@ -9,6 +9,7 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 ### Breaking
 
 - **`POST /v1/events`:** uses the same **`FLIGHTDECK_LOCAL_API_TOKEN`** / loopback policy as promotion and rollback. Remote unauthenticated ingest is no longer accepted; set the env var and send **`Authorization: Bearer`** (Python SDK **`api_token=`**, or **`--api-token`** / env in **[examples/integration/emit_sample_events.node.mjs](examples/integration/emit_sample_events.node.mjs)**).
+- **`GET /v1/*`:** when **`FLIGHTDECK_LOCAL_API_TOKEN`** is set, read APIs require **`Authorization: Bearer`** (same header as writes); previously only mutations were Bearer-gated.
 - **Python:** **`requires-python`** is **`>=3.11,<4`** (replaces **`>=3.14,<3.15`**). **`[tool.ruff] target-version`** is **`py311`**. CI follows **`.python-version`** (currently **3.12**).
 
 ### Changed
@@ -17,6 +18,9 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ### Added
 
+- **`GET /health`:** **`read_auth`** (`open` vs `bearer`) describes whether **`GET /v1/*`** requires **`Authorization: Bearer`** when **`FLIGHTDECK_LOCAL_API_TOKEN`** is set (aligned with writes).
+- **SQLite:** bounded retries on **`database is locked` / busy** for ledger **`execute`** paths; **`flightdeck serve --sqlite-lock-timeout`** / **`--retry-sqlite-lock`** (and env **`FLIGHTDECK_SQLITE_*`**) plus **`docs/operations-and-policy.md`** concurrency notes.
+- **CI / dev:** **`pytest-cov`** with **`--cov-fail-under=80`** on **`src/flightdeck`** (**`integrations/*`**, **`quickstart_smoke`**, and **`sdk/client.py`** omitted from the denominator — see **`[tool.coverage.run]`** in **`pyproject.toml`**).
 - **Experimental `flightdeck.integrations`:** optional extras **`integrations-langchain`**, **`integrations-temporal`**, **`integrations-openai-agents`**, and meta **`integrations-ci`** (CI job); thin mappers from OpenAI chat completions, Anthropic messages, OpenAI Agents–style results, LangChain callbacks, CrewAI-style manual totals, and Temporal-oriented **`labels`**. Docs: **`docs/sdk-integrations.md`**; examples: **`examples/integration/adoption/`**. Contributor policy updates in **`AGENTS.md`** / **`CLAUDE.md`**.
 
 ### Changed

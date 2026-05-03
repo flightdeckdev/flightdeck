@@ -59,7 +59,7 @@ jobs:
         run: uv run python -m ruff check src tests
 
       - name: Test
-        run: uv run python -m pytest
+        run: uv run python -m pytest --cov=flightdeck --cov-fail-under=80 --cov-report=term
 
       - name: JSON Schemas drift check
         run: |
@@ -161,7 +161,7 @@ jobs:
         run: uv run python -m ruff check src tests
 
       - name: Test
-        run: uv run python -m pytest
+        run: uv run python -m pytest --cov=flightdeck --cov-fail-under=80 --cov-report=term
 
       - name: JSON Schemas drift check
         run: |

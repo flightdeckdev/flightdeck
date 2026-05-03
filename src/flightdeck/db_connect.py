@@ -2,12 +2,49 @@
 
 from __future__ import annotations
 
+import os
+import random
 import sqlite3
+import time
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from typing import Any, Literal
 
 Backend = Literal["sqlite", "postgresql"]
+
+
+def sqlite_busy_timeout_ms() -> int:
+    raw = os.environ.get("FLIGHTDECK_SQLITE_BUSY_TIMEOUT_MS", "").strip()
+    if raw:
+        try:
+            return max(0, int(raw))
+        except ValueError:
+            pass
+    return 30_000
+
+
+def sqlite_lock_retry_enabled() -> bool:
+    v = os.environ.get("FLIGHTDECK_SQLITE_RETRY_ON_LOCK", "1").strip().lower()
+    return v not in ("0", "false", "no", "off")
+
+
+def sqlite_lock_deadline_seconds() -> float | None:
+    """``None`` = do not spin on locked/busy (fail after first error). ``>0`` = wall-clock budget."""
+    raw = os.environ.get("FLIGHTDECK_SQLITE_LOCK_TIMEOUT_S", "30").strip()
+    try:
+        t = float(raw)
+    except ValueError:
+        t = 30.0
+    if t <= 0:
+        return None
+    return t
+
+
+def _is_sqlite_busy_or_locked(exc: BaseException) -> bool:
+    if not isinstance(exc, sqlite3.OperationalError):
+        return False
+    msg = str(exc).lower()
+    return "locked" in msg or "busy" in msg
 
 
 def detect_backend(dsn: str) -> Backend:
@@ -126,9 +163,25 @@ class DbConn:
         p = tuple(params) if params is not None else ()
         if self._backend == "sqlite":
             assert self._sqlite is not None
-            cur = self._sqlite.execute(sql2, p)
-            self._last = DbCursor(self._backend, cur, None)
-            return self._last
+            deadline_s = sqlite_lock_deadline_seconds()
+            retry_on = sqlite_lock_retry_enabled() and deadline_s is not None
+            start = time.monotonic()
+            attempt = 0
+            while True:
+                try:
+                    cur = self._sqlite.execute(sql2, p)
+                    self._last = DbCursor(self._backend, cur, None)
+                    return self._last
+                except sqlite3.OperationalError as e:
+                    if not retry_on or not _is_sqlite_busy_or_locked(e):
+                        raise
+                    elapsed = time.monotonic() - start
+                    if elapsed >= deadline_s:
+                        raise
+                    cap = deadline_s - elapsed
+                    sleep = min(0.05 * (2 ** min(attempt, 8)), 1.0) * (0.5 + random.random())
+                    time.sleep(min(sleep, cap))
+                    attempt += 1
         assert self._pg is not None
         require_psycopg()
         from psycopg.rows import dict_row
@@ -168,7 +221,9 @@ def configure_sqlite(conn: sqlite3.Connection) -> None:
     conn.execute("PRAGMA foreign_keys=ON;")
     conn.execute("PRAGMA journal_mode=WAL;")
     conn.execute("PRAGMA synchronous=NORMAL;")
-    conn.execute("PRAGMA busy_timeout=5000;")
+    busy = sqlite_busy_timeout_ms()
+    # PRAGMA busy_timeout does not accept bound parameters on all SQLite builds.
+    conn.execute(f"PRAGMA busy_timeout={int(busy)};")
 
 
 @contextmanager

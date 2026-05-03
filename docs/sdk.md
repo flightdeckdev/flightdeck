@@ -79,9 +79,10 @@ method is a coroutine. Call `await client.aclose()` instead of `client.close()`.
 When `flightdeck serve` is started with `FLIGHTDECK_LOCAL_API_TOKEN` set, every **ledger write**
 — **`POST /v1/promote`**, **`POST /v1/promote/request`**, **`POST /v1/promote/confirm`**,
 **`POST /v1/rollback`**, and **`POST /v1/events`** (`ingest_run_events`) — requires the
-matching Bearer token on the `FlightdeckClient` (`api_token=…`). With no token configured
-on the server, those routes accept only **loopback** callers; read routes and **`POST /v1/diff`**
-stay open.
+matching Bearer token on the `FlightdeckClient` (`api_token=…`). The same token is required
+for **`GET /v1/*`** read APIs (`get_workspace`, `list_runs`, …). With no token configured on the
+server, writes accept only **loopback** callers and reads are open; **`POST /v1/diff`** stays
+unauthenticated regardless.
 
 ```python
 client = FlightdeckClient(
@@ -96,7 +97,7 @@ See [SECURITY.md](../SECURITY.md) for the full access model.
 
 ### `health() -> dict`
 
-`GET /health` — returns `{"status": "ok", "mutation_auth": "loopback"|"bearer"}` when the server is up (`mutation_auth` describes ledger-write auth, including event ingest; see **HTTP API**).
+`GET /health` — returns `{"status": "ok", "mutation_auth": "…", "read_auth": "…"}` when the server is up (`mutation_auth` / `read_auth` describe write vs read Bearer policy; see **HTTP API**).
 
 ### `get_workspace() -> dict`
 

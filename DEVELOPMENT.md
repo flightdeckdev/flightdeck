@@ -28,7 +28,7 @@ Local driver test helper (Docker optional): **`scripts/run_postgres_tests.ps1`**
 
 | Extra | Packages installed | When to use |
 |-------|--------------------|-------------|
-| `dev` | `pytest`, `ruff` | Development and CI; required to run tests and lint |
+| `dev` | `pytest`, `pytest-cov`, `ruff` | Development and CI; required to run tests and lint |
 | `openai` | `openai>=1.0` | If you want to use the OpenAI Python client alongside the SDK in your own agent code (not required by FlightDeck core) |
 | `anthropic` | `anthropic>=0.20` | Same, for the Anthropic Python client |
 | `telemetry` | `opentelemetry-api`, `-sdk`, `-exporter-otlp` | Forward-looking OTLP integration; FlightDeck core does **not** import OpenTelemetry at runtime |
@@ -270,7 +270,7 @@ virtual environment's Python executable directly:
 .venv/bin/python -m pytest
 ```
 
-Use **`uv run python -m pytest`** from the repo root so imports like **`from tests.test_spine import …`** resolve the same way as in CI.
+Use **`uv run python -m pytest`** from the repo root so imports like **`from tests.test_spine import …`** resolve the same way as in CI. CI adds **`--cov=flightdeck --cov-fail-under=80`** (see **`[tool.coverage.run]`** in **`pyproject.toml`** for **`omit`** — integrations shims, the quickstart entrypoint, and the HTTP SDK client are excluded so the gate tracks core ledger/diff/policy code).
 
 ## Environment variables
 

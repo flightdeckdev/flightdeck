@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 
 from flightdeck import __version__ as flightdeck_version
 from flightdeck.models import PromotionRequestRecord, WorkspacePublic
 from flightdeck.operations import OperationError, list_timeline, query_run_events_page
+from flightdeck.server.mutation_access import require_protected_read_access
 from flightdeck.server.routes.common import ensure_app_state
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_protected_read_access)])
 
 
 @router.get("/v1/workspace")

@@ -10,6 +10,7 @@ default and is intended for **local development and CI**, not public exposure.
 flightdeck serve                         # default: 127.0.0.1:8765
 flightdeck serve --port 9000            # custom port
 flightdeck serve --host 0.0.0.0         # non-loopback (prints warning; see Security)
+flightdeck serve --sqlite-lock-timeout 45 --retry-sqlite-lock  # SQLite busy/locked retries (default 30s on)
 ```
 
 The server requires a `flightdeck.yaml` in the working directory. Run `flightdeck init`
@@ -22,7 +23,7 @@ Two access tiers:
 | Route | No token configured | `FLIGHTDECK_LOCAL_API_TOKEN` set |
 |-------|--------------------|---------------------------------|
 | `GET /health` | open | open |
-| `GET /v1/*` (reads, including `GET /v1/workspace`, `GET /v1/metrics`, `GET /v1/runs`, `GET /v1/runs/export`, `GET /v1/promotion-requests`) | open | open |
+| `GET /v1/*` (reads: workspace, metrics, releases, promoted, actions, promotion-requests, runs, runs/export) | open | `Authorization: Bearer <token>` required |
 | `POST /v1/events` | loopback only | `Authorization: Bearer <token>` required |
 | `POST /v1/diff` | open | open |
 | `POST /v1/promote` | loopback only | `Authorization: Bearer <token>` required |
@@ -30,11 +31,12 @@ Two access tiers:
 | `POST /v1/rollback` | loopback only | `Authorization: Bearer <token>` required |
 
 `POST /v1/events` uses the **same** loopback / Bearer gate as promote and rollback
-(`require_ledger_write_access` in `server/mutation_access.py`). Remote agents must set
-`FLIGHTDECK_LOCAL_API_TOKEN` on the server and send matching `Authorization: Bearer` headers
-(including the Python SDK’s `api_token=`). When no token is configured, only loopback
-callers (`127.0.0.1`, `::1`, `localhost`) may append run events, so binding `--host 0.0.0.0`
-does not leave ingest open to arbitrary clients on the network.
+(`require_ledger_write_access` in `server/mutation_access.py`). **`GET /v1/*`** uses
+`require_protected_read_access`: with a token set, send the same **`Authorization: Bearer`**
+header (Python SDK **`api_token=`**). Remote agents must set `FLIGHTDECK_LOCAL_API_TOKEN` on
+the server and send matching Bearer headers when using non-loopback hosts. When no token is
+configured, only loopback callers (`127.0.0.1`, `::1`, `localhost`) may append run events, so
+binding `--host 0.0.0.0` does not leave ingest open to arbitrary clients on the network.
 
 ```bash
 export FLIGHTDECK_LOCAL_API_TOKEN="$(openssl rand -hex 32)"
@@ -56,15 +58,17 @@ Health probe. Always returns HTTP 200 while the server is up.
 **Response**
 
 ```json
-{"status": "ok", "mutation_auth": "loopback"}
+{"status": "ok", "mutation_auth": "loopback", "read_auth": "open"}
 ```
 
-`mutation_auth` is always present on current servers:
+`mutation_auth` and `read_auth` are always present on current servers:
 
-- `"loopback"` — `FLIGHTDECK_LOCAL_API_TOKEN` is not set; ledger writes (including **`POST /v1/events`**) are allowed only from loopback clients (no Bearer gate).
-- `"bearer"` — `FLIGHTDECK_LOCAL_API_TOKEN` is set; ledger writes require `Authorization: Bearer <that value>` from any client host.
+- **`mutation_auth`:** `"loopback"` — no API token; ledger writes (including **`POST /v1/events`**) are allowed only from loopback clients. `"bearer"` — token set; writes require `Authorization: Bearer <that value>` from any host.
+- **`read_auth`:** `"open"` — no API token; **`GET /v1/*`** need no Bearer. `"bearer"` — token set; read APIs require the same Bearer header as writes.
 
-This field never includes secret material.
+Neither field includes secret material.
+
+**SQLite contention:** parallel writers against the **same** workspace SQLite file can see `database is locked`. The server retries locked/busy statements for a bounded time (CLI **`--sqlite-lock-timeout`** / **`--no-retry-sqlite-lock`**, env **`FLIGHTDECK_SQLITE_LOCK_TIMEOUT_S`**, **`FLIGHTDECK_SQLITE_RETRY_ON_LOCK`**, **`FLIGHTDECK_SQLITE_BUSY_TIMEOUT_MS`** for `PRAGMA busy_timeout`). CI and multi-process setups should still use **one workspace path per concurrent server** or switch to **`database_url`** (PostgreSQL) for multi-writer throughput — see **[operations-and-policy.md](operations-and-policy.md#sqlite-concurrency-and-postgresql)**.
 
 ---
 

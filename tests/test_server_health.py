@@ -19,7 +19,7 @@ def test_health_includes_mutation_auth_loopback_when_no_token(monkeypatch: pytes
     with TestClient(create_app()) as client:
         r = client.get("/health")
     assert r.status_code == 200
-    assert r.json() == {"status": "ok", "mutation_auth": "loopback"}
+    assert r.json() == {"status": "ok", "mutation_auth": "loopback", "read_auth": "open"}
 
 
 def test_health_includes_mutation_auth_bearer_when_token_set(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -27,7 +27,7 @@ def test_health_includes_mutation_auth_bearer_when_token_set(monkeypatch: pytest
     with TestClient(create_app()) as client:
         r = client.get("/health")
     assert r.status_code == 200
-    assert r.json() == {"status": "ok", "mutation_auth": "bearer"}
+    assert r.json() == {"status": "ok", "mutation_auth": "bearer", "read_auth": "bearer"}
 
 
 def test_health_whitespace_only_token_treated_as_loopback(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -36,6 +36,27 @@ def test_health_whitespace_only_token_treated_as_loopback(monkeypatch: pytest.Mo
         r = client.get("/health")
     assert r.status_code == 200
     assert r.json()["mutation_auth"] == "loopback"
+    assert r.json()["read_auth"] == "open"
+
+
+def test_get_v1_metrics_401_without_bearer_when_token_set(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FLIGHTDECK_LOCAL_API_TOKEN", "metrics-read-gate")
+    monkeypatch.chdir(tmp_path)
+    assert CliRunner().invoke(cli, ["init"]).exit_code == 0
+    with TestClient(create_app()) as client:
+        r = client.get("/v1/metrics")
+    assert r.status_code == 401
+    assert "read route" in r.json()["detail"]
+
+
+def test_get_v1_metrics_200_with_bearer_when_token_set(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FLIGHTDECK_LOCAL_API_TOKEN", "metrics-read-ok")
+    monkeypatch.chdir(tmp_path)
+    assert CliRunner().invoke(cli, ["init"]).exit_code == 0
+    with TestClient(create_app()) as client:
+        r = client.get("/v1/metrics", headers={"Authorization": "Bearer metrics-read-ok"})
+    assert r.status_code == 200
+    assert r.json()["counters"]["releases_total"] == 0
 
 
 def test_v1_metrics_returns_counters(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

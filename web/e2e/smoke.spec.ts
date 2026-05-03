@@ -51,7 +51,11 @@ test("actions page shows direct Promote when approval off", async ({ page }) => 
 test("health endpoint", async ({ request }) => {
   const res = await request.get("/health");
   expect(res.ok()).toBeTruthy();
-  await expect(res.json()).resolves.toMatchObject({ status: "ok", mutation_auth: "loopback" });
+  await expect(res.json()).resolves.toMatchObject({
+    status: "ok",
+    mutation_auth: "loopback",
+    read_auth: "open",
+  });
 });
 
 test("security status reflects server loopback mode", async ({ page }) => {

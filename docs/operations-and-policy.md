@@ -58,10 +58,33 @@ scenarios), it re-runs the same load-and-migrate sequence and stores the results
 it also means the working directory at **first request time** determines which
 `flightdeck.yaml` is loaded, not the directory at process start.
 
-`_require_mutation_access` (called by `POST /v1/promote` and `POST /v1/rollback`) reads
+`require_ledger_write_access` (ledger writes, including **`POST /v1/events`**) and
+`require_protected_read_access` (**`GET /v1/*`** when a token is configured) read
 `request.app.state.local_api_token` set during lifespan or lazy init. The test client host
 `"testclient"` is included in `_LOCAL_CLIENT_HOSTS` alongside loopback addresses so that
-integration tests can call mutation routes without a Bearer token.
+integration tests can call **write** routes without a Bearer token when no server token is
+set; when **`FLIGHTDECK_LOCAL_API_TOKEN`** is set, writes and reads require **Bearer** even
+from the test client.
+
+---
+
+## SQLite concurrency and PostgreSQL
+
+The default ledger is **SQLite** under **`.flightdeck/`**. SQLite allows **one writer at a
+time** per database file. Running **multiple `flightdeck serve` processes** (or CI jobs)
+against the **same** workspace directory can surface **`database is locked`** /
+**`OperationalError`**. Mitigations:
+
+- **One server per workspace path** in automation; give each parallel job its own **`$WORKSPACE`** / temp dir (`flightdeck init` there).
+- **Bounded retries:** the server retries locked/busy SQLite executes for up to
+  **`--sqlite-lock-timeout`** seconds (see **`flightdeck serve --help`** and env vars in
+  **`docs/http-api.md`**). This improves correctness under brief contention; it does not make
+  concurrent multi-writer access safe on one file.
+- **PostgreSQL:** set **`database_url`** in **`flightdeck.yaml`** and install **`psycopg`**
+  (**`--extra postgres`**). Migrations are the same **`Storage.migrate()`** DDL as SQLite.
+  There is **no built-in SQLite → Postgres row copy**; for a controlled migration, export
+  evidence (**`runs export`**, **`GET /v1/runs/export`**) and re-ingest, or use your own ETL
+  plus a fresh Postgres workspace.
 
 ---
 

@@ -108,7 +108,7 @@ Failed checks print to stderr and exit 1. Passing exits 0.
 Start the local FlightDeck HTTP service.
 
 ```bash
-flightdeck serve [--host HOST] [--port PORT] [--reload]
+flightdeck serve [--host HOST] [--port PORT] [--reload] [--sqlite-lock-timeout SECONDS] [--retry-sqlite-lock / --no-retry-sqlite-lock]
 ```
 
 | Option | Default | Description |
@@ -116,12 +116,14 @@ flightdeck serve [--host HOST] [--port PORT] [--reload]
 | `--host` | `127.0.0.1` | Bind address. Non-loopback addresses print a security warning |
 | `--port` | `8765` | Bind port |
 | `--reload` | off | Hot-reload on source changes (development only) |
+| `--sqlite-lock-timeout` | `30` | Seconds to retry SQLite `database is locked` / busy errors on ledger statements (`0` disables timed retries) |
+| `--retry-sqlite-lock` | on | Retry locked/busy SQLite executes until the timeout elapses |
 
 The server exposes `/v1/*` JSON routes. See [http-api.md](http-api.md) for full route
 documentation.
 
 **Authentication:** set `FLIGHTDECK_LOCAL_API_TOKEN` to require a Bearer token for
-mutation routes (`POST /v1/promote`, `POST /v1/rollback`). See
+ledger writes and for **`GET /v1/*`** read APIs. See
 [http-api.md § Authentication](http-api.md).
 
 ```bash

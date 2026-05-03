@@ -37,6 +37,8 @@ export type HealthPayload = {
   status: string;
   /** Present on current servers; `bearer` when `FLIGHTDECK_LOCAL_API_TOKEN` is set. */
   mutation_auth?: "bearer" | "loopback";
+  /** `bearer` when the same token gates `GET /v1/*`; `open` when read routes need no Bearer. */
+  read_auth?: "bearer" | "open";
 };
 
 /**
