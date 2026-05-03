@@ -256,7 +256,7 @@ export function DiffPage() {
 
       {!diffOut && !diffErr ? (
         <section className="fd-card fd-card--hint" aria-label="Diff help">
-          <p className="fd-empty" style={{ margin: 0 }}>
+          <p className="fd-empty fd-m-0">
             Enter <strong>baseline</strong> and <strong>candidate</strong> release IDs, then <strong>Compute diff</strong>.
             Same contract as <code className="fd-mono fd-mono--sm">POST /v1/diff</code> and{" "}
             <code className="fd-mono fd-mono--sm">flightdeck release diff</code> — structured sections below summarize policy,
@@ -280,18 +280,16 @@ export function DiffPage() {
                   <div className="fd-diff-section__body">
                     <Badge tone={policy.passed ? "pass" : "fail"}>{policy.passed ? "PASS" : "FAIL"}</Badge>
                     {policy.evaluatedAt ? (
-                      <span className="fd-muted" style={{ marginLeft: "0.5rem", fontSize: "0.85rem" }}>
-                        evaluated_at {policy.evaluatedAt}
-                      </span>
+                      <span className="fd-muted-inline fd-ml-md">evaluated_at {policy.evaluatedAt}</span>
                     ) : null}
                     {policy.reasons.length > 0 ? (
-                      <ul className="fd-reasons" style={{ marginTop: "0.5rem" }}>
+                      <ul className="fd-reasons fd-mt-md">
                         {policy.reasons.map((r) => (
                           <li key={r}>{r}</li>
                         ))}
                       </ul>
                     ) : (
-                      <p className="fd-muted" style={{ margin: "0.35rem 0 0", fontSize: "0.88rem" }}>
+                      <p className="fd-muted-p">
                         No policy constraint messages (pass with empty reasons, or policy omitted).
                       </p>
                     )}
@@ -306,7 +304,7 @@ export function DiffPage() {
                   Evidence window
                 </h4>
                 {samples ? (
-                  <p className="fd-diff-section__body fd-muted" style={{ margin: 0 }}>
+                  <p className="fd-diff-section__body fd-muted fd-m-0">
                     Baseline runs: <strong>{num(samples.baseline_runs)}</strong> · Candidate runs:{" "}
                     <strong>{num(samples.candidate_runs)}</strong> · Confidence:{" "}
                     <strong>{String(samples.confidence ?? "—")}</strong>
@@ -323,7 +321,7 @@ export function DiffPage() {
                 </h4>
                 {pricing ? (
                   <div className="fd-diff-section__body">
-                    <p className="fd-muted" style={{ margin: "0 0 0.65rem", fontSize: "0.88rem" }}>
+                    <p className="fd-muted fd-block-mb-065 fd-type-desc">
                       Resolved models:{" "}
                       <code className="fd-mono fd-mono--sm">
                         {pricing.baselineProvider}/{pricing.baselineVersion} {pricing.baselineModel}
@@ -333,13 +331,9 @@ export function DiffPage() {
                         {pricing.candidateProvider}/{pricing.candidateVersion} {pricing.candidateModel}
                       </code>
                       {pricing.changed ? (
-                        <span className="fd-badge fd-badge--warn" style={{ marginLeft: "0.35rem" }}>
-                          pricing/model changed
-                        </span>
+                        <span className="fd-badge fd-badge--warn fd-ml-sm">pricing/model changed</span>
                       ) : (
-                        <span className="fd-badge fd-badge--neutral" style={{ marginLeft: "0.35rem" }}>
-                          unchanged
-                        </span>
+                        <span className="fd-badge fd-badge--neutral fd-ml-sm">unchanged</span>
                       )}
                     </p>
                     {(() => {
@@ -351,7 +345,7 @@ export function DiffPage() {
                       const versionSkew = bv.length > 0 && cv.length > 0 && bv !== cv;
                       if (!providerSkew && !versionSkew) return null;
                       return (
-                        <p className="fd-alert fd-alert--warn" style={{ margin: "0 0 0.65rem" }} role="status">
+                        <p className="fd-alert fd-alert--warn fd-block-mb-065" role="status">
                           {versionSkew ? (
                             <>
                               Imported <strong>pricing table versions</strong> differ (
@@ -372,10 +366,8 @@ export function DiffPage() {
                     })()}
                     {pricing.warnings.length > 0 ? (
                       <>
-                        <p className="fd-diff-section__title" style={{ marginBottom: "0.35rem" }}>
-                          Pricing warnings
-                        </p>
-                        <ul className="fd-alert fd-alert--warn fd-reasons" style={{ marginTop: 0 }}>
+                        <p className="fd-diff-section__title fd-mb-035">Pricing warnings</p>
+                        <ul className="fd-alert fd-alert--warn fd-reasons fd-mt-0">
                           {pricing.warnings.map((w) => (
                             <li key={w}>{w}</li>
                           ))}
@@ -384,10 +376,8 @@ export function DiffPage() {
                     ) : null}
                     {pricing.hints.length > 0 ? (
                       <>
-                        <p className="fd-diff-section__title" style={{ margin: "0.65rem 0 0.35rem" }}>
-                          Hints
-                        </p>
-                        <ul className="fd-alert fd-alert--info fd-reasons" style={{ marginTop: 0 }}>
+                        <p className="fd-diff-section__title fd-block-mt-065-mb-035">Hints</p>
+                        <ul className="fd-alert fd-alert--info fd-reasons fd-mt-0">
                           {pricing.hints.map((h) => (
                             <li key={h}>{h}</li>
                           ))}
@@ -396,12 +386,10 @@ export function DiffPage() {
                     ) : null}
                     {pricing.catalog && (pricing.catalog.enabled || pricing.catalog.warnings.length > 0) ? (
                       <>
-                        <p className="fd-diff-section__title" style={{ margin: "0.65rem 0 0.35rem" }}>
-                          Pricing catalog
-                        </p>
-                        <div className="fd-alert fd-alert--info" style={{ marginTop: 0 }}>
+                        <p className="fd-diff-section__title fd-block-mt-065-mb-035">Pricing catalog</p>
+                        <div className="fd-alert fd-alert--info fd-mt-0">
                           {pricing.catalog.enabled ? (
-                            <p style={{ margin: "0 0 0.35rem" }}>
+                            <p className="fd-m-0 fd-mb-035">
                               Catalog v{pricing.catalog.version ?? "—"} · slots{" "}
                               <code className="fd-mono fd-mono--sm">{pricing.catalog.baselineSlot ?? "—"}</code> →{" "}
                               <code className="fd-mono fd-mono--sm">{pricing.catalog.candidateSlot ?? "—"}</code>
@@ -418,12 +406,12 @@ export function DiffPage() {
                               ) : null}
                             </p>
                           ) : (
-                            <p className="fd-muted" style={{ margin: 0 }}>
+                            <p className="fd-muted fd-m-0">
                               Catalog disabled or incomplete for this diff.
                             </p>
                           )}
                           {pricing.catalog.warnings.length > 0 ? (
-                            <ul className="fd-reasons" style={{ marginBottom: 0 }}>
+                            <ul className="fd-reasons fd-mb-0">
                               {pricing.catalog.warnings.map((w) => (
                                 <li key={w}>{w}</li>
                               ))}
@@ -439,10 +427,8 @@ export function DiffPage() {
                     pricing.prices.baselineOutput !== null &&
                     pricing.prices.candidateOutput !== null ? (
                       <>
-                        <p className="fd-diff-section__title" style={{ margin: "0.65rem 0 0.35rem" }}>
-                          Per-1k token prices (USD)
-                        </p>
-                        <dl className="fd-dl fd-dl--inline" style={{ margin: 0 }}>
+                        <p className="fd-diff-section__title fd-block-mt-065-mb-035">Per-1k token prices (USD)</p>
+                        <dl className="fd-dl fd-dl--inline fd-m-0">
                           <div>
                             <dt>Input / 1k</dt>
                             <dd className="fd-mono fd-mono--sm">
@@ -456,7 +442,7 @@ export function DiffPage() {
                             </dd>
                           </div>
                         </dl>
-                        <p className="fd-muted" style={{ margin: "0.5rem 0 0", fontSize: "0.82rem" }}>
+                        <p className="fd-muted-xs fd-mt-md">
                           Cost rollups reflect pricing table and model identity; compare with catalog lines above when
                           configured.
                         </p>

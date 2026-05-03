@@ -55,10 +55,10 @@ export function SecurityStatusBar() {
     return (
       <div className="fd-security-strip" role="status" aria-busy="true" aria-live="polite">
         <span className="fd-sr-only">Checking server security</span>
-        <p className="fd-muted fd-security-strip__msg" style={{ margin: "0 0 0.35rem" }}>
+        <p className="fd-muted fd-security-strip__msg fd-security-strip__loading-line">
           Checking <code className="fd-mono fd-mono--sm">/health</code> for mutation rules…
         </p>
-        <span className="fd-skeleton fd-skeleton--w75" style={{ maxWidth: "26rem", display: "block" }} />
+        <span className="fd-skeleton fd-skeleton--w75 fd-security-strip__skeleton" />
       </div>
     );
   }

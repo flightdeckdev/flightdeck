@@ -472,6 +472,15 @@ body {
   margin-top: 1rem;
 }
 
+.fd-actions--align-center {
+  align-items: center;
+}
+
+.fd-grow-soft {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
 .fd-alert {
   padding: 0.65rem 0.85rem;
   border-radius: var(--fd-radius-sm);
@@ -529,6 +538,15 @@ body {
   text-decoration: underline;
 }
 
+.fd-json-panel__toggle:focus {
+  outline: none;
+}
+
+.fd-json-panel__toggle:focus-visible {
+  border-radius: var(--fd-radius-sm);
+  box-shadow: var(--fd-focus-ring);
+}
+
 .fd-json-panel__chevron {
   font-size: 0.7rem;
   opacity: 0.85;
@@ -577,6 +595,19 @@ body {
   align-items: center;
   gap: 0.35rem 0.5rem;
   font-size: 0.88rem;
+}
+
+/* Large metric values (Overview counters; Diff baseline/candidate row) */
+.fd-metric__bc {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fd-text);
+  line-height: 1.25;
 }
 
 .fd-metric__tag {
@@ -731,6 +762,13 @@ body {
   opacity: 1;
   pointer-events: auto;
   box-shadow: var(--fd-focus-ring);
+}
+
+button.fd-skip-link {
+  width: auto;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -977,6 +1015,110 @@ body {
 
 .fd-inline-nav a:hover {
   text-decoration: underline;
+}
+
+/* Layout / spacing utilities (prefer over inline styles in TSX) */
+.fd-m-0 {
+  margin: 0;
+}
+
+.fd-mt-sm {
+  margin-top: 0.35rem;
+}
+
+.fd-mt-md {
+  margin-top: 0.5rem;
+}
+
+.fd-mt-lg {
+  margin-top: 0.65rem;
+}
+
+.fd-mt-xl {
+  margin-top: 0.75rem;
+}
+
+.fd-mt-1 {
+  margin-top: 1rem;
+}
+
+.fd-ml-sm {
+  margin-left: 0.35rem;
+}
+
+.fd-ml-md {
+  margin-left: 0.5rem;
+}
+
+.fd-mb-md {
+  margin-bottom: 0.65rem;
+}
+
+.fd-muted-xs {
+  font-size: 0.78rem;
+  color: var(--fd-muted);
+}
+
+.fd-muted-inline {
+  font-size: 0.85rem;
+  color: var(--fd-muted);
+}
+
+.fd-muted-p {
+  margin: 0.35rem 0 0;
+  font-size: 0.88rem;
+  color: var(--fd-muted);
+}
+
+.fd-flex-inline-gap {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.fd-security-strip__loading-line {
+  margin: 0 0 0.35rem;
+}
+
+.fd-security-strip__skeleton {
+  display: block;
+  max-width: 26rem;
+}
+
+.fd-results-meta {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--fd-muted);
+}
+
+.fd-block-mb-065 {
+  margin: 0 0 0.65rem;
+}
+
+.fd-block-mt-065-mb-035 {
+  margin: 0.65rem 0 0.35rem;
+}
+
+.fd-mb-035 {
+  margin-bottom: 0.35rem;
+}
+
+.fd-mt-0 {
+  margin-top: 0;
+}
+
+.fd-mb-0 {
+  margin-bottom: 0;
+}
+
+.fd-break-word {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.fd-type-desc {
+  font-size: 0.88rem;
 }
 
 /* Narrow viewports: stack sidebar above content; tables may wrap long tokens */

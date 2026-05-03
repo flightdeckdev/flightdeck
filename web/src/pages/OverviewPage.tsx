@@ -26,9 +26,9 @@ function TableShell({
   return (
     <section className="fd-card" aria-labelledby={hid}>
       <div className="fd-card__head">
-        <h2 className="fd-card__title" id={hid}>
+        <h3 className="fd-card__title" id={hid}>
           {title}
-        </h2>
+        </h3>
         {description ? <p className="fd-card__desc">{description}</p> : null}
       </div>
       <div className="fd-table-wrap">{children}</div>
@@ -119,7 +119,7 @@ export function OverviewPage() {
       {metrics ? (
         <section className="fd-card" aria-label="Ledger metrics">
           <div className="fd-card__head">
-            <h2 className="fd-card__title">Ledger metrics</h2>
+            <h3 className="fd-card__title">Ledger metrics</h3>
             <p className="fd-card__desc">
               Read-only counters from{" "}
               <code className="fd-mono fd-mono--sm">GET /v1/metrics</code> (schema v
