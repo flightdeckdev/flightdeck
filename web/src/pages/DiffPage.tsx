@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { fetchJson } from "../api";
 import { Badge } from "../components/Badge";
 import { JsonPanel } from "../components/JsonPanel";
@@ -201,15 +202,16 @@ export function DiffPage() {
 
   return (
     <>
-      <div className="fd-page-head">
+      <header className="fd-page-head">
         <div>
           <h2 className="fd-page-title">Run diff</h2>
           <p className="fd-page-sub">
             Compare baseline vs candidate over a window. Same contract as{" "}
-            <code className="fd-mono fd-mono--sm">flightdeck release diff</code>.
+            <code className="fd-mono fd-mono--sm">flightdeck release diff</code>. Release IDs usually come from{" "}
+            <Link to="/">Overview</Link> or the CLI—nothing is prefilled from navigation.
           </p>
         </div>
-      </div>
+      </header>
 
       <section className="fd-card" aria-busy={busy} aria-label="Diff query">
         <div className="fd-form-grid">

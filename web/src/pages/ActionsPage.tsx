@@ -275,7 +275,7 @@ export function ActionsPage() {
 
   return (
     <>
-      <div className="fd-page-head">
+      <header className="fd-page-head">
         <div>
           <h2 className="fd-page-title">Promote & rollback</h2>
           <p className="fd-page-sub">
@@ -285,7 +285,7 @@ export function ActionsPage() {
             send <code className="fd-mono fd-mono--sm">Authorization: Bearer</code>.
           </p>
         </div>
-      </div>
+      </header>
 
       {workspaceErr ? <p className="fd-alert fd-alert--error">{workspaceErr}</p> : null}
 

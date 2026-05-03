@@ -49,8 +49,6 @@ export function AppShell() {
                     className="fd-sidebar__logo"
                     src={flightdeckMarkUrl}
                     alt=""
-                    width={40}
-                    height={40}
                     decoding="async"
                   />
                 </div>

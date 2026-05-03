@@ -5,6 +5,7 @@ import { fetchMetrics, loadTimeline } from "../api";
 import { useTimelineRefresh } from "../context/TimelineRefreshContext";
 import { Badge } from "../components/Badge";
 import { JsonPanel } from "../components/JsonPanel";
+import { ReleaseLifecycleStrip } from "../components/ReleaseLifecycleStrip";
 
 const OVERVIEW_POLL_MS = 30_000;
 
@@ -95,7 +96,7 @@ export function OverviewPage() {
 
   return (
     <>
-      <div className="fd-page-head">
+      <header className="fd-page-head">
         <div>
           <h2 className="fd-page-title">Overview</h2>
           <p className="fd-page-sub">
@@ -104,7 +105,9 @@ export function OverviewPage() {
             <Link to="/actions">Actions</Link>.
           </p>
         </div>
-      </div>
+      </header>
+
+      <ReleaseLifecycleStrip />
 
       {error && !loading ? <p className="fd-alert fd-alert--error">{error}</p> : null}
       {loading ? (

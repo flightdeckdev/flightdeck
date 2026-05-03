@@ -36,6 +36,12 @@ See **[CONTRIBUTING.md](CONTRIBUTING.md)** for a pre-push checklist aligned with
 
 ## Local HTTP API (`flightdeck serve`)
 
+### `FLIGHTDECK_LOCAL_API_TOKEN` — what it is (and is not)
+
+- **You choose the value.** FlightDeck does **not** generate, mint, or rotate this string for you. It is a **shared secret** you set in the server environment (same idea as a static API key). A typical choice is a long random value (for example `openssl rand -hex 32` as in **[docs/http-api.md](docs/http-api.md)**).
+- **What it gates:** access to this process’s **HTTP JSON API** (`GET /v1/*` when set, plus ledger writes and ingest) via the **`Authorization: Bearer …`** header. SDKs use **`api_token=`**; scripts and agents send the header explicitly; the **bundled React UI** uses **`VITE_FLIGHTDECK_LOCAL_API_TOKEN`** at build time (or **`web/.env.local`** under `npm run dev`) so the browser can send the **same** secret — see **[docs/web-ui.md](docs/web-ui.md)**.
+- **What it is not:** end-user login, OAuth/OIDC, SSO, or per-person identity inside FlightDeck. Those are **not** part of today’s core product; the roadmap treats stronger identity as a longer arc (see **[ROADMAP.md](ROADMAP.md)**).
+
 The bundled server is intended for **local development and demos**. **`POST /v1/promote`**, **`POST /v1/promote/request`**, **`POST /v1/promote/confirm`**, **`POST /v1/rollback`**, and **`POST /v1/events`** (run event ingest) share one **ledger-write** access model in server code: with no token configured, only **loopback** clients (`127.0.0.1`, `::1`, `localhost`, and the Starlette test client) may call them. If you set **`FLIGHTDECK_LOCAL_API_TOKEN`**, every such request must include **`Authorization: Bearer <that value>`**; use a strong random value and treat it like a local secret. Remote emitters (agents, sidecars) must use the Bearer path when the server listens beyond loopback.
 
 **Human approval** (`promotion_requires_approval: true` in `flightdeck.yaml`) adds a **second actor step** before a promote is applied: **`POST /v1/promote/request`** creates a pending row; **`POST /v1/promote/confirm`** completes it. **Policy still runs on confirm** — approval is not a bypass; a request that fails policy remains blocked with the same HTTP **409** outcome as a direct promote.

@@ -270,7 +270,7 @@ After a successful **promote** or **rollback** (or **confirm**):
 2. Outcome card shows policy badge, pointer badge, metric grid, and reasons list when applicable.
 3. `notifyTimelineMutated()` runs so `OverviewPage` refetches.
 
-**Auth:** `VITE_FLIGHTDECK_LOCAL_API_TOKEN` is sent on every `fetchJson` call, including **`POST /v1/promote/request`** and **`POST /v1/promote/confirm`**. See [http-api.md § Authentication](http-api.md#authentication-and-access-control).
+**Auth:** `VITE_FLIGHTDECK_LOCAL_API_TOKEN` is sent on every `fetchJson` call, including **`POST /v1/promote/request`** and **`POST /v1/promote/confirm`**. It must **match** `FLIGHTDECK_LOCAL_API_TOKEN` on the server when the server enforces Bearer (see [http-api.md § Authentication](http-api.md#authentication-and-access-control)). FlightDeck does **not** mint this value: the operator chooses a shared secret for **HTTP API** access. It is baked in at **build time** for the committed static bundle; local Bearer testing normally uses **`web/.env.local`** + **`npm run dev`**. It is **not** OAuth or end-user SSO — see [SECURITY.md](../SECURITY.md) (**Local HTTP API**).
 
 **HTTP errors:** `fetchJson` formats FastAPI **`detail`** strings, validation arrays, and `{ message: … }` objects into a single `Error` message for the alert line.
 

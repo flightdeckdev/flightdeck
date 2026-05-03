@@ -18,6 +18,8 @@ first if it does not exist.
 
 ## Authentication and access control
 
+**Credential model:** `FLIGHTDECK_LOCAL_API_TOKEN` is an **operator-chosen shared secret** for this server instance. FlightDeck does **not** issue it. It gates **HTTP access** to the local API (reads and/or writes per the table below). It is **not** OAuth, SSO, or per-user identity — see **[SECURITY.md](../SECURITY.md#local-http-api-flightdeck-serve)** and **[ROADMAP.md](../ROADMAP.md)** for scope and future directions.
+
 Two access tiers:
 
 | Route | No token configured | `FLIGHTDECK_LOCAL_API_TOKEN` set |
