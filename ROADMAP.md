@@ -6,7 +6,7 @@ This document is **strategy and ordering**, not a second changelog. It goes from
 
 **Reality check:** FlightDeck is intentionally **local-first** (CLI + SQLite + optional `flightdeck serve`). That keeps trust boundaries explicit; teams still supply integration glue to run it broadly in production.
 
-**Version detail:** The current shipping line is **v1.1.2**. For SemVer-by-SemVer behavior and migrations, use **[RELEASE_NOTES.md](RELEASE_NOTES.md)** and **[CHANGELOG.md](CHANGELOG.md)**.
+**Version detail:** The current shipping line is **v1.2.0**. For SemVer-by-SemVer behavior and migrations, use **[RELEASE_NOTES.md](RELEASE_NOTES.md)** and **[CHANGELOG.md](CHANGELOG.md)**.
 
 ---
 
@@ -35,25 +35,25 @@ Strategic UX intent for the bundled React app (routing and components: **[docs/w
 
 **Shipped surfaces**
 
-| Surface | Role |
-|--------|------|
-| **Overview** | Ledger / promotion snapshot, ledger metrics |
-| **Diff** | Release comparison, pricing / catalog / hints, policy outcome |
-| **Runs** | Forensics filters, listing, export |
-| **Actions / Promote** | Direct promote vs approval request/confirm, rollback |
-| **Shell** | Primary nav, security/status strip, optional read-only build |
+| Surface | Role | Operator outcome (intent) |
+|--------|------|----------------------------|
+| **Overview** | Ledger / promotion snapshot, ledger metrics | See promotion posture and ledger health at a glance before opening Diff or Runs. |
+| **Diff** | Release comparison, pricing / catalog / hints, policy outcome | Decide promote vs blocked with scannable economics and policy, not raw JSON first. |
+| **Runs** | Forensics filters, listing, export | Narrow to the slice that explains a spike or incident without re-ingesting elsewhere. |
+| **Actions / Promote** | Direct promote vs approval request/confirm, rollback | Complete an auditable promotion or rollback with clear guardrails. |
+| **Shell** | Primary nav, security/status strip, optional read-only build | Trust posture (token, read-only) stays visible while navigating. |
 
 **UX and UI backlog (grouped)**
 
 These map to **What is next** items **1**, **2**, and **5**; ship notes stay in **RELEASE_NOTES** / **CHANGELOG**.
 
-1. **Runs and forensics (web)** — Run or trace **detail** (drawer or page), clearer **empty and error** states, optional **timeline** grouping by `trace_id` / session, export affordances consistent with server limits.
-2. **Diff comprehension** — Stronger **scannability** for policy blocks and pricing/catalog lines; surface **version skew** and hint copy when the API exposes it.
-3. **Promotion and approval** — **Progressive disclosure** for approval vs direct promote, clearer confirmation copy, **pending requests** table polish.
-4. **Overview and trust** — Metrics **context** (what a counter means), light cross-links to Diff/Runs—not a metrics dashboard product.
-5. **Shell and quality bar** — **Loading** states, consistent spacing and type rhythm, keyboard **focus** and labels, layouts that tolerate narrow viewports where cheap.
-6. **Security ergonomics (UI)** — Token/env/mutation visibility, read-only build behavior, cautious affordances for destructive actions.
-7. **Visual system** — Shared typography scale, spacing rhythm, **focus-visible** affordances, and narrow-layout breakpoints so the operator surfaces stay legible without a separate design system product.
+1. **Outcome:** an engineer can open a **single run or trace** view and answer “what happened on this request?” without leaving the app — **Runs and forensics (web):** run or trace **detail** (drawer or page), clearer **empty and error** states, optional **timeline** grouping by `trace_id` / session, export affordances consistent with server limits.
+2. **Outcome:** a reviewer spots **policy blocks** and **pricing skew** in seconds — **Diff comprehension:** stronger **scannability** for policy blocks and pricing/catalog lines; surface **version skew** and hint copy when the API exposes it.
+3. **Outcome:** an approver completes **request → confirm** without ambiguity — **Promotion and approval:** **progressive disclosure** for approval vs direct promote, clearer confirmation copy, **pending requests** table polish.
+4. **Outcome:** counters on Overview are **interpretable**, not decorative — **Overview and trust:** metrics **context** (what a counter means), light cross-links to Diff/Runs—not a metrics dashboard product.
+5. **Outcome:** the UI feels **fast and accessible** on a laptop — **Shell and quality bar:** **loading** states, consistent spacing and type rhythm, keyboard **focus** and labels, layouts that tolerate narrow viewports where cheap.
+6. **Outcome:** operators **see** when mutations or tokens apply — **Security ergonomics (UI):** token/env/mutation visibility, read-only build behavior, cautious affordances for destructive actions.
+7. **Outcome:** dense operator layouts stay **readable** without a bespoke design system — **Visual system:** shared typography scale, spacing rhythm, **focus-visible** affordances, and narrow-layout breakpoints so the operator surfaces stay legible without a separate design system product.
 
 **Explicit UI deferrals**
 
@@ -81,15 +81,15 @@ Gaps between “works locally” and “easy to use across production services.�
 
 Each item ties to the core promise: **release integrity**, **runtime evidence**, **policy-gated promotion**, and **auditability** (see **[AGENTS.md](AGENTS.md)**).
 
-1. **Evidence and forensics (web)** — Replay/trace-oriented views and richer export semantics on top of `runs list`, `trace_id`, and JSONL export, so operators can reason over evidence without leaving the product surface. *UI details: **[Web UI and operator experience](#web-ui-and-operator-experience)**.*
-2. **Catalog lifecycle and diff diagnostics** — Stronger mismatch signals beyond pricing-table row presence (for example version skew hints), strengthening economic governance on diffs. *UI details: **[Web UI and operator experience](#web-ui-and-operator-experience)**.*
-3. **Integration glue** — Maintain app runtime emitters, CI/GitOps examples, and `serve` deployment recipes so the path from code to gated promotion is copy-pasteable.
-4. **Serve and deployment hardening** — Clear operator narrative for health checks, supervision, and backup/restore alongside existing Compose/Helm references.
-5. **Security ergonomics** — Continue explicit token/env status, mutation guardrails, and optional read-only UI patterns for local and bounded remote use. *UI details: **[Web UI and operator experience](#web-ui-and-operator-experience)**.*
-6. **OTLP-oriented integration (mid term)** — Documented or thin adapter-style paths for correlated telemetry; not a commitment to an in-product APM.
-7. **Fleet / cross-workspace (conditional)** — Broader governance surfaces only after the signals in **Horizons and conditions** below; default remains one workspace, one ledger.
+1. **Outcome:** operators **pinpoint the run or trace** behind a regression or cost jump from the web — **Evidence and forensics (web):** replay/trace-oriented views and richer export semantics on top of `runs list`, `trace_id`, and JSONL export, so operators can reason over evidence without leaving the product surface. *UI details: **[Web UI and operator experience](#web-ui-and-operator-experience)**.*
+2. **Outcome:** economic diffs **surface version and naming skew** before a bad promote — **Catalog lifecycle and diff diagnostics:** stronger mismatch signals beyond pricing-table row presence (for example version skew hints), strengthening economic governance on diffs. *UI details: **[Web UI and operator experience](#web-ui-and-operator-experience)**.*
+3. **Outcome:** a new service reaches **register → ingest → diff → gate** using **maintained examples** — **Integration glue:** maintain app runtime emitters, CI/GitOps examples, and `serve` deployment recipes so the path from code to gated promotion is copy-pasteable.
+4. **Outcome:** **`flightdeck serve`** in production is **boring to operate** (health, restarts, backups) — **Serve and deployment hardening:** clear operator narrative for health checks, supervision, and backup/restore alongside existing Compose/Helm references.
+5. **Outcome:** teams using **Bearer** and read-only builds **do not foot-gun** — **Security ergonomics:** continue explicit token/env status, mutation guardrails, and optional read-only UI patterns for local and bounded remote use. *UI details: **[Web UI and operator experience](#web-ui-and-operator-experience)**.*
+6. **Outcome:** correlated **infra** telemetry can sit **next to** ledger evidence without becoming an APM product — **OTLP-oriented integration (mid term):** documented or thin adapter-style paths for correlated telemetry; not a commitment to an in-product APM.
+7. **Outcome (conditional):** multi-team governance **without** breaking one-ledger trust — **Fleet / cross-workspace (conditional):** broader governance surfaces only after the signals in **Horizons and conditions** below; default remains one workspace, one ledger.
 
-Optional milestone framing (headline only): a **v1.2** line might emphasize **forensics + catalog diagnostics**; ship notes still land in **RELEASE_NOTES** / **CHANGELOG**.
+**v1.2.0** ships the Python **3.11+** floor, **HTTP access** tightening for ingest and read APIs when a local token is set, **bundled default pricing** on **`flightdeck init`**, optional **PostgreSQL**, **runs export** / filters, substantial **web** operator UX, and experimental **`flightdeck.integrations`**. Deeper **catalog diagnostics** and **forensics** workstreams continue under **What is next**; ship notes live in **RELEASE_NOTES** / **CHANGELOG**.
 
 ---
 
@@ -139,8 +139,8 @@ Use **[examples/README.md](examples/README.md)** as a discoverability pass again
 
 **Operator experience (web):**
 
-- An operator can reach a **promote vs blocked-by-policy** conclusion from **Diff** and **Actions** without opening raw JSON first.
-- A forensics task (for example trace-scoped triage) is completed from **Runs** without falling back to the CLI for the same filters and slice.
+- **Outcome:** within one **Diff** + **Actions** pass, an operator states **promote vs blocked-by-policy** without opening raw JSON first.
+- **Outcome:** within about **two minutes**, an engineer **isolates the run or trace** responsible for a cost or error spike using **Runs** filters and export—without re-running the CLI for the same slice.
 
 ---
 

@@ -6,38 +6,36 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ## Unreleased
 
+## 1.2.0 - 2026-05-03
+
 ### Breaking
 
 - **`POST /v1/events`:** uses the same **`FLIGHTDECK_LOCAL_API_TOKEN`** / loopback policy as promotion and rollback. Remote unauthenticated ingest is no longer accepted; set the env var and send **`Authorization: Bearer`** (Python SDK **`api_token=`**, or **`--api-token`** / env in **[examples/integration/emit_sample_events.node.mjs](examples/integration/emit_sample_events.node.mjs)**).
 - **`GET /v1/*`:** when **`FLIGHTDECK_LOCAL_API_TOKEN`** is set, read APIs require **`Authorization: Bearer`** (same header as writes); previously only mutations were Bearer-gated.
 - **Python:** **`requires-python`** is **`>=3.11,<4`** (replaces **`>=3.14,<3.15`**). **`[tool.ruff] target-version`** is **`py311`**. CI follows **`.python-version`** (currently **3.12**).
 
-### Changed
-
-- **Docs / examples:** **`DEVELOPMENT.md`**, **`AGENTS.md`**, **`docs/sdk.md`**, **`docs/troubleshooting.md`**, **`examples/integration/README.md`**, **`examples/integration/adoption/README.md`**, **`examples/deploy/README.md`** — align with the Python range and ledger-write ingest model.
-
 ### Added
 
+- **`flightdeck init`** (default): migrates the ledger, imports **bundled** OpenAI / Anthropic / Google pricing tables (**`pricing_version` `flightdeck-bundled-2026-05`**, illustrative snapshot), writes **`.flightdeck/pricing-catalog.yaml`**, and sets **`pricing_catalog_path`** in **`flightdeck.yaml`** so diffs can show cost signals without manual **`pricing import`**. Opt out with **`--no-bundled-pricing`**. Bundled YAML ships under **`src/flightdeck/bundled_pricing/`** (wheel package data).
 - **`GET /health`:** **`read_auth`** (`open` vs `bearer`) describes whether **`GET /v1/*`** requires **`Authorization: Bearer`** when **`FLIGHTDECK_LOCAL_API_TOKEN`** is set (aligned with writes).
 - **SQLite:** bounded retries on **`database is locked` / busy** for ledger **`execute`** paths; **`flightdeck serve --sqlite-lock-timeout`** / **`--retry-sqlite-lock`** (and env **`FLIGHTDECK_SQLITE_*`**) plus **`docs/operations-and-policy.md`** concurrency notes.
 - **CI / dev:** **`pytest-cov`** with **`--cov-fail-under=80`** on **`src/flightdeck`** (**`integrations/*`**, **`quickstart_smoke`**, and **`sdk/client.py`** omitted from the denominator — see **`[tool.coverage.run]`** in **`pyproject.toml`**).
 - **Experimental `flightdeck.integrations`:** optional extras **`integrations-langchain`**, **`integrations-temporal`**, **`integrations-openai-agents`**, and meta **`integrations-ci`** (CI job); thin mappers from OpenAI chat completions, Anthropic messages, OpenAI Agents–style results, LangChain callbacks, CrewAI-style manual totals, and Temporal-oriented **`labels`**. Docs: **`docs/sdk-integrations.md`**; examples: **`examples/integration/adoption/`**. Contributor policy updates in **`AGENTS.md`** / **`CLAUDE.md`**.
-
-### Changed
-
-- **Web Runs:** forensics — empty / offset / truncation messaging, export copy, trace band rows or **Group by trace_id**, **View** drawer (structured fields + full JSON, **session_id** / **span_id**, focus trap + return focus, **`aria-haspopup="dialog"`**), trace/status columns; **run-query** failures show a typed error card with **Retry**.
-- **Web Diff:** scannable sections (policy, evidence window, pricing/catalog/hints, rollups), pre-query hint, `evaluated_at` when present; warn when imported **pricing table versions** or **providers** differ baseline vs candidate.
-- **Web Actions:** workspace loading skeleton; numbered approval steps; pending **Refresh list** / **Use for confirm**; clearer confirms; approval-reason placeholder; **Rollback** danger-styled; **Actions** shows whether **`VITE_FLIGHTDECK_LOCAL_API_TOKEN`** is set (no value) and an inline hint when the server uses **Bearer** and the UI token is missing.
-- **Web shell / Overview / CSS:** **Langfuse-style** left sidebar + main column (stacks on narrow viewports); skeleton loading on first load; **Overview** auto-polls timeline + metrics every **30s** when the tab is visible (silent refresh; no manual **Refresh** button); updates after **Actions** mutations via context; ledger metrics hints + links to **Diff** / **Runs**; Diff query **`aria-busy`**; **Security strip** `/health` loading + **Bearer** + client-token reassurance line; shared **focus-visible** / type scale / narrow breakpoints; **skip to main** (HashRouter-safe); **[ROADMAP.md](ROADMAP.md)** adds **Visual system** backlog item and theme deferral.
-- **Examples / deploy / SECURITY / web README:** [examples/README.md](examples/README.md) end-to-end loop + **UI polish / operator flow** blurb; deploy checklist + **`restart: unless-stopped`**; **[SECURITY.md](SECURITY.md)** deploy pointer; **[web/README.md](web/README.md)** Playwright approval vs default runs.
-- **Playwright:** `e2e-server.mjs` gates approval workspace on **`PW_FORCE_APPROVAL_WORKSPACE`** (set from config); **`reuseExistingServer: false`**; config sets approval workspace only when the CLI lists **exactly one** `e2e/*.spec.ts` path and it is **`actions-approval.spec.ts`** (avoids multi-spec argv; **`PW_WEBSERVER_APPROVAL`** no longer toggles the server so a stale value cannot break **`npm run test:e2e`**); **`actions-approval.spec.ts`** skips when **`GET /v1/workspace`** shows approval off (e.g. full suite with **`FD_E2E_FORCE_APPROVAL=1`**).
-
-### Added
-
 - **PostgreSQL ledger:** optional **`database_url`** in **`flightdeck.yaml`** (`postgresql://` or `postgres://`); install **`psycopg`** with **`uv sync --extra postgres`** (or **`pip install 'flightdeck-ai[postgres]'`**). Same schema migrations and API behavior as SQLite; run filters use **`::json`** predicates on **`event_json`**. **`flightdeck doctor --backup`** stays SQLite-only (use **`pg_dump`** for Postgres). Optional integration tests: **`FLIGHTDECK_TEST_POSTGRES_URL`** with the **`postgres`** extra.
 - **`GET /v1/runs/export`** — NDJSON stream of the same filtered slice as **`GET /v1/runs`** (optional response headers when truncated).
 - **`session_id`** / **`span_id`** query filters on **`GET /v1/runs`**, matching CLI/SDK, and **`offset`** pagination on run listings (with **`runs list`** / **`runs export`**).
 - **Web Runs** page — query **`GET /v1/runs`** from the bundled UI.
+
+### Changed
+
+- **Docs / examples:** **`DEVELOPMENT.md`**, **`AGENTS.md`**, **`README.md`**, **`ROADMAP.md`**, **`SUPPORT.md`**, **`CONTRIBUTING.md`**, **`docs/sdk.md`**, **`docs/troubleshooting.md`**, **`docs/pricing-catalog.md`**, **`examples/integration/README.md`**, **`examples/integration/adoption/README.md`**, **`examples/deploy/README.md`** — align with the Python range, ledger-write ingest model, bundled init, ICP/sustainability copy, and outcome-oriented roadmap language.
+- **Web Runs:** forensics — empty / offset / truncation messaging, export copy, trace band rows or **Group by trace_id**, **View** drawer (structured fields + full JSON, **session_id** / **span_id**, focus trap + return focus, **`aria-haspopup="dialog"`**), trace/status columns; **run-query** failures show a typed error card with **Retry**.
+- **Web Diff:** scannable sections (policy, evidence window, pricing/catalog/hints, rollups), pre-query hint, `evaluated_at` when present; warn when imported **pricing table versions** or **providers** differ baseline vs candidate.
+- **Web Actions:** workspace loading skeleton; numbered approval steps; pending **Refresh list** / **Use for confirm**; clearer confirms; approval-reason placeholder; **Rollback** danger-styled; **Actions** shows whether **`VITE_FLIGHTDECK_LOCAL_API_TOKEN`** is set (no value) and an inline hint when the server uses **Bearer** and the UI token is missing.
+- **Web shell / Overview / CSS:** **Langfuse-style** left sidebar + main column (stacks on narrow viewports); skeleton loading on first load; **Overview** auto-polls timeline + metrics every **30s** when the tab is visible (silent refresh; no manual **Refresh** button); updates after **Actions** mutations via context; ledger metrics hints + links to **Diff** / **Runs**; Diff query **`aria-busy`**; **Security strip** `/health` loading + **Bearer** + client-token reassurance line; shared **focus-visible** / type scale / narrow breakpoints; **skip to main** (HashRouter-safe); **[ROADMAP.md](ROADMAP.md)** adds **Visual system** backlog item and theme deferral.
+- **Examples / deploy / SECURITY / web README:** [examples/README.md](examples/README.md) end-to-end loop + **UI polish / operator flow** blurb; deploy checklist + **`restart: unless-stopped`**; **[SECURITY.md](SECURITY.md)** deploy pointer; **[web/README.md](web/README.md)** Playwright approval vs default runs and **`init --no-bundled-pricing`** for stable **`GET /v1/workspace`** probes.
+- **Playwright:** `e2e-server.mjs` gates approval workspace on **`PW_FORCE_APPROVAL_WORKSPACE`** (set from config); **`reuseExistingServer: false`**; config sets approval workspace only when the CLI lists **exactly one** `e2e/*.spec.ts` path and it is **`actions-approval.spec.ts`** (avoids multi-spec argv; **`PW_WEBSERVER_APPROVAL`** no longer toggles the server so a stale value cannot break **`npm run test:e2e`**); **`actions-approval.spec.ts`** skips when **`GET /v1/workspace`** shows approval off (e.g. full suite with **`FD_E2E_FORCE_APPROVAL=1`**); default e2e workspace uses **`flightdeck init --no-bundled-pricing`** so **`pricing_catalog_configured`** stays **`false`** for **`e2e/smoke.spec.ts`**.
+- **Examples / CI / deploy / Helm pins:** **`flightdeck-ai>=1.2.0`** where version pins apply.
 
 ## 1.1.2 - 2026-05-03
 

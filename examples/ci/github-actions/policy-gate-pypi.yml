@@ -11,7 +11,7 @@ on:
 env:
   # Pin to a tag or SHA that matches your installed flightdeck-ai version when possible.
   FLIGHTDECK_REF: main
-  FLIGHTDECK_AI_SPEC: ">=1.1.2"
+  FLIGHTDECK_AI_SPEC: ">=1.2.0"
 
 jobs:
   ledger-gate:

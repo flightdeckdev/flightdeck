@@ -32,7 +32,7 @@ def _seed_workspace(path: Path) -> tuple[CliRunner, str, str]:
     path.mkdir(parents=True, exist_ok=True)
     runner = CliRunner()
     with _cwd(path):
-        assert runner.invoke(cli, ["init"]).exit_code == 0
+        assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
         policy = write_policy(path, max_cost_per_run_usd=10.0)
         assert runner.invoke(cli, ["policy", "set", str(policy)]).exit_code == 0
         pricing = write_pricing(path, provider="openai", pricing_version="openai-2026-04-30")
@@ -115,7 +115,7 @@ def test_http_v1_diff_pricing_warnings_when_model_missing(tmp_path: Path) -> Non
     ws.mkdir(parents=True, exist_ok=True)
     runner = CliRunner()
     with _cwd(ws):
-        assert runner.invoke(cli, ["init"]).exit_code == 0
+        assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
         policy = write_policy(
             ws,
             max_cost_per_run_usd=10.0,
@@ -267,7 +267,7 @@ def test_http_v1_workspace_reflects_catalog_and_approval_flags(tmp_path: Path) -
     ws.mkdir(parents=True, exist_ok=True)
     runner = CliRunner()
     with _cwd(ws):
-        assert runner.invoke(cli, ["init"]).exit_code == 0
+        assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
         cfg_path = ws / "flightdeck.yaml"
         data: dict[str, Any] = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
         data["pricing_catalog_path"] = "pricing/catalog.yaml"
@@ -285,7 +285,7 @@ def test_http_v1_workspace_reflects_catalog_and_approval_flags(tmp_path: Path) -
 
 def test_ui_root_serves_vite_index(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
-    assert CliRunner().invoke(cli, ["init"]).exit_code == 0
+    assert CliRunner().invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     app = create_app()
     with TestClient(app) as client:
         r = client.get("/")

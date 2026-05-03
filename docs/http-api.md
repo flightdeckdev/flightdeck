@@ -109,7 +109,7 @@ Read-only flags derived from `flightdeck.yaml` plus the running package version.
   "kind": "WorkspacePublic",
   "promotion_requires_approval": false,
   "pricing_catalog_configured": false,
-  "server_version": "1.1.2"
+  "server_version": "1.2.0"
 }
 ```
 

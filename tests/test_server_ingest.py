@@ -16,7 +16,7 @@ from flightdeck.server.app import create_app
 def test_post_v1_events_ingests(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
 
     pricing = {
         "provider": "openai",
@@ -84,7 +84,7 @@ def test_post_v1_events_ingests(tmp_path: Path, monkeypatch) -> None:
 def test_post_v1_events_rejects_non_v1_api_version(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
 
     app = create_app()
     client = TestClient(app)
@@ -150,7 +150,7 @@ def _make_run_event_dict(*, api_version: str | None = "v1") -> dict:
 
 def test_post_v1_events_rejects_empty_api_version_string(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
-    assert CliRunner().invoke(cli, ["init"]).exit_code == 0
+    assert CliRunner().invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     app = create_app()
     client = TestClient(app)
     ev = _make_run_event_dict(api_version="")
@@ -163,7 +163,7 @@ def test_post_v1_events_rejects_empty_api_version_string(tmp_path: Path, monkeyp
 
 def test_post_v1_events_rejects_wrong_casing_v1(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
-    assert CliRunner().invoke(cli, ["init"]).exit_code == 0
+    assert CliRunner().invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     app = create_app()
     client = TestClient(app)
     ev = _make_run_event_dict(api_version="V1")
@@ -176,7 +176,7 @@ def test_post_v1_events_rejects_wrong_casing_v1(tmp_path: Path, monkeypatch) -> 
 
 def test_post_v1_events_rejects_null_api_version(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
-    assert CliRunner().invoke(cli, ["init"]).exit_code == 0
+    assert CliRunner().invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     app = create_app()
     client = TestClient(app)
     ev = _make_run_event_dict()
@@ -191,7 +191,7 @@ def test_post_v1_events_rejects_null_api_version(tmp_path: Path, monkeypatch) ->
 def test_post_v1_events_accepts_omitted_api_version(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
 
     pricing = {
         "provider": "openai",
@@ -256,7 +256,7 @@ def test_post_v1_events_accepts_omitted_api_version(tmp_path: Path, monkeypatch)
 
 def test_post_v1_events_rejects_non_loopback_without_token(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
-    assert CliRunner().invoke(cli, ["init"]).exit_code == 0
+    assert CliRunner().invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     app = create_app()
     transport = httpx.ASGITransport(app=app, client=("198.51.100.2", 44444))
 
@@ -272,7 +272,7 @@ def test_post_v1_events_rejects_non_loopback_without_token(tmp_path: Path, monke
 def test_post_v1_events_non_loopback_requires_bearer_when_token_set(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("FLIGHTDECK_LOCAL_API_TOKEN", "ingest-test-secret")
     monkeypatch.chdir(tmp_path)
-    assert CliRunner().invoke(cli, ["init"]).exit_code == 0
+    assert CliRunner().invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     app = create_app()
     transport = httpx.ASGITransport(app=app, client=("198.51.100.3", 44444))
 
@@ -289,7 +289,7 @@ def test_post_v1_events_accepts_non_loopback_with_bearer(tmp_path: Path, monkeyp
     monkeypatch.setenv("FLIGHTDECK_LOCAL_API_TOKEN", "ingest-bearer-ok")
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
 
     pricing = {
         "provider": "openai",

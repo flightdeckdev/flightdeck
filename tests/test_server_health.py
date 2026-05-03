@@ -42,7 +42,7 @@ def test_health_whitespace_only_token_treated_as_loopback(monkeypatch: pytest.Mo
 def test_get_v1_metrics_401_without_bearer_when_token_set(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("FLIGHTDECK_LOCAL_API_TOKEN", "metrics-read-gate")
     monkeypatch.chdir(tmp_path)
-    assert CliRunner().invoke(cli, ["init"]).exit_code == 0
+    assert CliRunner().invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     with TestClient(create_app()) as client:
         r = client.get("/v1/metrics")
     assert r.status_code == 401
@@ -52,7 +52,7 @@ def test_get_v1_metrics_401_without_bearer_when_token_set(tmp_path: Path, monkey
 def test_get_v1_metrics_200_with_bearer_when_token_set(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("FLIGHTDECK_LOCAL_API_TOKEN", "metrics-read-ok")
     monkeypatch.chdir(tmp_path)
-    assert CliRunner().invoke(cli, ["init"]).exit_code == 0
+    assert CliRunner().invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
     with TestClient(create_app()) as client:
         r = client.get("/v1/metrics", headers={"Authorization": "Bearer metrics-read-ok"})
     assert r.status_code == 200
@@ -62,7 +62,7 @@ def test_get_v1_metrics_200_with_bearer_when_token_set(tmp_path: Path, monkeypat
 def test_v1_metrics_returns_counters(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert runner.invoke(cli, ["init"]).exit_code == 0
+    assert runner.invoke(cli, ["init", "--no-bundled-pricing"]).exit_code == 0
 
     pricing = write_pricing(tmp_path, provider="openai", pricing_version="openai-2026-04-30")
     assert runner.invoke(cli, ["pricing", "import", str(pricing)]).exit_code == 0

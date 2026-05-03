@@ -2,5 +2,5 @@ apiVersion: v2
 name: flightdeck
 description: Optional Helm chart for flightdeck serve (single-replica reference)
 type: application
-version: 0.1.0
-appVersion: "1.1.2"
+version: 0.1.1
+appVersion: "1.2.0"

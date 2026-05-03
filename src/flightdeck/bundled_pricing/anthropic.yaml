@@ -1,0 +1,15 @@
+# FlightDeck bundled snapshot — illustrative public list prices, not live vendor APIs.
+# For production accuracy, run: flightdeck pricing import <your_authoritative.yaml>
+# Snapshot id: flightdeck-bundled-2026-05 (see README / docs/pricing-catalog.md).
+provider: anthropic
+pricing_version: flightdeck-bundled-2026-05
+entries:
+  - model: claude-3-5-haiku-20241022
+    input_usd_per_1k_tokens: 0.25
+    output_usd_per_1k_tokens: 1.25
+  - model: claude-3-5-sonnet-20241022
+    input_usd_per_1k_tokens: 3.0
+    output_usd_per_1k_tokens: 15.0
+  - model: claude-sonnet-4-20250514
+    input_usd_per_1k_tokens: 3.0
+    output_usd_per_1k_tokens: 15.0

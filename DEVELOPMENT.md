@@ -85,7 +85,7 @@ Full command flags and exit codes: [README.md](https://github.com/flightdeckdev/
 `flightdeck-quickstart-verify` (entry point for `src/flightdeck/quickstart_smoke.py`) runs the full
 quickstart workflow end-to-end in an isolated temp directory:
 
-1. `flightdeck init`
+1. `flightdeck init` (bundled OpenAI / Anthropic / Google snapshot + catalog; additive with the imports below)
 2. Import both pricing tables from `examples/quickstart/`
 3. `flightdeck policy set`
 4. Register baseline and candidate releases — capture the `release_id` printed to stdout
@@ -143,7 +143,7 @@ Merging to **`main` does not publish packages** — PyPI uploads are **tag-drive
 1. **PyPI:** add a **trusted publisher** for **[github.com/flightdeckdev/flightdeck](https://github.com/flightdeckdev/flightdeck)** — workflow **`release-pypi.yml`**. If PyPI offers **Environment name: (Any)**, you can still use a GitHub **Environment** named **`pypi`** for approval gates; otherwise match whatever you register on PyPI ([trusted publishers](https://docs.pypi.org/trusted-publishers/)).
 2. **GitHub:** Settings → **Environments** → create **`pypi`** (optional: required reviewers / wait timer before OIDC publish).
 3. Bump **`version`** in **`pyproject.toml`** and **`src/flightdeck/__init__.py`**, update **`CHANGELOG.md`**, merge to **`main`**.
-4. **`git tag vX.Y.Z`** (must match **`pyproject.toml`** exactly, e.g. **`v1.1.2`**) then **`git push origin vX.Y.Z`**.
+4. **`git tag vX.Y.Z`** (must match **`pyproject.toml`** exactly, e.g. **`v1.2.0`**) then **`git push origin vX.Y.Z`**.
 
 The workflow runs **ruff**, **pytest**, schema drift, **`uv build`**, publishes **sdist + wheel** to **PyPI** via **OIDC** (no long-lived API token in repo secrets), enables **publish attestations**, and creates a **GitHub Release** with generated notes and **`dist/*`** assets.
 
