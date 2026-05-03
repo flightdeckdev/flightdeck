@@ -18,6 +18,53 @@ Local-first **CLI + SQLite**. Optional **`flightdeck serve`** exposes a small we
 | Versioned release artifact | Yes | No | DIY |
 | Cost/latency diff + policy gate | Yes | Different lens | DIY |
 
+## In ~20 seconds
+
+1. **Register** immutable agent releases (`release.yaml` + bundle checksum).
+2. **Ingest** run evidence (`RunEvent` JSONL or **`POST /v1/events`**).
+3. **Diff** baseline vs candidate: cost, latency, errors, and confidence (optional **pricing catalog** lines on top).
+4. **Promote** only when policy passes; optional **human approval** (request → confirm) before the ledger moves.
+
+## Why it exists
+
+Small prompt or model changes can move **cost**, **latency**, and **error rate** in ways that are easy to miss. FlightDeck turns those into **explicit promote decisions** backed by ingested runs—before production pointers advance.
+
+## Who should use this?
+
+- **Platform or ML engineering** teams shipping **multiple LLM agents** to production—especially after a **cost** or **regression** tied to a **prompt** or **model** change—who want a **governed promote** path without treating a tracing SaaS as their release gate.
+- **Regulated or compliance-sensitive** teams (healthcare, fintech, and similar) where **data residency**, **audit trails**, and **control over evidence and pricing data** matter; **local-first** defaults and optional self-hosted **`flightdeck serve`** fit that posture.
+- Teams that **version agent builds** (prompts, tools, model pins) and need a **durable audit trail** for what shipped and what ran.
+- Engineers who want a **straightforward workflow** to answer “is this candidate safe to roll forward?” with **numbers and policy**, not only gut feel or spreadsheet checklists.
+
+## Example outcome
+
+You ship a candidate whose **prompt or model** shifts slightly; under your tariffs the diff shows **cost per run** rising while policy caps spend. **`flightdeck release promote`** (or the HTTP promote path) **stays blocked** until you change the model, adjust policy with intent, or gather more evidence—not because CI is slow, but because the **ledger** says no. The **~31%** style story in [examples/quickstart/](examples/quickstart/) uses **two custom pricing YAMLs**; **`flightdeck init`** alone seeds a **bundled** snapshot so your first cost-aware diff is not empty.
+
+## How it fits your stack
+
+FlightDeck sits **next to** your agent runtime (not in the inference hot path): emit evidence, run **`flightdeck`** from a laptop or CI, gate **promote** with policy.
+
+```mermaid
+flowchart LR
+  subgraph runtime [Your agent runtime]
+    agent[Agent or service]
+  end
+  subgraph fd [FlightDeck workspace]
+    ingest[Ingest RunEvents]
+    ledger[(SQLite ledger)]
+    diff[release diff]
+    promote[promote or rollback]
+  end
+  subgraph automation [Automation]
+    ci[CI job or operator]
+  end
+  agent -->|"JSONL or HTTP events"| ingest
+  ingest --> ledger
+  ledger --> diff
+  diff --> ci
+  ci -->|"policy pass"| promote
+```
+
 ---
 
 ## Install and smoke-test
