@@ -47,3 +47,41 @@ This document turns the strict UI review into sequenced work. Scope is the check
 After `web/` changes: from `web/`, `npm ci && npm run build`; commit `src/flightdeck/server/static/` updates; run `npm run test:e2e` when navigation or forms behavior changes.
 
 On Unix hosts where `python` is not on `PATH`, set `FLIGHTDECK_E2E_PYTHON` to a Python that has FlightDeck installed (for example the repo venv: `FLIGHTDECK_E2E_PYTHON=/path/to/.venv/bin/python npm run test:e2e`). The default is `python3`.
+
+## Blueprint alignment (external product IA review)
+
+This section maps a fuller “control plane” blueprint to FlightDeck’s **current** CLI-first ledger and HTTP surface. Use it to avoid building UI that implies APIs or workflows we do not ship yet.
+
+### Adopted from the blueprint
+
+- **Page litmus**: each primary screen should answer at least one of — *What changed?* · *What happened because of it?* · *Can I ship?*
+- **Cross-page consistency**: shared status semantics (pass / fail / warn / neutral), fixed vocabulary (**Release**, **Diff**, **Policy**, **Evidence**), repeated rhythm (**header → summary → detail → actions**).
+- **Sparse chrome**: summary metrics and tables over chart-heavy dashboards (matches roadmap non-goals).
+- **Diff as differentiator**: structured comparison and policy outcome stay central; layout can evolve toward “baseline vs candidate” twin + verdict-first fold (Phase 1).
+- **Evidence as ground truth**: runs + rollups remain the forensic surface; avoid Langfuse-style analytics_scope creep.
+- **Component direction**: prefer one reusable set (`ReleaseHeader`, `StatusBadge`, `MetricCard`, etc.) over one-off page styling.
+
+### Merged information architecture (near term)
+
+Avoid exploding to eight top-level nav items before contracts exist. Practical sequencing:
+
+1. **Overview** — situational awareness; add promoted / last-action strip before burying operators in ledger counters (Phase 1).
+2. **Releases** — table-first browsing (today: Overview table; later: dedicated route if needed).
+3. **Release detail** — evolve `?release=` hero into `/release/:id` when we want a stable bookmark per artifact.
+4. **Diff** — deep dive; expand “change → impact → policy” **only** when diff payloads expose comparable structure (prompt/tools/model deltas as data, not copy).
+5. **Evidence** — Runs page (rename in nav only if it helps operators).
+6. **Promote** — Actions; surface approval flow when `promotion_requires_approval` is on (today: request / confirm API).
+
+Defer standalone **Policies** (rule catalog with thresholds), **multi-role approval chains**, and **rich audit timeline filters** until read APIs and persistence match those stories.
+
+### Deferred / backend-gated (do not imply in UI yet)
+
+- **Per-release row status** (“Blocked”, “Live”, “Rolled back”) with sortable **cost Δ / latency Δ**: “Live” can align with promoted pointers; “blocked” is **evaluation-scoped** (depends on baseline, window, environment)—not a global attribute unless we store or cache last evaluation per release.
+- **Policies page** listing rules with “expected vs actual”: needs a stable **rule listing** or workspace-backed contract; today policy output is **evaluated reasons**, not necessarily a browsable catalog.
+- **Approvals** as org chart (Platform → ML → Security): requires identity, roles, and workflow beyond optional promotion request/confirm.
+- **Risk score** / composite **HIGH** labels: needs a defined server-side aggregate or explicit mapping from existing fields (e.g. sample confidence alone is not a full risk model).
+- **Release twin** lines such as “system prompt +N tokens” unless those deltas exist on the wire from release/diff payloads.
+
+### Terminology note
+
+Treat **policy FAIL** as **do not promote this candidate under this evaluation context** (baseline + window + environment), not “this release ID is permanently blocked everywhere.”
