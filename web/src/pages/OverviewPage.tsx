@@ -407,7 +407,7 @@ export function OverviewPage() {
                             >
                               <code className="fd-mono">{shortId(r.release_id)}</code>
                             </Link>
-                            <CopyTextButton label="Release ID" value={r.release_id} buttonText="Copy" />
+                            <CopyTextButton label="Release ID" value={r.release_id} buttonText="Copy" testId="overview-copy-release-row" />
                           </div>
                         </td>
                         <td>
