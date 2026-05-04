@@ -85,3 +85,62 @@ Defer standalone **Policies** (rule catalog with thresholds), **multi-role appro
 ### Terminology note
 
 Treat **policy FAIL** as **do not promote this candidate under this evaluation context** (baseline + window + environment), not “this release ID is permanently blocked everywhere.”
+
+## Production wireframe direction (external — change → impact → policy → decision)
+
+This section folds **final wireframe** feedback into the same constraints as **Blueprint alignment**: useful as **layout and component targets**, not as a promise that every block exists on the wire today.
+
+### Thesis (keep)
+
+The UI should reinforce **change → impact → policy → decision**, not generic dashboards. Prefer **deepening diff causality and decision clarity** over charts and vanity metrics (already in **Non-goals**).
+
+### Target section stack (conceptual)
+
+| Section | Role | FlightDeck today (serve UI) | Next evolution |
+|--------|------|----------------------------|----------------|
+| Sidebar | Stable nav | `AppShell` | Optional rename **Runs → Evidence** if it helps operators without splitting routes. |
+| Release header | Human anchor for the release under review | Overview `?release=` hero; Diff form IDs | Dedicated **`/release/:id`** or shared **`ReleaseHeader`** component fed by timeline + focused release. |
+| Block reason banner | Unmissable “why stop” | Diff verdict banner (policy FAIL + reasons) | Optional **single-line primary reason** when server ranks or summarizes reasons. |
+| Release twin (OLD vs NEW) | At-a-glance identity change | Pricing model line + rollups (Diff) | Explicit **baseline vs candidate** strip (version/agent/env + model/provider) once data is stable in **`POST /v1/diff`**. |
+| Change impact analysis (expandable) | Causal / drill-down | Collapsible pricing/catalog + metric grid | **Structured change list** only when diff payload exposes comparable artifacts (prompt/tools deltas)—no invented causality. |
+| Policy evaluation | Gate outcome | Verdict banner + policy reasons | Optional **`PolicyPanel`** extracting banner + evaluated_at for reuse on Actions outcomes. |
+| Approvals | Human layer | **Actions** when `promotion_requires_approval` | Not multi-role org charts until backend supports it; keep **request / confirm** truthy UI. |
+| Decision | Readable outcome | PASS/FAIL copy + promote CTA | **`DecisionCard`** summarizing verdict + next step (promote / fix / widen evidence). |
+| Actions | Mutations | Promote / rollback / request / confirm | Same page; ensure cross-links from Diff retain window/env. |
+
+### Suggested components (map to repo gradually)
+
+Names from feedback are **targets** for extraction/refactor—not required file renames in one PR:
+
+- **`ReleaseHeader`** — consolidate Overview hero + future release route header.
+- **`ReleaseTwin`** — thin summary row for baseline vs candidate (model/pricing/version IDs).
+- **`DiffList` / change rows** — defer until **`changes[]`** (or equivalent) exists on the API.
+- **`PolicyPanel`** — wrapper around policy PASS/FAIL + reasons + timestamp.
+- **`ApprovalPanel`** — pending requests + confirm flow (today on Actions).
+- **`DecisionCard`** — verdict + recommended action line.
+
+### Illustrative data shape (not current wire contract)
+
+A unified front-end model such as:
+
+```ts
+// Illustrative only — do not treat as implemented HTTP schema.
+type Release = {
+  id: string;
+  status: "blocked" | "ready";
+  changes: Change[];
+  policies: PolicyResult[];
+  approvals: Approval[];
+};
+```
+
+…only makes sense after the server can compute **`blocked` vs `ready`** for a **specific evaluation context** (baseline, window, environment) and optionally expose **`changes[]`**. Until then, compose views from **`TimelinePayload`**, **`POST /v1/diff`**, **`GET /v1/runs`**, and promotion APIs **without** implying a single merged **`Release`** document.
+
+### Hard “don’t” (reasserted)
+
+- Do **not** add chart-heavy dashboards or random metric walls.
+- Do **not** fake approval chains or policy catalogs without API backing.
+
+### Relation to open UI work (e.g. PR #53 trajectory)
+
+Recent UI slices already move toward this wireframe: **verdict-first Diff**, **collapsed deep pricing**, **promoted-first Overview**, **copy/filters**, **decision-litmus copy**. Remaining gap is mostly **component extraction** and **release route / twin row**, gated on contracts above.
