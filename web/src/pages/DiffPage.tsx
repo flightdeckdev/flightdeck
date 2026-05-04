@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { fetchJson } from "../api";
 import { JsonPanel } from "../components/JsonPanel";
+import { Badge } from "../components/Badge";
 import { UI_READ_ONLY } from "../uiConfig";
 import { pickTrimmedSearch, searchParamsFromRecord } from "../urlSearch";
 
@@ -227,6 +228,24 @@ export function DiffPage() {
   const pct = (v: unknown) =>
     typeof v === "number" && Number.isFinite(v) ? `${(v * 100).toFixed(2)}%` : "—";
 
+  const pricingLine = (side: "baseline" | "candidate") => {
+    if (!pricing) return "—";
+    const prov = side === "baseline" ? pricing.baselineProvider : pricing.candidateProvider;
+    const ver = side === "baseline" ? pricing.baselineVersion : pricing.candidateVersion;
+    const mod = side === "baseline" ? pricing.baselineModel : pricing.candidateModel;
+    const parts = [prov.trim(), ver.trim(), mod.trim()].filter(Boolean);
+    return parts.length > 0 ? parts.join(" · ") : "—";
+  };
+
+  const promoteSearch =
+    !UI_READ_ONLY && diffCandidate.trim() !== ""
+      ? searchParamsFromRecord({
+          release_id: diffCandidate.trim(),
+          environment: diffEnv.trim(),
+          window: diffWindow.trim(),
+        })
+      : "";
+
   return (
     <>
       <header className="fd-page-head">
@@ -304,51 +323,50 @@ export function DiffPage() {
 
       {diffOut ? (
         <>
+          <section className="fd-diff-twin" aria-labelledby="diff-twin-heading">
+            <h3 className="fd-diff-twin__heading fd-sr-only" id="diff-twin-heading">
+              Release comparison
+            </h3>
+            <div className="fd-diff-twin__meta fd-muted-xs">
+              Environment <strong>{diffEnv.trim() || "—"}</strong> · Window <strong>{diffWindow.trim() || "—"}</strong>
+            </div>
+            <div className="fd-diff-twin__grid">
+              <div className="fd-diff-twin__col">
+                <span className="fd-diff-twin__label">Baseline (OLD)</span>
+                <code className="fd-diff-twin__id fd-mono" title={diffBaseline.trim() || undefined}>
+                  {diffBaseline.trim() !== "" ? diffBaseline.trim() : "—"}
+                </code>
+                <p className="fd-diff-twin__detail fd-muted fd-m-0 fd-mt-sm">{pricingLine("baseline")}</p>
+              </div>
+              <div className="fd-diff-twin__arrow" aria-hidden>
+                →
+              </div>
+              <div className="fd-diff-twin__col">
+                <span className="fd-diff-twin__label">Candidate (NEW)</span>
+                <code className="fd-diff-twin__id fd-mono" title={diffCandidate.trim() || undefined}>
+                  {diffCandidate.trim() !== "" ? diffCandidate.trim() : "—"}
+                </code>
+                <p className="fd-diff-twin__detail fd-muted fd-m-0 fd-mt-sm">{pricingLine("candidate")}</p>
+              </div>
+            </div>
+          </section>
+
+          {policy && !policy.passed && policy.reasons.length > 0 ? (
+            <div className="fd-diff-block-strip" role="status">
+              <strong>Blocked:</strong> <span>{policy.reasons[0]}</span>
+              {policy.reasons.length > 1 ? (
+                <span className="fd-muted-inline fd-ml-sm">(+{policy.reasons.length - 1} more in policy evaluation)</span>
+              ) : null}
+            </div>
+          ) : null}
+
           {policy ? (
             <div
-              className={`fd-verdict-banner ${policy.passed ? "fd-verdict-banner--pass" : "fd-verdict-banner--fail"}`}
+              className={`fd-diff-verdict-strip ${policy.passed ? "fd-diff-verdict-strip--pass" : "fd-diff-verdict-strip--fail"}`}
               role="status"
               aria-live="polite"
             >
-              <strong className="fd-verdict-banner__title">
-                {policy.passed ? "Policy PASS — safe to consider promotion" : "Policy FAIL — do not ship this candidate"}
-              </strong>
-              {policy.evaluatedAt ? (
-                <p className="fd-muted fd-m-0 fd-mt-md">
-                  evaluated_at <span className="fd-mono fd-mono--sm">{policy.evaluatedAt}</span>
-                </p>
-              ) : null}
-              {policy.reasons.length > 0 ? (
-                <ul className="fd-verdict-banner__reasons">
-                  {policy.reasons.map((r) => (
-                    <li key={r}>{r}</li>
-                  ))}
-                </ul>
-              ) : policy.passed ? (
-                <p className="fd-muted fd-m-0 fd-mt-md">No detailed constraint messages returned.</p>
-              ) : (
-                <p className="fd-muted fd-m-0 fd-mt-md">No reasons listed — inspect raw JSON and server policy.</p>
-              )}
-              {!UI_READ_ONLY && diffCandidate.trim() !== "" ? (
-                <p className="fd-inline-nav fd-mb-0 fd-mt-md">
-                  <Link
-                    className="fd-btn fd-btn--primary"
-                    to={{
-                      pathname: "/actions",
-                      search: searchParamsFromRecord({
-                        release_id: diffCandidate.trim(),
-                        environment: diffEnv.trim(),
-                        window: diffWindow.trim(),
-                      }),
-                    }}
-                  >
-                    Continue to promote
-                  </Link>
-                  <span className="fd-muted-inline fd-ml-sm">
-                    Uses candidate release ID and this page&apos;s window/environment (reason still required).
-                  </span>
-                </p>
-              ) : null}
+              {policy.passed ? "Policy PASS — candidate may proceed if you accept the impact below." : "Policy FAIL — do not promote this candidate for this evaluation."}
             </div>
           ) : (
             <div className="fd-alert fd-alert--warn" role="status">
@@ -357,9 +375,68 @@ export function DiffPage() {
             </div>
           )}
 
-          <section className="fd-card" aria-label="Diff result summary">
+          {policy ? (
+            <section className="fd-card fd-policy-panel" aria-labelledby="diff-policy-h">
+              <div className="fd-card__head fd-card__head--row">
+                <h3 className="fd-card__subtitle fd-m-0" id="diff-policy-h">
+                  Policy evaluation
+                </h3>
+                <Badge tone={policy.passed ? "pass" : "fail"}>{policy.passed ? "PASS" : "FAIL"}</Badge>
+              </div>
+              {policy.evaluatedAt ? (
+                <p className="fd-muted fd-m-0 fd-mb-md">
+                  evaluated_at <span className="fd-mono fd-mono--sm">{policy.evaluatedAt}</span>
+                </p>
+              ) : null}
+              {policy.reasons.length > 0 ? (
+                <ul className="fd-reasons fd-mt-0 fd-mb-0">
+                  {policy.reasons.map((r) => (
+                    <li key={r}>{r}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="fd-muted fd-m-0">
+                  {policy.passed
+                    ? "No constraint messages returned (pass with empty reasons)."
+                    : "No reasons listed — inspect raw JSON and server policy."}
+                </p>
+              )}
+            </section>
+          ) : null}
+
+          <section className="fd-card fd-decision-card" aria-labelledby="diff-decision-h">
             <div className="fd-card__head">
-              <h3 className="fd-card__subtitle">Evidence window</h3>
+              <h3 className="fd-card__subtitle fd-m-0" id="diff-decision-h">
+                Decision
+              </h3>
+              <p className="fd-card__desc fd-m-0 fd-mt-sm">
+                {policy === null
+                  ? "Run diff again after fixing the payload or server configuration."
+                  : policy.passed
+                    ? "Gate passed for this baseline, candidate, window, and environment. Next: promote from Actions if operational checks agree."
+                    : "Gate failed — resolve policy findings or choose a different candidate/baseline before promoting."}
+              </p>
+            </div>
+            {!UI_READ_ONLY && policy?.passed === true && promoteSearch !== "" ? (
+              <div className="fd-actions fd-mt-md">
+                <Link className="fd-btn fd-btn--primary" to={{ pathname: "/actions", search: promoteSearch }}>
+                  Continue to promote
+                </Link>
+                <span className="fd-muted-inline fd-grow-soft">
+                  Candidate release and window/environment are prefilled; reason is still required on Actions.
+                </span>
+              </div>
+            ) : null}
+          </section>
+
+          <section className="fd-card" aria-labelledby="diff-impact-h">
+            <div className="fd-card__head">
+              <h3 className="fd-card__subtitle fd-m-0" id="diff-impact-h">
+                Change impact
+              </h3>
+              <p className="fd-card__desc fd-m-0 fd-mt-sm">
+                Evidence coverage, runtime rollups, and expandable pricing detail — causal drill-down stays here (no invented change rows until the API exposes them).
+              </p>
             </div>
             <div className="fd-diff-stack">
               <div className="fd-diff-section" role="region" aria-labelledby="diff-sec-samples">

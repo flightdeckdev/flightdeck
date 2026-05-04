@@ -143,4 +143,6 @@ type Release = {
 
 ### Relation to open UI work (e.g. PR #53 trajectory)
 
-Recent UI slices already move toward this wireframe: **verdict-first Diff**, **collapsed deep pricing**, **promoted-first Overview**, **copy/filters**, **decision-litmus copy**. Remaining gap is mostly **component extraction** and **release route / twin row**, gated on contracts above.
+Recent UI slices move toward this wireframe: **verdict-first Diff**, **collapsed deep pricing**, **promoted-first Overview**, **copy/filters**, **decision-litmus copy**. On **Diff**, the **Release twin** (baseline vs candidate + resolved model line), **blocked strip** (first policy reason), **policy evaluation card**, **decision card** (promote when PASS), and **Change impact** section align layout with **change → impact → policy → decision** without inventing API fields.
+
+Remaining gap is mostly **component extraction** (`ReleaseHeader`, shared panels) and **release route**, gated on contracts above.
