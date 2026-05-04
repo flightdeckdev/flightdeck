@@ -1,8 +1,10 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { fetchJson } from "../api";
 import { Badge } from "../components/Badge";
 import { JsonPanel } from "../components/JsonPanel";
+import { UI_READ_ONLY } from "../uiConfig";
+import { pickTrimmedSearch, searchParamsFromRecord } from "../urlSearch";
 
 type DiffJson = Record<string, unknown>;
 
@@ -157,6 +159,7 @@ function Metric({
 }
 
 export function DiffPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [diffBaseline, setDiffBaseline] = useState("");
   const [diffCandidate, setDiffCandidate] = useState("");
   const [diffWindow, setDiffWindow] = useState("7d");
@@ -165,16 +168,35 @@ export function DiffPage() {
   const [diffErr, setDiffErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    setDiffBaseline(pickTrimmedSearch(searchParams, "baseline"));
+    setDiffCandidate(pickTrimmedSearch(searchParams, "candidate"));
+    const w = pickTrimmedSearch(searchParams, "window");
+    setDiffWindow(w !== "" ? w : "7d");
+    const e = pickTrimmedSearch(searchParams, "environment");
+    setDiffEnv(e !== "" ? e : "local");
+  }, [searchParams]);
+
   const runDiff = async () => {
     setDiffErr(null);
     setDiffOut(null);
     setBusy(true);
+    const baseline = diffBaseline.trim();
+    const candidate = diffCandidate.trim();
+    const windowVal = diffWindow.trim();
+    const envVal = diffEnv.trim();
+    const nextParams = new URLSearchParams();
+    if (baseline) nextParams.set("baseline", baseline);
+    if (candidate) nextParams.set("candidate", candidate);
+    nextParams.set("window", windowVal || "7d");
+    if (envVal) nextParams.set("environment", envVal);
+    setSearchParams(nextParams);
     try {
       const body = {
-        baseline_release_id: diffBaseline.trim(),
-        candidate_release_id: diffCandidate.trim(),
-        window: diffWindow.trim(),
-        environment: diffEnv.trim() || null,
+        baseline_release_id: baseline,
+        candidate_release_id: candidate,
+        window: windowVal,
+        environment: envVal || null,
       };
       const data = await fetchJson<DiffJson>("/v1/diff", {
         method: "POST",
@@ -207,8 +229,13 @@ export function DiffPage() {
           <h2 className="fd-page-title">Run diff</h2>
           <p className="fd-page-sub">
             Compare baseline vs candidate over a window. Same contract as{" "}
-            <code className="fd-mono fd-mono--sm">flightdeck release diff</code>. Release IDs usually come from{" "}
-            <Link to="/">Overview</Link> or the CLI—nothing is prefilled from navigation.
+            <code className="fd-mono fd-mono--sm">flightdeck release diff</code>.{" "}
+            <Link to="/">Overview</Link> shortcuts and shared URLs can prefill{" "}
+            <code className="fd-mono fd-mono--sm">baseline</code>,{" "}
+            <code className="fd-mono fd-mono--sm">candidate</code>,{" "}
+            <code className="fd-mono fd-mono--sm">window</code>, and{" "}
+            <code className="fd-mono fd-mono--sm">environment</code> query params; click{" "}
+            <strong>Compute diff</strong> to run.
           </p>
         </div>
       </header>
@@ -269,6 +296,59 @@ export function DiffPage() {
 
       {diffOut ? (
         <>
+          {policy ? (
+            <div
+              className={`fd-verdict-banner ${policy.passed ? "fd-verdict-banner--pass" : "fd-verdict-banner--fail"}`}
+              role="status"
+              aria-live="polite"
+            >
+              <strong className="fd-verdict-banner__title">
+                {policy.passed ? "Policy PASS — safe to consider promotion" : "Policy FAIL — do not ship this candidate"}
+              </strong>
+              {policy.evaluatedAt ? (
+                <p className="fd-muted fd-m-0 fd-mt-md">
+                  evaluated_at <span className="fd-mono fd-mono--sm">{policy.evaluatedAt}</span>
+                </p>
+              ) : null}
+              {policy.reasons.length > 0 ? (
+                <ul className="fd-verdict-banner__reasons">
+                  {policy.reasons.map((r) => (
+                    <li key={r}>{r}</li>
+                  ))}
+                </ul>
+              ) : policy.passed ? (
+                <p className="fd-muted fd-m-0 fd-mt-md">No detailed constraint messages returned.</p>
+              ) : (
+                <p className="fd-muted fd-m-0 fd-mt-md">No reasons listed — inspect raw JSON and server policy.</p>
+              )}
+              {!UI_READ_ONLY && diffCandidate.trim() !== "" ? (
+                <p className="fd-inline-nav fd-mb-0 fd-mt-md">
+                  <Link
+                    className="fd-btn fd-btn--primary"
+                    to={{
+                      pathname: "/actions",
+                      search: searchParamsFromRecord({
+                        release_id: diffCandidate.trim(),
+                        environment: diffEnv.trim(),
+                        window: diffWindow.trim(),
+                      }),
+                    }}
+                  >
+                    Continue to promote
+                  </Link>
+                  <span className="fd-muted-inline fd-ml-sm">
+                    Uses candidate release ID and this page&apos;s window/environment (reason still required).
+                  </span>
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <div className="fd-alert fd-alert--warn" role="status">
+              <strong>No policy block</strong> in this diff response — confirm server version and request payload before
+              treating the outcome as gated.
+            </div>
+          )}
+
           <section className="fd-card" aria-label="Diff result summary">
             <div className="fd-card__head">
               <h3 className="fd-card__subtitle">Diff result</h3>

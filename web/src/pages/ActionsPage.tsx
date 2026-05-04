@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import type { ActionOutcomePayload, PromotionRequestListItem, WorkspacePublicPayload } from "../api";
 import { fetchHealth, fetchJson, fetchPromotionRequests, fetchWorkspace } from "../api";
 import { clientMutationTokenConfigured } from "../uiConfig";
@@ -57,6 +58,7 @@ function pickOutcome(data: unknown): ActionOutcomePayload | null {
 type Busy = null | "promote" | "rollback" | "request" | "confirm";
 
 export function ActionsPage() {
+  const [searchParams] = useSearchParams();
   const { notifyTimelineMutated } = useTimelineRefresh();
   const [workspace, setWorkspace] = useState<WorkspacePublicPayload | null>(null);
   const [workspaceLoading, setWorkspaceLoading] = useState(true);
@@ -141,6 +143,15 @@ export function ActionsPage() {
   useEffect(() => {
     void refreshPending();
   }, [refreshPending, listNonce]);
+
+  useEffect(() => {
+    const rid = searchParams.get("release_id");
+    const env = searchParams.get("environment");
+    const win = searchParams.get("window");
+    if (rid !== null && rid.trim() !== "") setActRelease(rid.trim());
+    if (env !== null && env.trim() !== "") setActEnv(env.trim());
+    if (win !== null && win.trim() !== "") setActWindow(win.trim());
+  }, [searchParams]);
 
   const runAction = async (path: "/v1/promote" | "/v1/rollback") => {
     setActErr(null);

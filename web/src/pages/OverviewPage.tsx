@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useId, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import type { ActionRow, MetricsPayload, PromotedRow, ReleaseRow, TimelinePayload } from "../api";
 import { fetchMetrics, loadTimeline } from "../api";
 import { useTimelineRefresh } from "../context/TimelineRefreshContext";
 import { Badge } from "../components/Badge";
 import { JsonPanel } from "../components/JsonPanel";
 import { ReleaseLifecycleStrip } from "../components/ReleaseLifecycleStrip";
+import { UI_READ_ONLY } from "../uiConfig";
+import { searchParamsFromRecord } from "../urlSearch";
 
 const OVERVIEW_POLL_MS = 30_000;
 
@@ -38,6 +40,9 @@ function TableShell({
 }
 
 export function OverviewPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusReleaseId = (searchParams.get("release") ?? "").trim();
+
   const { generation } = useTimelineRefresh();
   const [data, setData] = useState<TimelinePayload | null>(null);
   const [metrics, setMetrics] = useState<MetricsPayload | null>(null);
@@ -94,6 +99,29 @@ export function OverviewPage() {
           2,
         );
 
+  const focusRelease = useMemo(() => {
+    if (!data || !focusReleaseId) return null;
+    return data.releases.find((r) => r.release_id === focusReleaseId) ?? null;
+  }, [data, focusReleaseId]);
+
+  const promotedBaselineForFocus = useMemo(() => {
+    if (!data || !focusRelease) return null;
+    return (
+      data.promoted.find(
+        (p) => p.agent_id === focusRelease.agent_id && p.environment === focusRelease.environment,
+      ) ?? null
+    );
+  }, [data, focusRelease]);
+
+  const clearReleaseFocus = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("release");
+    setSearchParams(next);
+  };
+
+  const baselineReleaseForRow = (r: ReleaseRow) =>
+    data?.promoted.find((p) => p.agent_id === r.agent_id && p.environment === r.environment)?.release_id ?? "";
+
   return (
     <>
       <header className="fd-page-head">
@@ -108,6 +136,82 @@ export function OverviewPage() {
       </header>
 
       <ReleaseLifecycleStrip />
+
+      {focusReleaseId && !loading && data ? (
+        focusRelease ? (
+          <section className="fd-release-hero" aria-labelledby="fd-release-hero-title">
+            <h3 className="fd-release-hero__title" id="fd-release-hero-title">
+              Focused release{" "}
+              <code className="fd-mono fd-mono--sm" title={focusRelease.release_id}>
+                {shortId(focusRelease.release_id, 14, 8)}
+              </code>
+            </h3>
+            <p className="fd-release-hero__meta">
+              {focusRelease.agent_id} · v{focusRelease.version} · {focusRelease.environment} · checksum{" "}
+              <code className="fd-mono fd-mono--sm" title={focusRelease.checksum}>
+                {shortId(focusRelease.checksum, 8, 6)}
+              </code>
+              {promotedBaselineForFocus ? (
+                <>
+                  {" "}
+                  · promoted baseline for this pair:{" "}
+                  <code className="fd-mono fd-mono--sm" title={promotedBaselineForFocus.release_id}>
+                    {shortId(promotedBaselineForFocus.release_id, 14, 8)}
+                  </code>
+                </>
+              ) : (
+                <> · no promoted pointer for this agent/environment yet</>
+              )}
+            </p>
+            <div className="fd-release-hero__actions">
+              <Link
+                className="fd-btn fd-btn--primary"
+                to={`/diff${searchParamsFromRecord({
+                  baseline: promotedBaselineForFocus?.release_id ?? "",
+                  candidate: focusRelease.release_id,
+                  environment: focusRelease.environment,
+                  window: "7d",
+                })}`}
+              >
+                Open diff
+              </Link>
+              <Link
+                className="fd-btn fd-btn--ghost"
+                to={`/runs${searchParamsFromRecord({
+                  release_id: focusRelease.release_id,
+                  environment: focusRelease.environment,
+                  window: "7d",
+                })}`}
+              >
+                Open runs
+              </Link>
+              {UI_READ_ONLY ? null : (
+                <Link
+                  className="fd-btn fd-btn--ghost"
+                  to={`/actions${searchParamsFromRecord({
+                    release_id: focusRelease.release_id,
+                    environment: focusRelease.environment,
+                    window: "7d",
+                  })}`}
+                >
+                  Promote
+                </Link>
+              )}
+              <button type="button" className="fd-btn fd-btn--ghost" onClick={clearReleaseFocus}>
+                Clear focus
+              </button>
+            </div>
+          </section>
+        ) : (
+          <section className="fd-alert fd-alert--warn" role="status">
+            <strong>Unknown release in URL.</strong> No registered release matches{" "}
+            <code className="fd-mono fd-mono--sm">{shortId(focusReleaseId, 20, 10)}</code>.{" "}
+            <button type="button" className="fd-btn fd-btn--ghost" onClick={clearReleaseFocus}>
+              Clear <span className="fd-sr-only">release query</span>
+            </button>
+          </section>
+        )
+      ) : null}
 
       {error && !loading ? <p className="fd-alert fd-alert--error">{error}</p> : null}
       {loading ? (
@@ -196,12 +300,13 @@ export function OverviewPage() {
                   <th scope="col">Environment</th>
                   <th scope="col">Checksum</th>
                   <th scope="col">Created</th>
+                  <th scope="col">Shortcuts</th>
                 </tr>
               </thead>
               <tbody>
                 {data.releases.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="fd-empty-cell">
+                    <td colSpan={7} className="fd-empty-cell">
                       No releases yet.
                     </td>
                   </tr>
@@ -209,9 +314,12 @@ export function OverviewPage() {
                   data.releases.map((r: ReleaseRow) => (
                     <tr key={r.release_id}>
                       <td>
-                        <code className="fd-mono" title={r.release_id}>
-                          {shortId(r.release_id)}
-                        </code>
+                        <Link
+                          to={{ pathname: "/", search: searchParamsFromRecord({ release: r.release_id }) }}
+                          title="Focus this release in the overview hero"
+                        >
+                          <code className="fd-mono">{shortId(r.release_id)}</code>
+                        </Link>
                       </td>
                       <td>{r.agent_id}</td>
                       <td>{r.version}</td>
@@ -222,6 +330,49 @@ export function OverviewPage() {
                         </code>
                       </td>
                       <td className="fd-nowrap">{new Date(r.created_at).toLocaleString()}</td>
+                      <td>
+                        <div className="fd-table-actions">
+                          <Link
+                            to={{
+                              pathname: "/diff",
+                              search: searchParamsFromRecord({
+                                baseline: baselineReleaseForRow(r),
+                                candidate: r.release_id,
+                                environment: r.environment,
+                                window: "7d",
+                              }),
+                            }}
+                          >
+                            Diff
+                          </Link>
+                          <Link
+                            to={{
+                              pathname: "/runs",
+                              search: searchParamsFromRecord({
+                                release_id: r.release_id,
+                                environment: r.environment,
+                                window: "7d",
+                              }),
+                            }}
+                          >
+                            Runs
+                          </Link>
+                          {UI_READ_ONLY ? null : (
+                            <Link
+                              to={{
+                                pathname: "/actions",
+                                search: searchParamsFromRecord({
+                                  release_id: r.release_id,
+                                  environment: r.environment,
+                                  window: "7d",
+                                }),
+                              }}
+                            >
+                              Promote
+                            </Link>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}

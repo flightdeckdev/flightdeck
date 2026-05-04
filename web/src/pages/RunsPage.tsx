@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import type { ReleaseRow, RunsListPayload } from "../api";
 import { fetchRuns, fetchRunsExportBlob, loadTimeline } from "../api";
 import { JsonPanel } from "../components/JsonPanel";
+import { pickTrimmedSearch } from "../urlSearch";
 
 function shortId(id: string, keepStart = 12, keepEnd = 6) {
   if (id.length <= keepStart + keepEnd + 1) return id;
@@ -102,6 +103,7 @@ function buildTraceGroups(events: unknown[]): { key: string; rows: Record<string
 
 export function RunsPage() {
   const drawerTitleId = useId();
+  const [searchParams] = useSearchParams();
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const drawerPanelRef = useRef<HTMLDivElement>(null);
   const drawerReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -137,6 +139,15 @@ export function RunsPage() {
         /* optional */
       });
   }, []);
+
+  useEffect(() => {
+    const rid = pickTrimmedSearch(searchParams, "release_id");
+    const win = pickTrimmedSearch(searchParams, "window");
+    const env = pickTrimmedSearch(searchParams, "environment");
+    if (rid) setReleaseId(rid);
+    if (win) setWindowVal(win);
+    setEnvironment(env);
+  }, [searchParams]);
 
   const closeDrawer = useCallback(() => {
     setDetailEvent(null);

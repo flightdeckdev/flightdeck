@@ -30,6 +30,24 @@ test("runs page requires release id before query", async ({ page }) => {
   await expect(page.getByText("Release ID is required.")).toBeVisible();
 });
 
+test("deep links prefill diff, runs, and promote forms from query params", async ({ page }) => {
+  await page.goto("/#/diff?baseline=rel_base&candidate=rel_cand&environment=staging&window=14d");
+  await expect(page.getByRole("textbox", { name: /baseline release id/i })).toHaveValue("rel_base");
+  await expect(page.getByRole("textbox", { name: /candidate release id/i })).toHaveValue("rel_cand");
+  await expect(page.getByRole("textbox", { name: /^environment$/i })).toHaveValue("staging");
+  await expect(page.getByRole("textbox", { name: /^window$/i })).toHaveValue("14d");
+
+  await page.goto("/#/runs?release_id=rel_run&environment=prod&window=30d");
+  await expect(page.getByLabel(/release id/i)).toHaveValue("rel_run");
+  await expect(page.getByLabel(/environment \(optional\)/i)).toHaveValue("prod");
+  await expect(page.getByLabel(/^window$/i)).toHaveValue("30d");
+
+  await page.goto("/#/actions?release_id=rel_act&environment=qa&window=1d");
+  await expect(page.getByLabel(/^release id$/i)).toHaveValue("rel_act");
+  await expect(page.getByLabel(/^environment$/i)).toHaveValue("qa");
+  await expect(page.getByLabel(/^window$/i)).toHaveValue("1d");
+});
+
 test("GET /v1/workspace returns WorkspacePublic", async ({ request }) => {
   const res = await request.get("/v1/workspace");
   expect(res.ok()).toBeTruthy();
