@@ -40,6 +40,8 @@ test.describe("appearance / theme", () => {
     await expect(page.getByRole("heading", { name: "FlightDeck", level: 1 })).toBeVisible();
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "Overview", level: 2 })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Ledger metrics" })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId("ledger-metrics-toggle")).toBeVisible({ timeout: 30_000 });
+    await page.getByTestId("ledger-metrics-toggle").click();
+    await expect(page.getByRole("region", { name: "Ledger metrics" })).toBeVisible();
   });
 });

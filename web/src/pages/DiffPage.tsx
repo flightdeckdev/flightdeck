@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { fetchJson } from "../api";
-import { Badge } from "../components/Badge";
 import { JsonPanel } from "../components/JsonPanel";
 import { UI_READ_ONLY } from "../uiConfig";
 import { pickTrimmedSearch, searchParamsFromRecord } from "../urlSearch";
@@ -160,6 +159,8 @@ function Metric({
 
 export function DiffPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const pricingPanelId = useId();
+  const [pricingDetailOpen, setPricingDetailOpen] = useState(false);
   const [diffBaseline, setDiffBaseline] = useState("");
   const [diffCandidate, setDiffCandidate] = useState("");
   const [diffWindow, setDiffWindow] = useState("7d");
@@ -176,6 +177,10 @@ export function DiffPage() {
     const e = pickTrimmedSearch(searchParams, "environment");
     setDiffEnv(e !== "" ? e : "local");
   }, [searchParams]);
+
+  useEffect(() => {
+    setPricingDetailOpen(false);
+  }, [diffOut]);
 
   const runDiff = async () => {
     setDiffErr(null);
@@ -227,15 +232,18 @@ export function DiffPage() {
       <header className="fd-page-head">
         <div>
           <h2 className="fd-page-title">Run diff</h2>
-          <p className="fd-page-sub">
-            Compare baseline vs candidate over a window. Same contract as{" "}
-            <code className="fd-mono fd-mono--sm">flightdeck release diff</code>.{" "}
-            <Link to="/">Overview</Link> shortcuts and shared URLs can prefill{" "}
+          <p className="fd-page-sub fd-page-sub--tight">
+            <strong>What changed?</strong> Baseline vs candidate releases over a window. <strong>Is it safe?</strong> Policy
+            verdict below. <strong>Can I ship?</strong> Use promote when policy passes —{" "}
+            <Link to="/actions">Actions</Link>.
+          </p>
+          <p className="fd-page-sub fd-page-sub--meta">
+            <Link to="/">Overview</Link> shortcuts and URLs can prefill{" "}
             <code className="fd-mono fd-mono--sm">baseline</code>,{" "}
             <code className="fd-mono fd-mono--sm">candidate</code>,{" "}
-            <code className="fd-mono fd-mono--sm">window</code>, and{" "}
-            <code className="fd-mono fd-mono--sm">environment</code> query params; click{" "}
-            <strong>Compute diff</strong> to run.
+            <code className="fd-mono fd-mono--sm">window</code>,{" "}
+            <code className="fd-mono fd-mono--sm">environment</code>; click <strong>Compute diff</strong> to run (same
+            contract as <code className="fd-mono fd-mono--sm">flightdeck release diff</code>).
           </p>
         </div>
       </header>
@@ -351,39 +359,12 @@ export function DiffPage() {
 
           <section className="fd-card" aria-label="Diff result summary">
             <div className="fd-card__head">
-              <h3 className="fd-card__subtitle">Diff result</h3>
+              <h3 className="fd-card__subtitle">Evidence window</h3>
             </div>
             <div className="fd-diff-stack">
-              <div className="fd-diff-section" role="region" aria-labelledby="diff-sec-policy">
-                <h4 className="fd-diff-section__title" id="diff-sec-policy">
-                  Policy gate
-                </h4>
-                {policy ? (
-                  <div className="fd-diff-section__body">
-                    <Badge tone={policy.passed ? "pass" : "fail"}>{policy.passed ? "PASS" : "FAIL"}</Badge>
-                    {policy.evaluatedAt ? (
-                      <span className="fd-muted-inline fd-ml-md">evaluated_at {policy.evaluatedAt}</span>
-                    ) : null}
-                    {policy.reasons.length > 0 ? (
-                      <ul className="fd-reasons fd-mt-md">
-                        {policy.reasons.map((r) => (
-                          <li key={r}>{r}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="fd-muted-p">
-                        No policy constraint messages (pass with empty reasons, or policy omitted).
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="fd-muted fd-diff-section__body">No policy block in this response.</p>
-                )}
-              </div>
-
               <div className="fd-diff-section" role="region" aria-labelledby="diff-sec-samples">
                 <h4 className="fd-diff-section__title" id="diff-sec-samples">
-                  Evidence window
+                  Sample coverage
                 </h4>
                 {samples ? (
                   <p className="fd-diff-section__body fd-muted fd-m-0">
@@ -397,18 +378,65 @@ export function DiffPage() {
                 )}
               </div>
 
-              <div className="fd-diff-section" role="region" aria-labelledby="diff-sec-pricing">
-                <h4 className="fd-diff-section__title" id="diff-sec-pricing">
-                  Pricing, model, and catalog
+              <div className="fd-diff-section" role="region" aria-labelledby="diff-sec-metrics">
+                <h4 className="fd-diff-section__title" id="diff-sec-metrics">
+                  Cost and quality rollups
                 </h4>
-                {pricing ? (
-                  <div className="fd-diff-section__body">
-                    <p className="fd-muted fd-block-mb-065 fd-type-desc">
-                      Resolved models:{" "}
+                {metrics ? (
+                  <div className="fd-metric-grid">
+                    <Metric
+                      label="Cost / run (USD)"
+                      baseline={num(metrics.baseline_cost_per_run_usd)}
+                      candidate={num(metrics.candidate_cost_per_run_usd)}
+                      delta={
+                        typeof metrics.delta_cost_per_run_usd === "number"
+                          ? `Δ ${num(metrics.delta_cost_per_run_usd)}${
+                              typeof metrics.delta_cost_per_run_pct === "number"
+                                ? ` (${metrics.delta_cost_per_run_pct >= 0 ? "+" : ""}${(metrics.delta_cost_per_run_pct * 100).toFixed(2)}% vs baseline)`
+                                : ""
+                            }`
+                          : undefined
+                      }
+                    />
+                    <Metric
+                      label="Latency avg (ms)"
+                      baseline={num(metrics.baseline_latency_ms_avg)}
+                      candidate={num(metrics.candidate_latency_ms_avg)}
+                      delta={
+                        typeof metrics.delta_latency_ms_avg === "number"
+                          ? `Δ ${num(metrics.delta_latency_ms_avg)} ms`
+                          : undefined
+                      }
+                    />
+                    <Metric
+                      label="Error rate"
+                      baseline={pct(metrics.baseline_error_rate)}
+                      candidate={pct(metrics.candidate_error_rate)}
+                      delta={
+                        typeof metrics.delta_error_rate === "number"
+                          ? `Δ ${pct(metrics.delta_error_rate)}`
+                          : undefined
+                      }
+                    />
+                  </div>
+                ) : (
+                  <p className="fd-muted fd-diff-section__body">No metrics block in this response.</p>
+                )}
+              </div>
+
+              <div className="fd-diff-section fd-diff-section--collapse-wrap" role="region" aria-labelledby="diff-pricing-toggle">
+                <div className="fd-diff-pricing-inline">
+                  <h4 className="fd-diff-section__title fd-m-0" id="diff-pricing-toggle">
+                    Pricing &amp; model
+                  </h4>
+                  {pricing ? (
+                    <p className="fd-muted fd-type-desc fd-m-0 fd-diff-pricing-inline__summary">
                       <code className="fd-mono fd-mono--sm">
                         {pricing.baselineProvider}/{pricing.baselineVersion} {pricing.baselineModel}
-                      </code>{" "}
-                      →{" "}
+                      </code>
+                      <span className="fd-metric__arrow fd-mx-xs" aria-hidden>
+                        →
+                      </span>
                       <code className="fd-mono fd-mono--sm">
                         {pricing.candidateProvider}/{pricing.candidateVersion} {pricing.candidateModel}
                       </code>
@@ -418,6 +446,23 @@ export function DiffPage() {
                         <span className="fd-badge fd-badge--neutral fd-ml-sm">unchanged</span>
                       )}
                     </p>
+                  ) : (
+                    <p className="fd-muted fd-m-0">No pricing block in this response.</p>
+                  )}
+                  {pricing ? (
+                    <button
+                      type="button"
+                      className="fd-btn fd-btn--ghost fd-diff-detail-toggle"
+                      aria-expanded={pricingDetailOpen}
+                      aria-controls={pricingPanelId}
+                      onClick={() => setPricingDetailOpen((o) => !o)}
+                    >
+                      {pricingDetailOpen ? "Hide" : "Show"} catalog, tables &amp; warnings
+                    </button>
+                  ) : null}
+                </div>
+                {pricing && pricingDetailOpen ? (
+                  <div id={pricingPanelId} className="fd-diff-section__body fd-mt-md">
                     {(() => {
                       const bp = pricing.baselineProvider.trim();
                       const cp = pricing.candidateProvider.trim();
@@ -488,9 +533,7 @@ export function DiffPage() {
                               ) : null}
                             </p>
                           ) : (
-                            <p className="fd-muted fd-m-0">
-                              Catalog disabled or incomplete for this diff.
-                            </p>
+                            <p className="fd-muted fd-m-0">Catalog disabled or incomplete for this diff.</p>
                           )}
                           {pricing.catalog.warnings.length > 0 ? (
                             <ul className="fd-reasons fd-mb-0">
@@ -531,55 +574,7 @@ export function DiffPage() {
                       </>
                     ) : null}
                   </div>
-                ) : (
-                  <p className="fd-muted fd-diff-section__body">No pricing block in this response.</p>
-                )}
-              </div>
-
-              <div className="fd-diff-section" role="region" aria-labelledby="diff-sec-metrics">
-                <h4 className="fd-diff-section__title" id="diff-sec-metrics">
-                  Cost and quality rollups
-                </h4>
-                {metrics ? (
-                  <div className="fd-metric-grid">
-                    <Metric
-                      label="Cost / run (USD)"
-                      baseline={num(metrics.baseline_cost_per_run_usd)}
-                      candidate={num(metrics.candidate_cost_per_run_usd)}
-                      delta={
-                        typeof metrics.delta_cost_per_run_usd === "number"
-                          ? `Δ ${num(metrics.delta_cost_per_run_usd)}${
-                              typeof metrics.delta_cost_per_run_pct === "number"
-                                ? ` (${metrics.delta_cost_per_run_pct >= 0 ? "+" : ""}${(metrics.delta_cost_per_run_pct * 100).toFixed(2)}% vs baseline)`
-                                : ""
-                            }`
-                          : undefined
-                      }
-                    />
-                    <Metric
-                      label="Latency avg (ms)"
-                      baseline={num(metrics.baseline_latency_ms_avg)}
-                      candidate={num(metrics.candidate_latency_ms_avg)}
-                      delta={
-                        typeof metrics.delta_latency_ms_avg === "number"
-                          ? `Δ ${num(metrics.delta_latency_ms_avg)} ms`
-                          : undefined
-                      }
-                    />
-                    <Metric
-                      label="Error rate"
-                      baseline={pct(metrics.baseline_error_rate)}
-                      candidate={pct(metrics.candidate_error_rate)}
-                      delta={
-                        typeof metrics.delta_error_rate === "number"
-                          ? `Δ ${pct(metrics.delta_error_rate)}`
-                          : undefined
-                      }
-                    />
-                  </div>
-                ) : (
-                  <p className="fd-muted fd-diff-section__body">No metrics block in this response.</p>
-                )}
+                ) : null}
               </div>
             </div>
           </section>

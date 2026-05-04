@@ -20,21 +20,21 @@ This document turns the strict UI review into sequenced work. Scope is the check
 
 ## Phase 1 — Hierarchy and differentiation
 
-| Priority | Work |
-|----------|------|
-| P1 | Collapse or relocate **Ledger metrics** on Overview so the releases + promoted story leads. |
-| P1 | **Reorder Diff result**: top fold = verdict + key deltas; pricing/catalog in collapsed sections or tabs. |
-| P1 | **Promoted vs candidate** narrative per `agent + environment` (e.g. inline summary above tables). |
-| P1 | Reduce reliance on **manual checksum scanning** — surface version + agent + env as the human keys. |
+| Priority | Work | Status |
+|----------|------|--------|
+| P1 | Collapse or relocate **Ledger metrics** on Overview so the releases + promoted story leads. | Done — metrics in collapsible panel below tables (collapsed by default). |
+| P1 | **Reorder Diff result**: top fold = verdict + key deltas; pricing/catalog in collapsed sections or tabs. | Done — verdict banner; samples + rollups; pricing summary inline with expandable detail. |
+| P1 | **Promoted vs candidate** narrative per `agent + environment` (e.g. inline summary above tables). | Done — promoted table first with version column; releases show Live vs Registered. |
+| P1 | Reduce reliance on **manual checksum scanning** — surface version + agent + env as the human keys. | Done — Primary column on releases table; hero leads with agent/version/env. |
 
 ## Phase 2 — Polish and operator UX
 
-| Priority | Work |
-|----------|------|
-| P2 | Typography scale for page vs card titles; consistent vertical rhythm. |
-| P2 | Table ergonomics: row hover, optional filters, copy-to-clipboard for release IDs. |
-| P2 | Tone down gradient accents for a more **infra / audit** aesthetic (keep accessible contrast). |
-| P2 | Copy pass: each primary page answers *What changed?* *Is it safe?* *Can I ship?* in one short block. |
+| Priority | Work | Status |
+|----------|------|--------|
+| P2 | Typography scale for page vs card titles; consistent vertical rhythm. | Done — `fd-page-sub--tight` / `--meta`, wider page header measure. |
+| P2 | Table ergonomics: row hover, optional filters, copy-to-clipboard for release IDs. | Done — filter row on releases; copy buttons; hover accent on `fd-table--hover`. |
+| P2 | Tone down gradient accents for a more **infra / audit** aesthetic (keep accessible contrast). | Done — solid primary buttons; flat logo tile; nav indicator unchanged. |
+| P2 | Copy pass: each primary page answers *What changed?* *Is it safe?* *Can I ship?* in one short block. | Done — Overview, Diff, Runs, Actions, Settings intros. |
 
 ## Non-goals (near term)
 

@@ -289,11 +289,16 @@ export function ActionsPage() {
       <header className="fd-page-head">
         <div>
           <h2 className="fd-page-title">Promote & rollback</h2>
-          <p className="fd-page-sub">
-            Writes use the same HTTP contract as the CLI. When{" "}
+          <p className="fd-page-sub fd-page-sub--tight">
+            <strong>What changed?</strong> You choose the candidate release and window. <strong>Is it safe?</strong> The
+            server evaluates policy before mutating the ledger. <strong>Can I ship?</strong> Promotion succeeds only when
+            policy passes (or follow request/confirm when approval is required).
+          </p>
+          <p className="fd-page-sub fd-page-sub--meta">
+            Same HTTP contract as the CLI. When{" "}
             <code className="fd-mono fd-mono--sm">FLIGHTDECK_LOCAL_API_TOKEN</code> is set, include it via{" "}
-            <code className="fd-mono fd-mono--sm">VITE_FLIGHTDECK_LOCAL_API_TOKEN</code> so reads and mutations
-            send <code className="fd-mono fd-mono--sm">Authorization: Bearer</code>.
+            <code className="fd-mono fd-mono--sm">VITE_FLIGHTDECK_LOCAL_API_TOKEN</code> so reads and mutations send{" "}
+            <code className="fd-mono fd-mono--sm">Authorization: Bearer</code>.
           </p>
         </div>
       </header>
@@ -468,7 +473,7 @@ export function ActionsPage() {
               <p className="fd-muted">No pending requests. After you request a promotion, it appears here.</p>
             ) : (
               <div className="fd-table-wrap">
-                <table className="fd-table">
+                <table className="fd-table fd-table--hover">
                   <thead>
                     <tr>
                       <th scope="col">Request ID</th>
