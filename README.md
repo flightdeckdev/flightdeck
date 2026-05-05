@@ -67,11 +67,33 @@ flowchart LR
 
 ---
 
+## Fast start
+
+After **`pip install flightdeck-ai`** (or **`uv tool install flightdeck-ai`**):
+
+```bash
+flightdeck demo
+```
+
+**`flightdeck demo`** runs the full quickstart ledger flow in a disposable temp workspace—no **`sed`**, no fixture paths—using **`examples/quickstart`** from your checkout or packaged **`flightdeck/_bundled_quickstart`** from PyPI.
+
+**Web UI** (needs a workspace in the current directory):
+
+```bash
+flightdeck init
+flightdeck serve
+```
+
+Open **http://127.0.0.1:8765/**. Same end-to-end checks CI uses: **`flightdeck-quickstart-verify`** (contributors: **`uv run flightdeck-quickstart-verify`**).
+
+---
+
 ## Install and smoke-test
 
 ```bash
 uv sync --extra dev
 uv run flightdeck --help
+uv run flightdeck demo
 uv run flightdeck-quickstart-verify
 ```
 
@@ -138,6 +160,7 @@ Bundled pricing from `init` is a **convenience snapshot**—`flightdeck pricing 
 uv sync --frozen --extra dev
 uv run python -m ruff check src tests
 uv run python -m pytest
+uv run flightdeck demo
 uv run flightdeck-quickstart-verify
 uv run flightdeck --help
 ```
