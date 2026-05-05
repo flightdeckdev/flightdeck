@@ -13,7 +13,8 @@ export function App() {
     <ThemePreferenceProvider>
       <HashRouter>
         <Routes>
-          <Route element={<AppShell />}>
+          {/* RR v7 requires an explicit path on layout routes so nested routes match (avoid blank UI). */}
+          <Route path="/" element={<AppShell />}>
             <Route index element={<OverviewPage />} />
             <Route path="diff" element={<DiffPage />} />
             <Route path="runs" element={<RunsPage />} />

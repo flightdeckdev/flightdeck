@@ -6,6 +6,10 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ## Unreleased
 
+### Fixed
+
+- **Web UI / Playwright:** local **`npm run test:e2e`** now prefers **`uv run flightdeck …`** when **`uv.lock`** is present so the server serves **this repo’s** committed **`static/`** bundle (not a stale **`site-packages`** install). Python fallback sets **`PYTHONPATH`** to **`src/`**.
+
 ### Added
 
 - **Web UI (`flightdeck serve`):** **`/#/settings`** for appearance (Light / Dark / System, **`flightdeck-theme`**); collapsible sidebar (**`flightdeck-sidebar-collapsed`**); **offline system font stack** (no remote font CSS); sidebar + favicon use **bundled** **`/assets/flightdeck-icon-*.png`** with stable **`GET /flightdeck-icon.png`** fallback; **`html[data-theme="dark"]`** tokens and Playwright **`web/e2e/`** (`smoke` icon checks, `theme.spec.ts`, `sidebar.spec.ts`).
