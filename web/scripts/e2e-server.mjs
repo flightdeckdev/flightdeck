@@ -37,7 +37,8 @@ if (inCi) {
 } else if (process.platform === "win32") {
   await run("py", ["-3", "-m", "flightdeck.cli.main", "init", "--no-bundled-pricing"], { cwd: ws });
 } else {
-  await run("python", ["-m", "flightdeck.cli.main", "init", "--no-bundled-pricing"], { cwd: ws });
+  const py = process.env.FLIGHTDECK_E2E_PYTHON || "python3";
+  await run(py, ["-m", "flightdeck.cli.main", "init", "--no-bundled-pricing"], { cwd: ws });
 }
 
 // Set by `playwright.config.ts` only when the Playwright CLI targets `e2e/actions-approval.spec.ts`
@@ -62,7 +63,7 @@ if (inCi) {
   serveArgs = ["-m", "flightdeck.cli.main", "serve", "--host", "127.0.0.1", "--port", port];
 }
 
-const serveCmd = inCi ? "uv" : process.platform === "win32" ? "py" : "python";
+const serveCmd = inCi ? "uv" : process.platform === "win32" ? "py" : process.env.FLIGHTDECK_E2E_PYTHON || "python3";
 const serve = spawn(serveCmd, serveArgs, { cwd: ws, stdio: "inherit" });
 
 function forward(sig) {

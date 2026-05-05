@@ -56,7 +56,7 @@ export function AppShell() {
                   <span className="fd-sidebar__title-text">FlightDeck</span>
                 </h1>
               </div>
-              <p className="fd-sidebar__tagline">Diffs, evidence, policy gates</p>
+              <p className="fd-sidebar__tagline">Release safety ledger</p>
             </div>
             <button
               type="button"

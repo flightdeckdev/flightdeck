@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import type { ActionOutcomePayload, PromotionRequestListItem, WorkspacePublicPayload } from "../api";
 import { fetchHealth, fetchJson, fetchPromotionRequests, fetchWorkspace } from "../api";
 import { clientMutationTokenConfigured } from "../uiConfig";
@@ -57,6 +58,7 @@ function pickOutcome(data: unknown): ActionOutcomePayload | null {
 type Busy = null | "promote" | "rollback" | "request" | "confirm";
 
 export function ActionsPage() {
+  const [searchParams] = useSearchParams();
   const { notifyTimelineMutated } = useTimelineRefresh();
   const [workspace, setWorkspace] = useState<WorkspacePublicPayload | null>(null);
   const [workspaceLoading, setWorkspaceLoading] = useState(true);
@@ -141,6 +143,15 @@ export function ActionsPage() {
   useEffect(() => {
     void refreshPending();
   }, [refreshPending, listNonce]);
+
+  useEffect(() => {
+    const rid = searchParams.get("release_id");
+    const env = searchParams.get("environment");
+    const win = searchParams.get("window");
+    if (rid !== null && rid.trim() !== "") setActRelease(rid.trim());
+    if (env !== null && env.trim() !== "") setActEnv(env.trim());
+    if (win !== null && win.trim() !== "") setActWindow(win.trim());
+  }, [searchParams]);
 
   const runAction = async (path: "/v1/promote" | "/v1/rollback") => {
     setActErr(null);
@@ -278,11 +289,16 @@ export function ActionsPage() {
       <header className="fd-page-head">
         <div>
           <h2 className="fd-page-title">Promote & rollback</h2>
-          <p className="fd-page-sub">
-            Writes use the same HTTP contract as the CLI. When{" "}
+          <p className="fd-page-sub fd-page-sub--tight">
+            <strong>What changed?</strong> You choose the candidate release and window. <strong>Is it safe?</strong> The
+            server evaluates policy before mutating the ledger. <strong>Can I ship?</strong> Promotion succeeds only when
+            policy passes (or follow request/confirm when approval is required).
+          </p>
+          <p className="fd-page-sub fd-page-sub--meta">
+            Same HTTP contract as the CLI. When{" "}
             <code className="fd-mono fd-mono--sm">FLIGHTDECK_LOCAL_API_TOKEN</code> is set, include it via{" "}
-            <code className="fd-mono fd-mono--sm">VITE_FLIGHTDECK_LOCAL_API_TOKEN</code> so reads and mutations
-            send <code className="fd-mono fd-mono--sm">Authorization: Bearer</code>.
+            <code className="fd-mono fd-mono--sm">VITE_FLIGHTDECK_LOCAL_API_TOKEN</code> so reads and mutations send{" "}
+            <code className="fd-mono fd-mono--sm">Authorization: Bearer</code>.
           </p>
         </div>
       </header>
@@ -457,7 +473,7 @@ export function ActionsPage() {
               <p className="fd-muted">No pending requests. After you request a promotion, it appears here.</p>
             ) : (
               <div className="fd-table-wrap">
-                <table className="fd-table">
+                <table className="fd-table fd-table--hover">
                   <thead>
                     <tr>
                       <th scope="col">Request ID</th>

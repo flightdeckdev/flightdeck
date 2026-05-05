@@ -78,8 +78,7 @@ export function ReleaseLifecycleStrip() {
         ))}
       </ol>
       <p className="fd-lifecycle-strip__note">
-        Links always open the page. They do not auto-fill forms: if tables are empty, register and ingest with the CLI
-        first, then copy release IDs from Overview into Runs or Diff.
+        Links always open the page. Deep links can prefill Diff, Runs, and Promote via URL query params; still run diff or load runs explicitly on those pages.
       </p>
     </nav>
   );

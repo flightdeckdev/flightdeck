@@ -6,7 +6,11 @@ export function SettingsPage() {
       <header className="fd-page-head">
         <div>
           <h2 className="fd-page-title fd-page-title--brand">Settings</h2>
-          <p className="fd-page-sub">Appearance and workspace preferences (more options later).</p>
+          <p className="fd-page-sub fd-page-sub--tight">
+            <strong>What changed?</strong> Theme preference only for now. <strong>Is it safe?</strong> Stored locally in this
+            browser. <strong>Can I ship?</strong> Unrelated to promotion — use <strong>Actions</strong> for ledger writes.
+          </p>
+          <p className="fd-page-sub fd-page-sub--meta">Appearance and workspace preferences (more options later).</p>
         </div>
       </header>
 

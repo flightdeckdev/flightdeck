@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import type { ReleaseRow, RunsListPayload } from "../api";
 import { fetchRuns, fetchRunsExportBlob, loadTimeline } from "../api";
 import { JsonPanel } from "../components/JsonPanel";
+import { pickTrimmedSearch } from "../urlSearch";
 
 function shortId(id: string, keepStart = 12, keepEnd = 6) {
   if (id.length <= keepStart + keepEnd + 1) return id;
@@ -102,6 +103,7 @@ function buildTraceGroups(events: unknown[]): { key: string; rows: Record<string
 
 export function RunsPage() {
   const drawerTitleId = useId();
+  const [searchParams] = useSearchParams();
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const drawerPanelRef = useRef<HTMLDivElement>(null);
   const drawerReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -137,6 +139,15 @@ export function RunsPage() {
         /* optional */
       });
   }, []);
+
+  useEffect(() => {
+    const rid = pickTrimmedSearch(searchParams, "release_id");
+    const win = pickTrimmedSearch(searchParams, "window");
+    const env = pickTrimmedSearch(searchParams, "environment");
+    if (rid) setReleaseId(rid);
+    if (win) setWindowVal(win);
+    setEnvironment(env);
+  }, [searchParams]);
 
   const closeDrawer = useCallback(() => {
     setDetailEvent(null);
@@ -363,10 +374,14 @@ export function RunsPage() {
       <header className="fd-page-head">
         <div>
           <h2 className="fd-page-title">Run events</h2>
-          <p className="fd-page-sub">
-            Read-only slice of ingested runs (<code className="fd-mono fd-mono--sm">GET /v1/runs</code>). Newest
-            first; offset pages through the match set.             Paste a release ID from <Link to="/">Overview</Link> (or the CLI), then load. Use a row&apos;s <strong>View</strong> action for structured detail (same payload
-            as export lines).
+          <p className="fd-page-sub fd-page-sub--tight">
+            <strong>What changed?</strong> Inspect ingested runs for a release. <strong>Is it safe?</strong> Correlate with{" "}
+            <Link to="/diff">Diff</Link> policy. <strong>Can I ship?</strong> Evidence supports the promotion decision on{" "}
+            <Link to="/actions">Actions</Link>.
+          </p>
+          <p className="fd-page-sub fd-page-sub--meta">
+            Read-only <code className="fd-mono fd-mono--sm">GET /v1/runs</code>, newest first; paste a release ID from{" "}
+            <Link to="/">Overview</Link> or the CLI. Row <strong>View</strong> opens structured detail (same shape as export lines).
           </p>
         </div>
       </header>
@@ -553,7 +568,7 @@ export function RunsPage() {
                         )}
                       </summary>
                       <div className="fd-table-wrap">
-                        <table className="fd-table">
+                        <table className="fd-table fd-table--hover">
                           {tableHead}
                           <tbody>{g.rows.map((rec, idx) => renderEventRow(rec, idx, g.key))}</tbody>
                         </table>
@@ -564,7 +579,7 @@ export function RunsPage() {
               </div>
             ) : (
               <div className="fd-table-wrap">
-                <table className="fd-table">
+                <table className="fd-table fd-table--hover">
                   {tableHead}
                   <tbody>
                     {result.events.length === 0 ? (
