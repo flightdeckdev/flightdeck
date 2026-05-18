@@ -412,6 +412,46 @@ flightdeck pricing show --provider PROVIDER --version VERSION
 
 Both flags are required. If the table does not exist, exits 1 with an error message.
 
+### `flightdeck pricing check`
+
+Check the age of any **`flightdeck-bundled-*`** pricing snapshots currently in the ledger.
+Bundled snapshots use a calendar anchor (`YYYY-MM-01`) derived from the version string; the
+command computes how many days have elapsed since that anchor date (in UTC) and reports
+whether each table is within the acceptable age window.
+
+```bash
+flightdeck pricing check [--max-age-days N] [--fail]
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--max-age-days` | `90` | Warn (and optionally fail) when a bundled snapshot anchor is older than this many days |
+| `--fail` | off | Exit with code **1** if any bundled snapshot exceeds `--max-age-days` |
+
+If the ledger contains no `flightdeck-bundled-*` tables (for example when the workspace
+was initialized with `--no-bundled-pricing`), the command prints a single informational
+line and exits 0.
+
+**Output format — each bundled table is printed on its own line:**
+
+```
+OK     flightdeck-bundled-2026-05  (~17 days old; max 90)
+```
+
+or, when stale (written to **stderr**):
+
+```
+STALE  flightdeck-bundled-2025-12  (anchor 2025-12-01, ~168 days old; max 90)
+```
+
+`STALE` lines are written to stderr; `OK` lines to stdout. If `--fail` is given and any
+table is stale, the process exits 1 after printing all lines.
+
+**CI use:** add `flightdeck pricing check --fail` to a periodic job or pre-release gate to
+detect when bundled tables have aged past your allowed threshold. See
+[pricing-catalog.md § Bundled snapshot](pricing-catalog.md) for maintainer cadence and
+how diff responses surface stale-snapshot warnings automatically.
+
 ---
 
 ## `flightdeck policy`
