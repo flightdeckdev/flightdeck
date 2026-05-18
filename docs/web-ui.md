@@ -54,12 +54,20 @@ The app uses **HashRouter** (`react-router-dom`) so all navigation stays within 
 
 | Hash path | Component | HTTP calls | Notes |
 |-----------|-----------|-----------|-------|
-| `#/` | `OverviewPage` | `GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions`, `GET /v1/metrics` (parallel where applicable) | Ledger metrics (read-only); short per-counter hints; skeleton on first load; **auto-refresh** every 30s when the tab is visible + on timeline **`generation`** bump; links to Diff/Runs |
-| `#/diff` | `DiffPage` | `POST /v1/diff` | Sections: policy gate (incl. `evaluated_at`), evidence window, pricing/catalog/hints (incl. provider/version skew callout when sides differ), per-1k prices when present, cost/quality rollups; raw JSON panel |
-| `#/runs` | `RunsPage` | `GET /v1/releases` (for datalist), `GET /v1/runs`, `GET /v1/runs/export` | Forensics: filters, table (trace/status, trace band rows or **Group by trace_id**), **View** drawer (focus trap, session/span ids), typed **run-query error** card with **Retry**, empty/offset/truncation hints, NDJSON download |
+| `#/` | `OverviewPage` | `GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions`, `GET /v1/metrics` (parallel where applicable) | Ledger metrics (collapsible, read-only); short per-counter hints; skeleton on first load; **auto-refresh** every 30s when the tab is visible + on timeline **`generation`** bump; links to Diff/Runs. URL param **`?release=<id>`** activates the **focused-release hero**. |
+| `#/diff` | `DiffPage` | `POST /v1/diff` | Sections: policy gate (incl. `evaluated_at`), evidence window, pricing/catalog/hints (incl. provider/version skew callout when sides differ), per-1k prices when present, cost/quality rollups; raw JSON panel. URL params **`?baseline=<id>&candidate=<id>&window=7d&environment=prod`** prefill the form. |
+| `#/runs` | `RunsPage` | `GET /v1/releases` (for datalist), `GET /v1/runs`, `GET /v1/runs/export` | Forensics: filters, table (trace/status, trace band rows or **Group by trace_id**), **View** drawer (focus trap, session/span ids), typed **run-query error** card with **Retry**, empty/offset/truncation hints, NDJSON download. URL params **`?release_id=<id>&window=7d&environment=prod`** prefill the filters. |
 | `#/settings` | `SettingsPage` | *(none)* | **Color theme** (Light / Dark / System) via `ThemeToggle`; more preferences later. |
-| `#/actions` | `ActionsPage` | `GET /v1/workspace`, `GET /v1/promotion-requests` (when `promotion_requires_approval`), `POST /v1/promote` **or** `POST /v1/promote/request` + `POST /v1/promote/confirm`, `POST /v1/rollback` | Workspace skeleton then strip; approval path: numbered steps, pending **Refresh list** / **Use for confirm**; **Rollback** danger-styled; see **ActionsPage** below |
+| `#/actions` | `ActionsPage` | `GET /v1/workspace`, `GET /v1/promotion-requests` (when `promotion_requires_approval`), `POST /v1/promote` **or** `POST /v1/promote/request` + `POST /v1/promote/confirm`, `POST /v1/rollback` | Workspace skeleton then strip; approval path: numbered steps, pending **Refresh list** / **Use for confirm**; **Rollback** danger-styled; see **ActionsPage** below. URL params **`?release_id=<id>&environment=prod&window=7d`** prefill the form. |
 | `#/*` (any other) | — | Redirects to `#/` | |
+
+**URL deep-linking:** all page query parameters are read from the hash-router search string
+on mount. Pages do **not** auto-submit — they prefill form fields; the user still clicks the
+action button to fire the request. Deep links are generated throughout the UI (every row in
+the Overview releases table has **Diff**, **Runs**, and **Promote** shortcuts; the
+focused-release hero also renders those buttons). See
+[`urlSearch.ts`](#urlsearchts-websrcurlsearchts) for the helpers that construct and parse
+search strings.
 
 `App.tsx` declares the route tree. `AppShell` is the layout wrapper rendered for all routes.
 
@@ -172,22 +180,52 @@ fail. This is a configuration hint only — the server enforces the actual gate.
 
 ## `OverviewPage` (`web/src/pages/OverviewPage.tsx`)
 
-Read-only dashboard. Renders a **Ledger metrics** card from `fetchMetrics()` plus three tables from `loadTimeline()` output:
+Read-only dashboard. Renders a **`ReleaseLifecycleStrip`** workflow nav, an optional
+**focused-release hero**, and then four blocks from `loadTimeline()` + `fetchMetrics()`:
 
 | Block | Source | Content |
 |-------|--------|---------|
-| Ledger metrics | `GET /v1/metrics` | Releases, pricing tables, run events, promoted pointers, and actions totals (plus `actions_by_action` breakdown), `schema_version`, `generated_at` |
-| Releases | `GET /v1/releases` | Release ID, Agent, Version, Environment, Checksum, Created |
-| Promoted | `GET /v1/promoted` | Agent, Environment, Active release |
+| Promoted releases | `GET /v1/promoted` | Agent, Environment, Active release, Version; Copy-ID button |
+| Registered releases | `GET /v1/releases` | Agent/version/env, Release ID (copy + focus link), Checksum, Created, Shortcuts (Diff / Runs / Promote) |
 | Recent actions | `GET /v1/actions` | When, Action, Policy (PASS/FAIL badge), Release, Environment, Reason |
+| Ledger metrics | `GET /v1/metrics` | Collapsible card: releases, pricing tables, run events, promoted pointers, actions totals + `actions_by_action` breakdown, `schema_version`, `generated_at` |
 
 Long IDs are abbreviated with `shortId(id, keepStart, keepEnd)` and shown in full on hover
 via the HTML `title` attribute.
 
+**Release table filters:** a toolbar above the Registered releases table exposes three
+client-side filters that narrow the displayed rows without an additional API call:
+
+| Filter | Behaviour |
+|--------|-----------|
+| Agent contains | Case-insensitive substring match on `agent_id` |
+| Environment contains | Case-insensitive substring match on `environment` |
+| Promotion | `All` / `Live (promoted)` / `Not promoted` — based on whether the row's `release_id` matches the current promoted pointer for that agent/environment pair |
+
+**Focused-release hero:** when the URL includes `?release=<release_id>`, the page looks up
+that release from the already-loaded data and renders a hero block above the tables:
+
+- **Title:** `<agent_id> v<version> (<environment>)`
+- **Meta:** abbreviated release ID with a **Copy ID** button, abbreviated checksum, and the
+  currently promoted baseline for the same agent/environment pair (or a note if none).
+- **Action buttons:** **Open diff** (links to `#/diff?baseline=<promoted_id>&candidate=<id>&…`),
+  **Open runs** (links to `#/runs?release_id=<id>&…`), **Promote** (links to
+  `#/actions?release_id=<id>&…`; hidden in `UI_READ_ONLY` mode), **Clear focus** (removes
+  `?release` from the URL).
+- When the `?release` value does not match any registered release, a warning banner is shown
+  with a **Clear** button.
+
+Each release ID in the table is a link that sets `?release=<id>` to open the focused hero.
+The promoted releases table does the same for the active promoted ID.
+
 **Refresh:** while the document tab is visible, the page **auto-polls** metrics and the
-timeline on an interval and uses **silent** fetches after the first load. The `generation`
+timeline every 30 seconds and uses **silent** fetches after the first load. The `generation`
 counter from `TimelineRefreshContext` triggers an immediate refresh after mutations from
 `ActionsPage`.
+
+**Ledger metrics panel:** collapsed by default; click the **▸ Ledger metrics** toggle to
+expand. Shows per-counter metric cards with hints. Uses `aria-expanded` / `aria-controls`
+and a `data-testid="ledger-metrics-toggle"` for E2E targeting.
 
 ---
 
@@ -369,6 +407,28 @@ Calls `GET /v1/promotion-requests` with optional query parameters. Used by `Acti
 
 ---
 
+## `urlSearch.ts` (`web/src/urlSearch.ts`)
+
+Thin helpers for reading and writing hash-router search strings. Used by all pages that
+support URL deep-linking.
+
+| Export | Signature | Description |
+|--------|-----------|-------------|
+| `pickTrimmedSearch` | `(searchParams, key) => string` | Returns `searchParams.get(key).trim()` or `""` when the key is absent. Prevents whitespace-only values from being treated as filled form fields. |
+| `searchParamsFromRecord` | `(rec: Record<string, string>) => string` | Builds a query string (e.g. `"?baseline=rel_abc&window=7d"`) from an object, omitting keys whose value is `""`. Returns `""` (not `"?"`) when all values are empty. |
+
+**Usage pattern in pages:**
+
+```ts
+// Read on mount
+const baseline = pickTrimmedSearch(searchParams, "baseline");
+
+// Write when building a shortcut link
+const href = `/diff${searchParamsFromRecord({ baseline, candidate, window: "7d" })}`;
+```
+
+---
+
 ## Shared components
 
 ### `Badge` (`web/src/components/Badge.tsx`)
@@ -393,6 +453,44 @@ Collapsible raw-JSON viewer. Props:
 | `defaultOpen` | boolean | `false` | Whether expanded on first render |
 
 Uses `aria-expanded` and `aria-controls` for accessibility. Toggle state is local (`useState`).
+
+### `CopyTextButton` (`web/src/components/CopyTextButton.tsx`)
+
+One-click clipboard helper. Renders a `<button>` that copies `value` to the clipboard using
+`navigator.clipboard.writeText` (with a `document.execCommand` fallback for headless /
+insecure contexts). After a successful copy, the button label changes to **"Copied"** for 2 s;
+on failure it shows **"Copy failed."** for 2.5 s, then resets. Cleans up pending timeouts on
+unmount.
+
+Props:
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `label` | string | — | Accessible description of what is being copied (used in `aria-label` and `title`) |
+| `value` | string | — | Text to copy |
+| `buttonText` | string | `"Copy"` | Visible button label when idle |
+| `className` | string | `"fd-btn fd-btn--ghost fd-copy-btn"` | CSS class(es) |
+| `testId` | string | — | Optional `data-testid` for Playwright targeting |
+
+Used in `OverviewPage` to let operators copy release IDs directly from the table without
+selecting text manually.
+
+### `ReleaseLifecycleStrip` (`web/src/components/ReleaseLifecycleStrip.tsx`)
+
+A `<nav>` strip rendered at the top of `OverviewPage` that maps the four governance steps
+to pages in the app. Each step is a `<Link>` with a label and a one-line hint:
+
+| Step | Label | Hint | Destination |
+|------|-------|------|-------------|
+| 1 | Register | releases on this ledger | `#/` |
+| 2 | Ingest | run evidence | `#/runs` |
+| 3 | Diff & policy | compare + gate | `#/diff` |
+| 4 | Promote & rollback | ledger actions | `#/actions` (or static text in `UI_READ_ONLY` mode) |
+
+The strip is purely navigational — it generates no API calls. In `UI_READ_ONLY` mode the
+**Promote & rollback** step renders as non-interactive text rather than a link. Each step
+carries a `title` attribute that explains what to expect on the target page and that deep
+links can prefill the form.
 
 ---
 
@@ -452,6 +550,20 @@ All tokens are CSS custom properties on `:root`:
 | `fd-inline` | Inline flex row used for label + badge pairs inside card headers |
 | `fd-samples` | Muted paragraph for sample/confidence metadata in diff and action outcome cards |
 | `fd-reasons` | Small bulleted list of policy failure reasons; used in `DiffPage` and `ActionsPage` outcome cards |
+| `fd-lifecycle-strip` | `<nav>` wrapper for `ReleaseLifecycleStrip`; contains ordered steps linked to pages |
+| `fd-lifecycle-strip__step` | A single step `<li>` inside the strip |
+| `fd-lifecycle-strip__link` | Step link/span; `--static` modifier for non-interactive steps in `UI_READ_ONLY` mode |
+| `fd-release-hero` | Focused-release hero `<section>` shown on `OverviewPage` when `?release=<id>` is set |
+| `fd-release-hero__actions` | Flex row of action buttons inside the hero (`Open diff`, `Open runs`, `Promote`, `Clear focus`) |
+| `fd-copy-btn` | Default class for `CopyTextButton`; a ghost-style button with clipboard icon semantics |
+| `fd-card--collapse` | Card variant with a collapsible body (`fd-collapse-head` + `fd-collapse-body`) |
+| `fd-collapse-head` | Toggle button row inside a collapsible card; contains `fd-collapse-head__chevron` and `fd-collapse-head__title` |
+| `fd-collapse-body` | Revealed body of a collapsible card |
+| `fd-filter-row` | Flex row of compact filter fields in a table toolbar (`fd-table-toolbar`) |
+| `fd-table-toolbar` | Toolbar container placed between the card head and the table wrapper |
+| `fd-table-actions` | Inline row of shortcut links in a table cell (Diff, Runs, Promote) |
+| `fd-cell-stack` | Flex column for stacked content in a single cell (agent+version, env, badge) |
+| `fd-cell-inline` | Flex row for inline content in a cell (ID + copy button) |
 
 ---
 
