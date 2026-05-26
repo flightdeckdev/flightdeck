@@ -169,13 +169,16 @@ async function main() {
       await dwell(1800);
       await shot("05-actions-promote.png");
 
-      await page.goto(`${base}/#/settings`, { waitUntil: "networkidle" });
-      await page.getByRole("heading", { name: "Settings", level: 2 }).waitFor({ state: "visible" });
+      await page.goto(`${base}/#/`, { waitUntil: "networkidle" });
+      await page.getByTestId("sidebar-settings-trigger").click();
+      await page.getByRole("dialog", { name: "Appearance" }).waitFor({ state: "visible" });
       await dwell(900);
       await page.getByRole("radio", { name: "Dark" }).check();
       await dwell(2000);
       await shot("06-settings-dark-theme.png");
 
+      await page.keyboard.press("Escape");
+      await dwell(300);
       await page.goto(`${base}/#/`, { waitUntil: "networkidle" });
       await page.getByRole("heading", { name: "Overview", level: 2 }).waitFor({ state: "visible" });
       await dwell(2200);

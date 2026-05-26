@@ -517,6 +517,16 @@ html[data-theme="dark"] .fd-theme-toggle--settings .fd-theme-toggle__label:has(.
   box-shadow: inset 3px 0 0 0 var(--fd-nav-active-indicator);
 }
 
+button.fd-nav__link--button {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: inherit;
+  appearance: none;
+}
+
 .fd-sidebar--collapsed .fd-nav__link {
   justify-content: center;
   gap: 0;
@@ -1997,6 +2007,42 @@ button.fd-skip-link {
   overflow: auto;
   flex: 1;
   min-height: 0;
+}
+
+.fd-settings-popover-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: transparent;
+}
+
+.fd-settings-popover {
+  position: fixed;
+  z-index: 85;
+  padding: 1rem 1.1rem 1.15rem;
+  border-radius: var(--fd-radius);
+  border: 1px solid var(--fd-border-strong);
+  background: var(--fd-surface);
+  box-shadow: var(--fd-drawer-shadow);
+}
+
+.fd-settings-popover__head {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--fd-text);
+}
+
+.fd-settings-popover__hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  color: var(--fd-muted);
+  line-height: 1.4;
+}
+
+.fd-settings-popover__body {
+  margin: 0 -0.25rem;
 }
 
 .fd-diff-stack {

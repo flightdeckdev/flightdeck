@@ -22,19 +22,23 @@ test("document title reflects current route", async ({ page }) => {
   await page.goto("/#/runs");
   await expect(page).toHaveTitle(/Run events · FlightDeck$/);
   await page.goto("/#/settings");
-  await expect(page).toHaveTitle(/Settings · FlightDeck$/);
+  await expect(page).toHaveTitle(/Overview · FlightDeck$/);
   await page.goto("/#/actions");
   await expect(page).toHaveTitle(/Promote & rollback · FlightDeck$/);
 });
 
-test("hash routes reach diff, runs, settings, and promote pages", async ({ page }) => {
+test("hash routes reach diff, runs, settings redirect, and promote pages", async ({ page }) => {
   await page.goto("/#/diff");
   await expect(page.getByRole("heading", { name: "Run diff", level: 2 })).toBeVisible();
   await expect(page.getByRole("region", { name: "Diff help" })).toBeVisible();
   await page.goto("/#/runs");
   await expect(page.getByRole("heading", { name: "Run events", level: 2 })).toBeVisible();
   await page.goto("/#/settings");
-  await expect(page.getByRole("heading", { name: "Settings", level: 2 })).toBeVisible();
+  await expect(page).toHaveURL(/#\/?$/);
+  await expect(page.getByRole("heading", { name: "Overview", level: 2 })).toBeVisible();
+  await page.getByTestId("sidebar-settings-trigger").click();
+  await expect(page.getByRole("dialog", { name: "Appearance" })).toBeVisible();
+  await page.keyboard.press("Escape");
   await page.goto("/#/actions");
   await expect(page.getByRole("heading", { name: "Promote & rollback", level: 2 })).toBeVisible();
 });
