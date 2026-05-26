@@ -1,0 +1,82 @@
+site_name: FlightDeck documentation
+site_description: Release diffs, runtime evidence, and policy gates for AI agents.
+site_url: https://flightdeckdev.github.io/flightdeck/
+repo_url: https://github.com/flightdeckdev/flightdeck
+repo_name: flightdeckdev/flightdeck
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+site_dir: site
+
+strict: true
+
+# Guides intentionally link to repo-root files (SECURITY.md, schemas/, …) for GitHub
+# readers; those paths are not copied into the MkDocs tree.
+validation:
+  links:
+    not_found: ignore
+    anchors: ignore
+
+nav:
+  - Home: index.md
+  - CLI: cli.md
+  - HTTP API: http-api.md
+  - Operations & policy: operations-and-policy.md
+  - Release artifact: release-artifact.md
+  - Pricing catalog: pricing-catalog.md
+  - Python SDK: sdk.md
+  - SDK integrations: sdk-integrations.md
+  - Web UI: web-ui.md
+  - UI roadmap: ui-roadmap.md
+  - Troubleshooting: troubleshooting.md
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.expand
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+plugins:
+  - search
+
+markdown_extensions:
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+extra:
+  generator: false
+  # Dismissible strip with outbound “Ask AI” helpers (no FlightDeck backend).
+  announce: >-
+    <strong>Ask AI</strong> about FlightDeck (paste the question after the page loads):
+    <a target="_blank" rel="noopener noreferrer" href="https://www.perplexity.ai/search?q=FlightDeck%20AI%20release%20governance%20flightdeck%20CLI%20policy%20gates%20site%3Aflightdeckdev.github.io%2Fflightdeck%20OR%20site%3Agithub.com%2Fflightdeckdev%2Fflightdeck">Perplexity</a>
+    ·
+    <a target="_blank" rel="noopener noreferrer" href="https://chatgpt.com/">ChatGPT</a>
+    ·
+    <a target="_blank" rel="noopener noreferrer" href="https://github.com/flightdeckdev/flightdeck">Repository</a>
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/ask-ai.js
