@@ -171,7 +171,7 @@ async function main() {
 
       await page.goto(`${base}/#/`, { waitUntil: "networkidle" });
       await page.getByTestId("sidebar-settings-trigger").click();
-      await page.getByRole("dialog", { name: "Appearance" }).waitFor({ state: "visible" });
+      await page.getByRole("dialog", { name: "Settings" }).waitFor({ state: "visible" });
       await dwell(900);
       await page.getByRole("radio", { name: "Dark" }).check();
       await dwell(2000);

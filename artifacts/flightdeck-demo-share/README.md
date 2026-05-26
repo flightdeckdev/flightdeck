@@ -14,6 +14,6 @@ node web/scripts/capture-demo-artifacts.mjs
 - **03-diff-compute.png** — Run diff page.
 - **04-runs-query.png** — Run events page.
 - **05-actions-promote.png** — Promote & rollback page.
-- **06-settings-dark-theme.png** — Sidebar Settings → Appearance (dark theme selected).
+- **06-settings-dark-theme.png** — Sidebar Settings popover → Theme icons (dark selected).
 
 Safe to delete this directory before a squash if you do not want binaries in history.

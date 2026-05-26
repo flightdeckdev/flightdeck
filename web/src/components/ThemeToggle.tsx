@@ -1,26 +1,33 @@
 import { useId } from "react";
 import { useThemePreference } from "../context/ThemePreferenceContext";
 import type { ThemePreference } from "../themeStorage";
+import { IconMonitor, IconMoon, IconSun } from "./sidebarIcons";
 
-const OPTIONS: { value: ThemePreference; label: string }[] = [
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-  { value: "system", label: "System" },
+const OPTIONS: { value: ThemePreference; label: string; Icon: typeof IconSun }[] = [
+  { value: "light", label: "Light", Icon: IconSun },
+  { value: "dark", label: "Dark", Icon: IconMoon },
+  { value: "system", label: "System", Icon: IconMonitor },
 ];
 
-export function ThemeToggle({ variant = "default" }: { variant?: "default" | "settings" }) {
-  const legendId = useId();
+/**
+ * Theme picker for the sidebar Settings popover: inline “Theme” label + icon-only radios.
+ */
+export function ThemeToggle() {
+  const themeLabelId = useId();
   const { preference, setPreference } = useThemePreference();
-  const fs = variant === "settings" ? "fd-theme-toggle fd-theme-toggle--settings" : "fd-theme-toggle";
 
   return (
-    <fieldset className={fs} aria-labelledby={legendId}>
-      <legend id={legendId} className="fd-theme-toggle__legend">
-        Appearance
-      </legend>
-      <div className="fd-theme-toggle__options">
-        {OPTIONS.map(({ value, label }) => (
-          <label key={value} className="fd-theme-toggle__label">
+    <div className="fd-theme-toggle fd-theme-toggle--icons">
+      <span id={themeLabelId} className="fd-theme-toggle__theme-label">
+        Theme
+      </span>
+      <div
+        className="fd-theme-toggle__icon-row"
+        role="radiogroup"
+        aria-labelledby={themeLabelId}
+      >
+        {OPTIONS.map(({ value, label, Icon }) => (
+          <label key={value} className="fd-theme-toggle__icon-option" title={label}>
             <input
               type="radio"
               name="flightdeck-theme"
@@ -29,10 +36,13 @@ export function ThemeToggle({ variant = "default" }: { variant?: "default" | "se
               checked={preference === value}
               onChange={() => setPreference(value)}
             />
-            <span className="fd-theme-toggle__text">{label}</span>
+            <span className="fd-theme-toggle__icon-wrap" aria-hidden="true">
+              <Icon size={18} />
+            </span>
+            <span className="fd-sr-only">{label}</span>
           </label>
         ))}
       </div>
-    </fieldset>
+    </div>
   );
 }

@@ -80,7 +80,7 @@ export function AppShell() {
             <nav
               id="sidebar-footer-nav"
               className="fd-sidebar__nav fd-sidebar__nav--footer"
-              aria-label="Settings and appearance"
+              aria-label="Settings and theme"
             >
               <SidebarSettingsMenu sidebarCollapsed={sidebarCollapsed} />
             </nav>

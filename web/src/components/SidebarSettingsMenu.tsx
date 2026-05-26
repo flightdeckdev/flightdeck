@@ -3,8 +3,8 @@ import { createPortal } from "react-dom";
 import { ThemeToggle } from "./ThemeToggle";
 import { IconSettings } from "./sidebarIcons";
 
-const POPOVER_WIDTH = 288;
-const POPOVER_ESTIMATE_H = 320;
+const POPOVER_WIDTH = 248;
+const POPOVER_ESTIMATE_H = 220;
 
 function positionPopover(trigger: HTMLElement) {
   const r = trigger.getBoundingClientRect();
@@ -97,11 +97,11 @@ export function SidebarSettingsMenu({ sidebarCollapsed }: { sidebarCollapsed: bo
               style={{ top: coords.top, left: coords.left, width: POPOVER_WIDTH }}
             >
               <div className="fd-settings-popover__head" id={titleId}>
-                Appearance
+                Settings
               </div>
-              <p className="fd-settings-popover__hint">Theme is saved in this browser only.</p>
+              <p className="fd-settings-popover__hint">Saved in this browser only.</p>
               <div className="fd-settings-popover__body">
-                <ThemeToggle variant="settings" />
+                <ThemeToggle />
               </div>
             </div>
           </>,

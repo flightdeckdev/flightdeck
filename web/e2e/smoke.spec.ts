@@ -37,7 +37,7 @@ test("hash routes reach diff, runs, settings redirect, and promote pages", async
   await expect(page).toHaveURL(/#\/?$/);
   await expect(page.getByRole("heading", { name: "Overview", level: 2 })).toBeVisible();
   await page.getByTestId("sidebar-settings-trigger").click();
-  await expect(page.getByRole("dialog", { name: "Appearance" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Settings" })).toBeVisible();
   await page.keyboard.press("Escape");
   await page.goto("/#/actions");
   await expect(page.getByRole("heading", { name: "Promote & rollback", level: 2 })).toBeVisible();
