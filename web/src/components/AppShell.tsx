@@ -11,9 +11,9 @@ import {
   IconOverview,
   IconPromote,
   IconRuns,
-  IconSettings,
 } from "./sidebarIcons";
 import { SidebarNavLink } from "./SidebarNavLink";
+import { SidebarSettingsMenu } from "./SidebarSettingsMenu";
 import { UI_READ_ONLY } from "../uiConfig";
 
 function skipToMain() {
@@ -39,7 +39,7 @@ export function AppShell() {
         </button>
         <aside
           className={`fd-sidebar${sidebarCollapsed ? " fd-sidebar--collapsed" : ""}`}
-          aria-label="Application"
+          aria-label="FlightDeck main navigation"
         >
           <div className="fd-sidebar__head">
             <div className="fd-sidebar__brand">
@@ -77,8 +77,12 @@ export function AppShell() {
               <SidebarNavLink to="/runs" label="Runs" icon={<IconRuns />} />
               {UI_READ_ONLY ? null : <SidebarNavLink to="/actions" label="Promote" icon={<IconPromote />} />}
             </nav>
-            <nav id="sidebar-footer-nav" className="fd-sidebar__nav fd-sidebar__nav--footer" aria-label="Settings">
-              <SidebarNavLink to="/settings" label="Settings" icon={<IconSettings />} />
+            <nav
+              id="sidebar-footer-nav"
+              className="fd-sidebar__nav fd-sidebar__nav--footer"
+              aria-label="Settings and theme"
+            >
+              <SidebarSettingsMenu sidebarCollapsed={sidebarCollapsed} />
             </nav>
           </div>
         </aside>

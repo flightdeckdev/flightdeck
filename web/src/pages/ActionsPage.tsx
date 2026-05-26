@@ -4,8 +4,10 @@ import type { ActionOutcomePayload, PromotionRequestListItem, WorkspacePublicPay
 import { fetchHealth, fetchJson, fetchPromotionRequests, fetchWorkspace } from "../api";
 import { clientMutationTokenConfigured } from "../uiConfig";
 import { Badge } from "../components/Badge";
+import { Button } from "../components/Button";
 import { JsonPanel } from "../components/JsonPanel";
 import { useTimelineRefresh } from "../context/TimelineRefreshContext";
+import { useDocumentTitle } from "../useDocumentTitle";
 
 function shortId(id: string, keepStart = 10, keepEnd = 6) {
   if (id.length <= keepStart + keepEnd + 1) return id;
@@ -57,7 +59,11 @@ function pickOutcome(data: unknown): ActionOutcomePayload | null {
 
 type Busy = null | "promote" | "rollback" | "request" | "confirm";
 
+/** Client-side validation highlight for promote/confirm forms (not API errors). */
+type ActionsFieldError = null | "step1_reason" | "confirm_request" | "confirm_approval";
+
 export function ActionsPage() {
+  useDocumentTitle("Promote & rollback");
   const [searchParams] = useSearchParams();
   const { notifyTimelineMutated } = useTimelineRefresh();
   const [workspace, setWorkspace] = useState<WorkspacePublicPayload | null>(null);
@@ -75,6 +81,7 @@ export function ActionsPage() {
   const [actOutcome, setActOutcome] = useState<ActionOutcomePayload | null>(null);
   const [actRaw, setActRaw] = useState<string | null>(null);
   const [actErr, setActErr] = useState<string | null>(null);
+  const [actFieldError, setActFieldError] = useState<ActionsFieldError>(null);
   const [busy, setBusy] = useState<Busy>(null);
 
   const [confirmRequestId, setConfirmRequestId] = useState("");
@@ -155,11 +162,13 @@ export function ActionsPage() {
 
   const runAction = async (path: "/v1/promote" | "/v1/rollback") => {
     setActErr(null);
+    setActFieldError(null);
     setActOutcome(null);
     setActRaw(null);
     setRequestRaw(null);
     const reason = actReason.trim();
     if (!reason) {
+      setActFieldError("step1_reason");
       setActErr("Reason is required.");
       return;
     }
@@ -190,6 +199,7 @@ export function ActionsPage() {
       setActRaw(JSON.stringify(data, null, 2));
       notifyTimelineMutated();
     } catch (e) {
+      setActFieldError(null);
       setActErr(String(e));
     } finally {
       setBusy(null);
@@ -198,11 +208,13 @@ export function ActionsPage() {
 
   const runRequestPromotion = async () => {
     setActErr(null);
+    setActFieldError(null);
     setActOutcome(null);
     setActRaw(null);
     setRequestRaw(null);
     const reason = actReason.trim();
     if (!reason) {
+      setActFieldError("step1_reason");
       setActErr("Reason is required for the promotion request.");
       return;
     }
@@ -229,6 +241,7 @@ export function ActionsPage() {
       setListNonce((n) => n + 1);
       notifyTimelineMutated();
     } catch (e) {
+      setActFieldError(null);
       setActErr(String(e));
     } finally {
       setBusy(null);
@@ -237,15 +250,18 @@ export function ActionsPage() {
 
   const runConfirmPromotion = async () => {
     setActErr(null);
+    setActFieldError(null);
     setActOutcome(null);
     setActRaw(null);
     const rid = confirmRequestId.trim();
     const ar = confirmReason.trim();
     if (!rid) {
+      setActFieldError("confirm_request");
       setActErr("Request ID is required to confirm.");
       return;
     }
     if (!ar) {
+      setActFieldError("confirm_approval");
       setActErr("Approval reason is required.");
       return;
     }
@@ -272,6 +288,7 @@ export function ActionsPage() {
       setListNonce((n) => n + 1);
       notifyTimelineMutated();
     } catch (e) {
+      setActFieldError(null);
       setActErr(String(e));
     } finally {
       setBusy(null);
@@ -349,7 +366,7 @@ export function ActionsPage() {
         </section>
       ) : null}
 
-      <section className="fd-card" aria-busy={!canMutate}>
+      <section className="fd-card" aria-busy={workspaceLoading}>
         {approvalOn ? (
           <div className="fd-card__head">
             <h3 className="fd-card__subtitle">1. Request a promotion</h3>
@@ -393,18 +410,33 @@ export function ActionsPage() {
             />
           </label>
           <label className="fd-field fd-field--full">
-            <span className="fd-field__label">Reason (required)</span>
+            <span className="fd-field__label">
+              Reason
+              <span className="fd-field__required" aria-hidden="true">
+                *
+              </span>
+            </span>
             <input
-              className="fd-input"
+              className={`fd-input${actFieldError === "step1_reason" ? " fd-input--invalid" : ""}`}
               value={actReason}
-              onChange={(e) => setActReason(e.target.value)}
+              onChange={(e) => {
+                setActReason(e.target.value);
+                if (actFieldError === "step1_reason") setActFieldError(null);
+              }}
               disabled={!canMutate}
+              required
+              aria-required="true"
+              aria-invalid={actFieldError === "step1_reason"}
             />
           </label>
         </div>
-        {!canMutate ? (
+        {workspaceLoading ? (
           <p className="fd-muted fd-samples" aria-live="polite">
-            Loading workspace mode…
+            Loading workspace…
+          </p>
+        ) : workspaceErr ? (
+          <p className="fd-muted fd-samples" aria-live="polite">
+            Workspace unavailable — resolve the error above before promoting or rolling back.
           </p>
         ) : (
           <p className="fd-muted fd-samples" aria-live="polite">
@@ -414,32 +446,35 @@ export function ActionsPage() {
         )}
         <div className="fd-actions fd-actions--align-center">
           {approvalOn ? (
-            <button
-              type="button"
-              className="fd-btn fd-btn--primary"
+            <Button
+              variant="primary"
               disabled={!canMutate || busy !== null}
+              loading={busy === "request"}
+              loadingLabel="Requesting…"
               onClick={() => void runRequestPromotion()}
             >
-              {busy === "request" ? "Requesting…" : "Request promotion"}
-            </button>
+              Request promotion
+            </Button>
           ) : (
-            <button
-              type="button"
-              className="fd-btn fd-btn--primary"
+            <Button
+              variant="primary"
               disabled={!canMutate || busy !== null}
+              loading={busy === "promote"}
+              loadingLabel="Promoting…"
               onClick={() => void runAction("/v1/promote")}
             >
-              {busy === "promote" ? "Promoting…" : "Promote"}
-            </button>
+              Promote
+            </Button>
           )}
-          <button
-            type="button"
-            className="fd-btn fd-btn--danger"
+          <Button
+            variant="danger"
             disabled={!canMutate || busy !== null}
+            loading={busy === "rollback"}
+            loadingLabel="Rolling back…"
             onClick={() => void runAction("/v1/rollback")}
           >
-            {busy === "rollback" ? "Rolling back…" : "Rollback"}
-          </button>
+            Rollback
+          </Button>
           {showBearerTokenHint ? (
             <span className="fd-muted fd-samples fd-grow-soft">
               Server uses Bearer for mutations — set{" "}
@@ -459,21 +494,22 @@ export function ActionsPage() {
                   Open requests waiting for an approver. Use <strong>Use for confirm</strong> to copy an ID into step 3.
                 </p>
               </div>
-              <button
-                type="button"
-                className="fd-btn fd-btn--ghost"
+              <Button
+                variant="ghost"
                 disabled={pendingRefreshing || busy !== null}
+                loading={pendingRefreshing}
+                loadingLabel="Refreshing…"
                 onClick={() => void refreshPending()}
               >
-                {pendingRefreshing ? "Refreshing…" : "Refresh list"}
-              </button>
+                Refresh list
+              </Button>
             </div>
             {pendingErr ? <p className="fd-alert fd-alert--error">{pendingErr}</p> : null}
             {pendingList.length === 0 ? (
               <p className="fd-muted">No pending requests. After you request a promotion, it appears here.</p>
             ) : (
-              <div className="fd-table-wrap">
-                <table className="fd-table fd-table--hover">
+              <div className="fd-table-wrap fd-table-wrap--sticky">
+                <table className="fd-table fd-table--hover fd-table--striped">
                   <thead>
                     <tr>
                       <th scope="col">Request ID</th>
@@ -497,15 +533,15 @@ export function ActionsPage() {
                         <td>{row.environment}</td>
                         <td className="fd-muted">{row.created_at}</td>
                         <td>
-                          <button
-                            type="button"
-                            className="fd-btn fd-btn--ghost fd-btn--sm"
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             disabled={busy !== null}
                             aria-label={`Use request ${shortId(row.request_id, 14, 8)} for confirm step`}
                             onClick={() => setConfirmRequestId(row.request_id)}
                           >
                             Use for confirm
-                          </button>
+                          </Button>
                         </td>
                       </tr>
                     ))}
@@ -527,31 +563,40 @@ export function ActionsPage() {
               <label className="fd-field fd-field--full">
                 <span className="fd-field__label">Request ID</span>
                 <input
-                  className="fd-input"
+                  className={`fd-input${actFieldError === "confirm_request" ? " fd-input--invalid" : ""}`}
                   value={confirmRequestId}
-                  onChange={(e) => setConfirmRequestId(e.target.value)}
+                  onChange={(e) => {
+                    setConfirmRequestId(e.target.value);
+                    if (actFieldError === "confirm_request") setActFieldError(null);
+                  }}
                   placeholder="From the table above or promote-request output"
+                  aria-invalid={actFieldError === "confirm_request"}
                 />
               </label>
               <label className="fd-field fd-field--full">
                 <span className="fd-field__label">Approval reason</span>
                 <input
-                  className="fd-input"
+                  className={`fd-input${actFieldError === "confirm_approval" ? " fd-input--invalid" : ""}`}
                   value={confirmReason}
-                  onChange={(e) => setConfirmReason(e.target.value)}
+                  onChange={(e) => {
+                    setConfirmReason(e.target.value);
+                    if (actFieldError === "confirm_approval") setActFieldError(null);
+                  }}
                   placeholder="Why you are approving this promotion"
+                  aria-invalid={actFieldError === "confirm_approval"}
                 />
               </label>
             </div>
             <div className="fd-actions">
-              <button
-                type="button"
-                className="fd-btn fd-btn--primary"
+              <Button
+                variant="primary"
                 disabled={busy !== null}
+                loading={busy === "confirm"}
+                loadingLabel="Confirming…"
                 onClick={() => void runConfirmPromotion()}
               >
-                {busy === "confirm" ? "Confirming…" : "Confirm promotion"}
-              </button>
+                Confirm promotion
+              </Button>
             </div>
           </section>
         </>

@@ -2,8 +2,10 @@ import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 
 import { Link, useSearchParams } from "react-router-dom";
 import type { ReleaseRow, RunsListPayload } from "../api";
 import { fetchRuns, fetchRunsExportBlob, loadTimeline } from "../api";
+import { Button } from "../components/Button";
 import { JsonPanel } from "../components/JsonPanel";
 import { pickTrimmedSearch } from "../urlSearch";
+import { useDocumentTitle } from "../useDocumentTitle";
 
 function shortId(id: string, keepStart = 12, keepEnd = 6) {
   if (id.length <= keepStart + keepEnd + 1) return id;
@@ -102,6 +104,7 @@ function buildTraceGroups(events: unknown[]): { key: string; rows: Record<string
 }
 
 export function RunsPage() {
+  useDocumentTitle("Run events");
   const drawerTitleId = useId();
   const [searchParams] = useSearchParams();
   const closeBtnRef = useRef<HTMLButtonElement>(null);
@@ -394,10 +397,14 @@ export function RunsPage() {
           <label className="fd-field fd-field--full">
             <span className="fd-field__label">Release ID</span>
             <input
-              className="fd-input"
+              className={`fd-input${rawErr === "Release ID is required." ? " fd-input--invalid" : ""}`}
               value={releaseId}
-              onChange={(e) => setReleaseId(e.target.value)}
+              onChange={(e) => {
+                setReleaseId(e.target.value);
+                if (rawErr === "Release ID is required.") setRawErr(null);
+              }}
               list="fd-release-ids"
+              aria-invalid={rawErr === "Release ID is required."}
             />
             <datalist id="fd-release-ids">
               {releases.map((r) => (
@@ -449,17 +456,24 @@ export function RunsPage() {
           per download). Truncation warnings apply to the returned page, not necessarily the whole ledger.
         </p>
         <div className="fd-actions">
-          <button type="button" className="fd-btn fd-btn--primary" disabled={busy} onClick={() => void runQuery()}>
-            {busy ? "Loading…" : "Load runs"}
-          </button>
-          <button
-            type="button"
-            className="fd-btn fd-btn--ghost"
-            disabled={exportBusy}
+          <Button
+            variant="primary"
+            disabled={busy || exportBusy}
+            loading={busy}
+            loadingLabel="Loading…"
+            onClick={() => void runQuery()}
+          >
+            Load runs
+          </Button>
+          <Button
+            variant="ghost"
+            disabled={busy || exportBusy}
+            loading={exportBusy}
+            loadingLabel="Exporting…"
             onClick={() => void downloadExport()}
           >
-            {exportBusy ? "Exporting…" : "Download NDJSON"}
-          </button>
+            Download NDJSON
+          </Button>
         </div>
         {rawErr ? <p className="fd-alert fd-alert--error">{rawErr}</p> : null}
       </section>
@@ -493,9 +507,9 @@ export function RunsPage() {
               {runsQueryError.detail}
             </p>
             <div className="fd-actions fd-mt-1">
-              <button type="button" className="fd-btn fd-btn--primary" disabled={busy} onClick={() => void runQuery()}>
-                {busy ? "Retrying…" : "Retry"}
-              </button>
+              <Button variant="primary" disabled={busy || exportBusy} loading={busy} loadingLabel="Retrying…" onClick={() => void runQuery()}>
+                Retry
+              </Button>
             </div>
           </div>
         </section>
@@ -568,7 +582,7 @@ export function RunsPage() {
                         )}
                       </summary>
                       <div className="fd-table-wrap">
-                        <table className="fd-table fd-table--hover">
+                        <table className="fd-table fd-table--hover fd-table--striped">
                           {tableHead}
                           <tbody>{g.rows.map((rec, idx) => renderEventRow(rec, idx, g.key))}</tbody>
                         </table>
@@ -579,7 +593,7 @@ export function RunsPage() {
               </div>
             ) : (
               <div className="fd-table-wrap">
-                <table className="fd-table fd-table--hover">
+                <table className="fd-table fd-table--hover fd-table--striped">
                   {tableHead}
                   <tbody>
                     {result.events.length === 0 ? (

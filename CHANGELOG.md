@@ -8,7 +8,7 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ### Added
 
-- **Web UI (`flightdeck serve`):** **`/#/settings`** for appearance (Light / Dark / System, **`flightdeck-theme`**); collapsible sidebar (**`flightdeck-sidebar-collapsed`**); **offline system font stack** (no remote font CSS); sidebar + favicon use **bundled** **`/assets/flightdeck-icon-*.png`** with stable **`GET /flightdeck-icon.png`** fallback; **`html[data-theme="dark"]`** tokens and Playwright **`web/e2e/`** (`smoke` icon checks, `theme.spec.ts`, `sidebar.spec.ts`).
+- **Web UI (`flightdeck serve`):** **Theme** (Light / Dark / System icon radios, **`flightdeck-theme`**) in the **sidebar Settings** popover; legacy **`/#/settings`** redirects to **`#/`**; collapsible sidebar (**`flightdeck-sidebar-collapsed`**); **offline system font stack** (no remote font CSS); sidebar + favicon use **bundled** **`/assets/flightdeck-icon-*.png`** with stable **`GET /flightdeck-icon.png`** fallback; **`html[data-theme="dark"]`** tokens and Playwright **`web/e2e/`** (`smoke` icon checks, `theme.spec.ts`, `sidebar.spec.ts`).
 - **`flightdeck pricing check`** — reports **`flightdeck-bundled-*`** snapshot age vs **`--max-age-days`** (default **90**); **`--fail`** for CI. **`release diff`** / **`POST /v1/diff`** append **`pricing.warnings`** when bundled snapshots exceed the same age threshold.
 - **`flightdeck.integrations.telemetry.configure_otel_tracing()`** — optional OTLP HTTP **`TracerProvider`** wiring when the **`telemetry`** extra is installed (see **`docs/sdk-integrations.md`**).
 - **SDK:** **`flightdeck.sdk.http_common`** shared serializers and retry policy; parity tests keep sync/async clients aligned. **`pytest-cov`** no longer omits **`sdk/client.py`**.
@@ -17,6 +17,7 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 - **`[project.optional-dependencies] dev`:** **`ruff`** is **`>=0.15,<0.16`** (was an exact patch pin) so **`pip install`** / shared venvs can resolve alongside other tools; **`uv sync --frozen`** still follows **`uv.lock`**. **`docs/troubleshooting.md`** notes checking **`uv.lock`** for the resolved **`0.15.x`** wheel.
 - **Docs / positioning:** README local-first and ICP copy; bundled pricing cadence, vendor pricing URLs in YAML comments, and **`docs/pricing-catalog.md`** / **ROADMAP** / **RELEASE_NOTES** staleness commitments.
+- **Web UI (`flightdeck serve`):** Sidebar **Settings** popover shows a **Settings** heading and **Theme** as sun / moon / monitor icon radios (replacing text-only appearance controls in that surface).
 
 ## 1.2.0 - 2026-05-03
 

@@ -9,6 +9,7 @@ import { JsonPanel } from "../components/JsonPanel";
 import { ReleaseLifecycleStrip } from "../components/ReleaseLifecycleStrip";
 import { UI_READ_ONLY } from "../uiConfig";
 import { searchParamsFromRecord } from "../urlSearch";
+import { useDocumentTitle } from "../useDocumentTitle";
 
 const OVERVIEW_POLL_MS = 30_000;
 
@@ -38,12 +39,13 @@ function TableShell({
         {description ? <p className="fd-card__desc">{description}</p> : null}
       </div>
       {toolbar ? <div className="fd-table-toolbar">{toolbar}</div> : null}
-      <div className="fd-table-wrap">{children}</div>
+      <div className="fd-table-wrap fd-table-wrap--sticky">{children}</div>
     </section>
   );
 }
 
 export function OverviewPage() {
+  useDocumentTitle("Overview");
   const [searchParams, setSearchParams] = useSearchParams();
   const focusReleaseId = (searchParams.get("release") ?? "").trim();
 
@@ -271,7 +273,7 @@ export function OverviewPage() {
             title="Promoted releases"
             description="Current promoted release ID per agent and environment — compare with newer registrations below."
           >
-            <table className="fd-table fd-table--hover">
+            <table className="fd-table fd-table--hover fd-table--striped">
               <thead>
                 <tr>
                   <th scope="col">Agent</th>
@@ -299,6 +301,7 @@ export function OverviewPage() {
                         <td>{p.environment}</td>
                         <td>
                           <Link
+                            className="fd-link"
                             to={{ pathname: "/", search: searchParamsFromRecord({ release: p.release_id }) }}
                             title="Focus this release"
                           >
@@ -345,7 +348,7 @@ export function OverviewPage() {
                 <label className="fd-field fd-field--compact">
                   <span className="fd-field__label">Promotion</span>
                   <select
-                    className="fd-input"
+                    className="fd-select"
                     value={filterPromoted}
                     onChange={(e) => setFilterPromoted(e.target.value as "" | "live" | "not-live")}
                   >
@@ -357,7 +360,7 @@ export function OverviewPage() {
               </div>
             }
           >
-            <table className="fd-table fd-table--hover">
+            <table className="fd-table fd-table--hover fd-table--striped">
               <thead>
                 <tr>
                   <th scope="col">Primary</th>
@@ -468,7 +471,7 @@ export function OverviewPage() {
           </TableShell>
 
           <TableShell title="Recent actions" description="Promotion and rollback attempts from the audit log.">
-            <table className="fd-table fd-table--hover">
+            <table className="fd-table fd-table--hover fd-table--striped">
               <thead>
                 <tr>
                   <th scope="col">When</th>
