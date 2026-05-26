@@ -68,6 +68,7 @@ integrations-ci = [
 
 [project.urls]
 Homepage = "https://github.com/flightdeckdev/flightdeck"
+Documentation = "https://flightdeckdev.github.io/flightdeck/"
 Repository = "https://github.com/flightdeckdev/flightdeck"
 Issues = "https://github.com/flightdeckdev/flightdeck/issues"
 Changelog = "https://github.com/flightdeckdev/flightdeck/blob/main/CHANGELOG.md"
