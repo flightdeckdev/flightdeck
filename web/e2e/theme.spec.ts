@@ -11,6 +11,7 @@ test.describe("appearance / theme", () => {
 
   test("defaults to light and shows Appearance controls on Settings", async ({ page }) => {
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#f3f4f6");
     await expect(page.getByRole("heading", { name: "Settings", level: 2 })).toBeVisible();
     await expect(page.getByRole("group", { name: "Appearance" })).toBeVisible();
     await expect(page.getByRole("radio", { name: "Light" })).toBeChecked();
@@ -19,6 +20,7 @@ test.describe("appearance / theme", () => {
   test("dark mode sets data-theme and persists", async ({ page }) => {
     await page.getByRole("radio", { name: "Dark" }).check();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#0c0f14");
     await expect(page.getByRole("radio", { name: "Dark" })).toBeChecked();
 
     await page.reload();

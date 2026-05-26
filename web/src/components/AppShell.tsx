@@ -39,7 +39,7 @@ export function AppShell() {
         </button>
         <aside
           className={`fd-sidebar${sidebarCollapsed ? " fd-sidebar--collapsed" : ""}`}
-          aria-label="Application"
+          aria-label="FlightDeck main navigation"
         >
           <div className="fd-sidebar__head">
             <div className="fd-sidebar__brand">

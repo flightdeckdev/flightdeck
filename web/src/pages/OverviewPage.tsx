@@ -9,6 +9,7 @@ import { JsonPanel } from "../components/JsonPanel";
 import { ReleaseLifecycleStrip } from "../components/ReleaseLifecycleStrip";
 import { UI_READ_ONLY } from "../uiConfig";
 import { searchParamsFromRecord } from "../urlSearch";
+import { useDocumentTitle } from "../useDocumentTitle";
 
 const OVERVIEW_POLL_MS = 30_000;
 
@@ -44,6 +45,7 @@ function TableShell({
 }
 
 export function OverviewPage() {
+  useDocumentTitle("Overview");
   const [searchParams, setSearchParams] = useSearchParams();
   const focusReleaseId = (searchParams.get("release") ?? "").trim();
 
@@ -271,7 +273,7 @@ export function OverviewPage() {
             title="Promoted releases"
             description="Current promoted release ID per agent and environment — compare with newer registrations below."
           >
-            <table className="fd-table fd-table--hover">
+            <table className="fd-table fd-table--hover fd-table--striped">
               <thead>
                 <tr>
                   <th scope="col">Agent</th>
@@ -357,7 +359,7 @@ export function OverviewPage() {
               </div>
             }
           >
-            <table className="fd-table fd-table--hover">
+            <table className="fd-table fd-table--hover fd-table--striped">
               <thead>
                 <tr>
                   <th scope="col">Primary</th>
@@ -468,7 +470,7 @@ export function OverviewPage() {
           </TableShell>
 
           <TableShell title="Recent actions" description="Promotion and rollback attempts from the audit log.">
-            <table className="fd-table fd-table--hover">
+            <table className="fd-table fd-table--hover fd-table--striped">
               <thead>
                 <tr>
                   <th scope="col">When</th>

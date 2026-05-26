@@ -4,6 +4,7 @@ import type { ReleaseRow, RunsListPayload } from "../api";
 import { fetchRuns, fetchRunsExportBlob, loadTimeline } from "../api";
 import { JsonPanel } from "../components/JsonPanel";
 import { pickTrimmedSearch } from "../urlSearch";
+import { useDocumentTitle } from "../useDocumentTitle";
 
 function shortId(id: string, keepStart = 12, keepEnd = 6) {
   if (id.length <= keepStart + keepEnd + 1) return id;
@@ -102,6 +103,7 @@ function buildTraceGroups(events: unknown[]): { key: string; rows: Record<string
 }
 
 export function RunsPage() {
+  useDocumentTitle("Run events");
   const drawerTitleId = useId();
   const [searchParams] = useSearchParams();
   const closeBtnRef = useRef<HTMLButtonElement>(null);
@@ -568,7 +570,7 @@ export function RunsPage() {
                         )}
                       </summary>
                       <div className="fd-table-wrap">
-                        <table className="fd-table fd-table--hover">
+                        <table className="fd-table fd-table--hover fd-table--striped">
                           {tableHead}
                           <tbody>{g.rows.map((rec, idx) => renderEventRow(rec, idx, g.key))}</tbody>
                         </table>
@@ -579,7 +581,7 @@ export function RunsPage() {
               </div>
             ) : (
               <div className="fd-table-wrap">
-                <table className="fd-table fd-table--hover">
+                <table className="fd-table fd-table--hover fd-table--striped">
                   {tableHead}
                   <tbody>
                     {result.events.length === 0 ? (

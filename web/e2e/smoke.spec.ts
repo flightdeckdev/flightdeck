@@ -14,6 +14,19 @@ test("home loads FlightDeck shell and overview tables", async ({ page }) => {
   await expect(page.getByText("No releases yet.")).toBeVisible();
 });
 
+test("document title reflects current route", async ({ page }) => {
+  await page.goto("/");
+  await expect(page).toHaveTitle(/Overview · FlightDeck$/);
+  await page.goto("/#/diff");
+  await expect(page).toHaveTitle(/Run diff · FlightDeck$/);
+  await page.goto("/#/runs");
+  await expect(page).toHaveTitle(/Run events · FlightDeck$/);
+  await page.goto("/#/settings");
+  await expect(page).toHaveTitle(/Settings · FlightDeck$/);
+  await page.goto("/#/actions");
+  await expect(page).toHaveTitle(/Promote & rollback · FlightDeck$/);
+});
+
 test("hash routes reach diff, runs, settings, and promote pages", async ({ page }) => {
   await page.goto("/#/diff");
   await expect(page.getByRole("heading", { name: "Run diff", level: 2 })).toBeVisible();

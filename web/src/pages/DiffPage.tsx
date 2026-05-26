@@ -15,8 +15,10 @@ import {
 } from "../components/diff/diffPayload";
 import { UI_READ_ONLY } from "../uiConfig";
 import { pickTrimmedSearch, searchParamsFromRecord } from "../urlSearch";
+import { useDocumentTitle } from "../useDocumentTitle";
 
 export function DiffPage() {
+  useDocumentTitle("Run diff");
   const [searchParams, setSearchParams] = useSearchParams();
   const [diffResultSeq, setDiffResultSeq] = useState(0);
   const [diffBaseline, setDiffBaseline] = useState("");

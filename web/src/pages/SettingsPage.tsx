@@ -1,6 +1,8 @@
 import { ThemeToggle } from "../components/ThemeToggle";
+import { useDocumentTitle } from "../useDocumentTitle";
 
 export function SettingsPage() {
+  useDocumentTitle("Settings");
   return (
     <>
       <header className="fd-page-head">

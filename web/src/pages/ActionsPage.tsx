@@ -6,6 +6,7 @@ import { clientMutationTokenConfigured } from "../uiConfig";
 import { Badge } from "../components/Badge";
 import { JsonPanel } from "../components/JsonPanel";
 import { useTimelineRefresh } from "../context/TimelineRefreshContext";
+import { useDocumentTitle } from "../useDocumentTitle";
 
 function shortId(id: string, keepStart = 10, keepEnd = 6) {
   if (id.length <= keepStart + keepEnd + 1) return id;
@@ -58,6 +59,7 @@ function pickOutcome(data: unknown): ActionOutcomePayload | null {
 type Busy = null | "promote" | "rollback" | "request" | "confirm";
 
 export function ActionsPage() {
+  useDocumentTitle("Promote & rollback");
   const [searchParams] = useSearchParams();
   const { notifyTimelineMutated } = useTimelineRefresh();
   const [workspace, setWorkspace] = useState<WorkspacePublicPayload | null>(null);
@@ -473,7 +475,7 @@ export function ActionsPage() {
               <p className="fd-muted">No pending requests. After you request a promotion, it appears here.</p>
             ) : (
               <div className="fd-table-wrap">
-                <table className="fd-table fd-table--hover">
+                <table className="fd-table fd-table--hover fd-table--striped">
                   <thead>
                     <tr>
                       <th scope="col">Request ID</th>
