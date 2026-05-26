@@ -4,6 +4,7 @@ import type { ActionOutcomePayload, PromotionRequestListItem, WorkspacePublicPay
 import { fetchHealth, fetchJson, fetchPromotionRequests, fetchWorkspace } from "../api";
 import { clientMutationTokenConfigured } from "../uiConfig";
 import { Badge } from "../components/Badge";
+import { Button } from "../components/Button";
 import { JsonPanel } from "../components/JsonPanel";
 import { useTimelineRefresh } from "../context/TimelineRefreshContext";
 
@@ -393,12 +394,19 @@ export function ActionsPage() {
             />
           </label>
           <label className="fd-field fd-field--full">
-            <span className="fd-field__label">Reason (required)</span>
+            <span className="fd-field__label">
+              Reason
+              <span className="fd-field__required" aria-hidden="true">
+                *
+              </span>
+            </span>
             <input
-              className="fd-input"
+              className={`fd-input${actErr?.includes("Reason is required") ? " fd-input--invalid" : ""}`}
               value={actReason}
               onChange={(e) => setActReason(e.target.value)}
               disabled={!canMutate}
+              required
+              aria-required="true"
             />
           </label>
         </div>
@@ -414,32 +422,35 @@ export function ActionsPage() {
         )}
         <div className="fd-actions fd-actions--align-center">
           {approvalOn ? (
-            <button
-              type="button"
-              className="fd-btn fd-btn--primary"
+            <Button
+              variant="primary"
               disabled={!canMutate || busy !== null}
+              loading={busy === "request"}
+              loadingLabel="Requesting…"
               onClick={() => void runRequestPromotion()}
             >
-              {busy === "request" ? "Requesting…" : "Request promotion"}
-            </button>
+              Request promotion
+            </Button>
           ) : (
-            <button
-              type="button"
-              className="fd-btn fd-btn--primary"
+            <Button
+              variant="primary"
               disabled={!canMutate || busy !== null}
+              loading={busy === "promote"}
+              loadingLabel="Promoting…"
               onClick={() => void runAction("/v1/promote")}
             >
-              {busy === "promote" ? "Promoting…" : "Promote"}
-            </button>
+              Promote
+            </Button>
           )}
-          <button
-            type="button"
-            className="fd-btn fd-btn--danger"
+          <Button
+            variant="danger"
             disabled={!canMutate || busy !== null}
+            loading={busy === "rollback"}
+            loadingLabel="Rolling back…"
             onClick={() => void runAction("/v1/rollback")}
           >
-            {busy === "rollback" ? "Rolling back…" : "Rollback"}
-          </button>
+            Rollback
+          </Button>
           {showBearerTokenHint ? (
             <span className="fd-muted fd-samples fd-grow-soft">
               Server uses Bearer for mutations — set{" "}
@@ -459,20 +470,21 @@ export function ActionsPage() {
                   Open requests waiting for an approver. Use <strong>Use for confirm</strong> to copy an ID into step 3.
                 </p>
               </div>
-              <button
-                type="button"
-                className="fd-btn fd-btn--ghost"
+              <Button
+                variant="ghost"
                 disabled={pendingRefreshing || busy !== null}
+                loading={pendingRefreshing}
+                loadingLabel="Refreshing…"
                 onClick={() => void refreshPending()}
               >
-                {pendingRefreshing ? "Refreshing…" : "Refresh list"}
-              </button>
+                Refresh list
+              </Button>
             </div>
             {pendingErr ? <p className="fd-alert fd-alert--error">{pendingErr}</p> : null}
             {pendingList.length === 0 ? (
               <p className="fd-muted">No pending requests. After you request a promotion, it appears here.</p>
             ) : (
-              <div className="fd-table-wrap">
+              <div className="fd-table-wrap fd-table-wrap--sticky">
                 <table className="fd-table fd-table--hover">
                   <thead>
                     <tr>
@@ -544,14 +556,15 @@ export function ActionsPage() {
               </label>
             </div>
             <div className="fd-actions">
-              <button
-                type="button"
-                className="fd-btn fd-btn--primary"
+              <Button
+                variant="primary"
                 disabled={busy !== null}
+                loading={busy === "confirm"}
+                loadingLabel="Confirming…"
                 onClick={() => void runConfirmPromotion()}
               >
-                {busy === "confirm" ? "Confirming…" : "Confirm promotion"}
-              </button>
+                Confirm promotion
+              </Button>
             </div>
           </section>
         </>

@@ -13,6 +13,7 @@ import {
   pickPolicy,
   pickPricing,
 } from "../components/diff/diffPayload";
+import { Button } from "../components/Button";
 import { UI_READ_ONLY } from "../uiConfig";
 import { pickTrimmedSearch, searchParamsFromRecord } from "../urlSearch";
 
@@ -138,14 +139,9 @@ export function DiffPage() {
           </label>
         </div>
         <div className="fd-actions">
-          <button type="button" className="fd-btn fd-btn--primary" disabled={busy} onClick={() => void runDiff()}>
-            {busy ? "Computing…" : "Compute diff"}
-          </button>
-          {busy ? (
-            <span className="fd-sr-only" aria-live="polite">
-              Computing diff
-            </span>
-          ) : null}
+          <Button variant="primary" loading={busy} loadingLabel="Computing…" onClick={() => void runDiff()}>
+            Compute diff
+          </Button>
         </div>
       </section>
 

@@ -38,7 +38,7 @@ function TableShell({
         {description ? <p className="fd-card__desc">{description}</p> : null}
       </div>
       {toolbar ? <div className="fd-table-toolbar">{toolbar}</div> : null}
-      <div className="fd-table-wrap">{children}</div>
+      <div className="fd-table-wrap fd-table-wrap--sticky">{children}</div>
     </section>
   );
 }
@@ -299,6 +299,7 @@ export function OverviewPage() {
                         <td>{p.environment}</td>
                         <td>
                           <Link
+                            className="fd-link"
                             to={{ pathname: "/", search: searchParamsFromRecord({ release: p.release_id }) }}
                             title="Focus this release"
                           >
@@ -345,7 +346,7 @@ export function OverviewPage() {
                 <label className="fd-field fd-field--compact">
                   <span className="fd-field__label">Promotion</span>
                   <select
-                    className="fd-input"
+                    className="fd-select"
                     value={filterPromoted}
                     onChange={(e) => setFilterPromoted(e.target.value as "" | "live" | "not-live")}
                   >
