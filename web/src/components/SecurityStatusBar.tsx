@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchHealth, type HealthPayload } from "../api";
 import { clientMutationTokenConfigured, UI_READ_ONLY } from "../uiConfig";
+import { StatusChip } from "./StatusChip";
 
 function resolveMutationAuth(data: HealthPayload): "bearer" | "loopback" | null {
   const m = data.mutation_auth;
@@ -52,8 +53,11 @@ export function SecurityStatusBar() {
   if (UI_READ_ONLY) {
     return (
       <div className="fd-security-strip" role="status">
-        <p className="fd-alert fd-alert--info fd-security-strip__msg">
-          Read-only UI: navigation to promote and rollback is disabled (
+        <div className="fd-status-chip-row">
+          <StatusChip label="UI mode" value="Read-only" tone="info" />
+        </div>
+        <p className="fd-security-strip__detail">
+          Promote and rollback navigation is disabled (
           <code className="fd-mono fd-mono--sm">VITE_FLIGHTDECK_UI_READ_ONLY</code>).
         </p>
       </div>
@@ -64,9 +68,9 @@ export function SecurityStatusBar() {
     return (
       <div className="fd-security-strip" role="status" aria-busy="true" aria-live="polite">
         <span className="fd-sr-only">Checking server security</span>
-        <p className="fd-muted fd-security-strip__msg fd-security-strip__loading-line">
-          Checking <code className="fd-mono fd-mono--sm">/health</code> for API security…
-        </p>
+        <div className="fd-status-chip-row">
+          <StatusChip label="API security" value="Checking…" tone="neutral" />
+        </div>
         <span className="fd-skeleton fd-skeleton--w75 fd-security-strip__skeleton" />
       </div>
     );
@@ -76,8 +80,7 @@ export function SecurityStatusBar() {
     return (
       <div className="fd-security-strip" role="status">
         <p className="fd-alert fd-alert--warn fd-security-strip__msg">
-          Could not load server security mode from <code className="fd-mono fd-mono--sm">/health</code>
-          : {fetchErr}
+          Could not load security mode from <code className="fd-mono fd-mono--sm">/health</code>: {fetchErr}
         </p>
       </div>
     );
@@ -87,47 +90,42 @@ export function SecurityStatusBar() {
     return null;
   }
 
-  const readLine =
-    readAuth === "bearer"
-      ? "GET /v1/* read APIs require the same Bearer token."
-      : "GET /v1/* read APIs are open (no Bearer) while the server has no API token configured.";
-
-  const serverLine =
-    auth === "bearer"
-      ? "Server requires an Authorization: Bearer token for ledger writes (ingest, promote, rollback)."
-      : "Server allows ledger writes from loopback without a Bearer token.";
-
-  const clientLine = hasClient
-    ? "This UI build sends a client token (VITE_FLIGHTDECK_LOCAL_API_TOKEN is set)."
-    : "This UI build does not send a client token (VITE_FLIGHTDECK_LOCAL_API_TOKEN unset).";
-
-  if (auth === "bearer" && hasClient) {
-    return (
-      <div className="fd-security-strip" role="status">
-        <p className="fd-muted fd-security-strip__msg">
-          Bearer API: <code className="fd-mono fd-mono--sm">VITE_FLIGHTDECK_LOCAL_API_TOKEN</code> is set —
-          confirm it matches the server&apos;s{" "}
-          <code className="fd-mono fd-mono--sm">FLIGHTDECK_LOCAL_API_TOKEN</code> (writes and{" "}
-          <code className="fd-mono fd-mono--sm">GET /v1/*</code> when the server uses a token).
-        </p>
-      </div>
-    );
-  }
+  const mutationTone = auth === "bearer" ? "info" : "pass";
+  const readTone = readAuth === "bearer" ? "info" : "neutral";
+  const clientTone = hasClient ? "pass" : mismatch ? "warn" : "neutral";
 
   return (
     <div className="fd-security-strip" role="status">
+      <div className="fd-status-chip-row">
+        <StatusChip
+          label="Writes"
+          value={auth === "bearer" ? "Bearer required" : "Loopback open"}
+          tone={mutationTone}
+        />
+        <StatusChip
+          label="Reads"
+          value={readAuth === "bearer" ? "Bearer required" : "Open"}
+          tone={readTone}
+        />
+        <StatusChip
+          label="UI token"
+          value={hasClient ? "Configured" : "Not set"}
+          tone={clientTone}
+        />
+      </div>
       {mismatch ? (
-        <p className="fd-alert fd-alert--warn fd-security-strip__msg">
-          Server expects a Bearer token for writes and read APIs, but this UI is not configured with{" "}
-          <code className="fd-mono fd-mono--sm">VITE_FLIGHTDECK_LOCAL_API_TOKEN</code>. Requests will be rejected
-          until the token matches{" "}
-          <code className="fd-mono fd-mono--sm">FLIGHTDECK_LOCAL_API_TOKEN</code> on the server.
+        <p className="fd-alert fd-alert--warn fd-security-strip__detail">
+          Server expects <code className="fd-mono fd-mono--sm">Authorization: Bearer</code> for writes and reads, but{" "}
+          <code className="fd-mono fd-mono--sm">VITE_FLIGHTDECK_LOCAL_API_TOKEN</code> is unset in this UI build. Set it
+          to match <code className="fd-mono fd-mono--sm">FLIGHTDECK_LOCAL_API_TOKEN</code> on the server.
+        </p>
+      ) : auth === "bearer" && hasClient ? (
+        <p className="fd-security-strip__detail fd-muted">
+          Confirm the UI token matches the server&apos;s <code className="fd-mono fd-mono--sm">FLIGHTDECK_LOCAL_API_TOKEN</code>.
         </p>
       ) : (
-        <p className="fd-alert fd-alert--info fd-security-strip__msg">
-          <span className="fd-security-strip__line">{serverLine}</span>{" "}
-          <span className="fd-security-strip__line">{readLine}</span>{" "}
-          <span className="fd-security-strip__line">{clientLine}</span>
+        <p className="fd-security-strip__detail fd-muted">
+          Ingest, promote, and rollback follow the write mode above. Diff stays unauthenticated.
         </p>
       )}
     </div>

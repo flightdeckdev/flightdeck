@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 
 import { Link, useSearchParams } from "react-router-dom";
 import type { ReleaseRow, RunsListPayload } from "../api";
 import { fetchRuns, fetchRunsExportBlob, loadTimeline } from "../api";
+import { Button } from "../components/Button";
 import { JsonPanel } from "../components/JsonPanel";
 import { pickTrimmedSearch } from "../urlSearch";
 import { useDocumentTitle } from "../useDocumentTitle";
@@ -451,17 +452,12 @@ export function RunsPage() {
           per download). Truncation warnings apply to the returned page, not necessarily the whole ledger.
         </p>
         <div className="fd-actions">
-          <button type="button" className="fd-btn fd-btn--primary" disabled={busy} onClick={() => void runQuery()}>
-            {busy ? "Loading…" : "Load runs"}
-          </button>
-          <button
-            type="button"
-            className="fd-btn fd-btn--ghost"
-            disabled={exportBusy}
-            onClick={() => void downloadExport()}
-          >
-            {exportBusy ? "Exporting…" : "Download NDJSON"}
-          </button>
+          <Button variant="primary" loading={busy} loadingLabel="Loading…" onClick={() => void runQuery()}>
+            Load runs
+          </Button>
+          <Button variant="ghost" loading={exportBusy} loadingLabel="Exporting…" onClick={() => void downloadExport()}>
+            Download NDJSON
+          </Button>
         </div>
         {rawErr ? <p className="fd-alert fd-alert--error">{rawErr}</p> : null}
       </section>
@@ -495,9 +491,9 @@ export function RunsPage() {
               {runsQueryError.detail}
             </p>
             <div className="fd-actions fd-mt-1">
-              <button type="button" className="fd-btn fd-btn--primary" disabled={busy} onClick={() => void runQuery()}>
-                {busy ? "Retrying…" : "Retry"}
-              </button>
+              <Button variant="primary" loading={busy} loadingLabel="Retrying…" onClick={() => void runQuery()}>
+                Retry
+              </Button>
             </div>
           </div>
         </section>
