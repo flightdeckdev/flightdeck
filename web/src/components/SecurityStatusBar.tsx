@@ -3,38 +3,45 @@ import { fetchHealth, type HealthPayload } from "../api";
 import { clientMutationTokenConfigured, UI_READ_ONLY } from "../uiConfig";
 import { StatusChip } from "./StatusChip";
 
-function resolveMutationAuth(data: HealthPayload): "bearer" | "loopback" | null {
+type MutationAuthResolved = "bearer" | "loopback" | "unknown";
+type ReadAuthResolved = "bearer" | "open" | "unknown";
+
+function resolveMutationAuth(data: HealthPayload): MutationAuthResolved {
   const m = data.mutation_auth;
   if (m === "bearer" || m === "loopback") return m;
-  return null;
+  return "unknown";
 }
 
-function resolveReadAuth(data: HealthPayload): "bearer" | "open" | null {
+function resolveReadAuth(data: HealthPayload): ReadAuthResolved {
   const r = data.read_auth;
   if (r === "bearer" || r === "open") return r;
-  return null;
+  return "unknown";
 }
 
 export function SecurityStatusBar() {
-  const [auth, setAuth] = useState<"bearer" | "loopback" | null>(null);
-  const [readAuth, setReadAuth] = useState<"bearer" | "open" | null>(null);
+  const [mutationAuth, setMutationAuth] = useState<MutationAuthResolved | null>(null);
+  const [readAuth, setReadAuth] = useState<ReadAuthResolved | null>(null);
   const [fetchErr, setFetchErr] = useState<string | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
 
   useEffect(() => {
+    if (UI_READ_ONLY) {
+      setHealthLoading(false);
+      return;
+    }
     let cancelled = false;
     void (async () => {
       setHealthLoading(true);
       try {
         const h = await fetchHealth();
         if (!cancelled) {
-          setAuth(resolveMutationAuth(h));
+          setMutationAuth(resolveMutationAuth(h));
           setReadAuth(resolveReadAuth(h));
           setFetchErr(null);
         }
       } catch (e) {
         if (!cancelled) {
-          setAuth(null);
+          setMutationAuth(null);
           setReadAuth(null);
           setFetchErr(String(e));
         }
@@ -48,11 +55,11 @@ export function SecurityStatusBar() {
   }, []);
 
   const hasClient = clientMutationTokenConfigured();
-  const mismatch = auth === "bearer" && !hasClient;
+  const mismatch = mutationAuth === "bearer" && !hasClient;
 
   if (UI_READ_ONLY) {
     return (
-      <div className="fd-security-strip" role="status">
+      <div className="fd-security-strip" role="status" data-testid="security-strip">
         <div className="fd-status-chip-row">
           <StatusChip label="UI mode" value="Read-only" tone="info" />
         </div>
@@ -66,7 +73,7 @@ export function SecurityStatusBar() {
 
   if (healthLoading) {
     return (
-      <div className="fd-security-strip" role="status" aria-busy="true" aria-live="polite">
+      <div className="fd-security-strip" role="status" aria-busy="true" aria-live="polite" data-testid="security-strip">
         <span className="fd-sr-only">Checking server security</span>
         <div className="fd-status-chip-row">
           <StatusChip label="API security" value="Checking…" tone="neutral" />
@@ -78,7 +85,7 @@ export function SecurityStatusBar() {
 
   if (fetchErr) {
     return (
-      <div className="fd-security-strip" role="status">
+      <div className="fd-security-strip" role="status" data-testid="security-strip">
         <p className="fd-alert fd-alert--warn fd-security-strip__msg">
           Could not load security mode from <code className="fd-mono fd-mono--sm">/health</code>: {fetchErr}
         </p>
@@ -86,40 +93,53 @@ export function SecurityStatusBar() {
     );
   }
 
-  if (auth === null) {
-    return null;
+  if (mutationAuth === null || readAuth === null) {
+    return (
+      <div className="fd-security-strip" role="status" data-testid="security-strip">
+        <p className="fd-alert fd-alert--warn fd-security-strip__msg">
+          Security mode from <code className="fd-mono fd-mono--sm">/health</code> is unavailable.
+        </p>
+      </div>
+    );
   }
 
-  const mutationTone = auth === "bearer" ? "info" : "pass";
-  const readTone = readAuth === "bearer" ? "info" : "neutral";
+  const writeValue =
+    mutationAuth === "bearer" ? "Bearer required" : mutationAuth === "loopback" ? "Loopback open" : "Unknown";
+  const writeTone =
+    mutationAuth === "bearer" ? "info" : mutationAuth === "loopback" ? "pass" : "warn";
+
+  const readValue =
+    readAuth === "bearer" ? "Bearer required" : readAuth === "open" ? "Open" : "Unknown";
+  const readTone = readAuth === "bearer" ? "info" : readAuth === "open" ? "neutral" : "warn";
+
   const clientTone = hasClient ? "pass" : mismatch ? "warn" : "neutral";
 
+  const contractDrift = mutationAuth === "unknown" || readAuth === "unknown";
+
   return (
-    <div className="fd-security-strip" role="status">
+    <div className="fd-security-strip" role="status" data-testid="security-strip">
       <div className="fd-status-chip-row">
-        <StatusChip
-          label="Writes"
-          value={auth === "bearer" ? "Bearer required" : "Loopback open"}
-          tone={mutationTone}
-        />
-        <StatusChip
-          label="Reads"
-          value={readAuth === "bearer" ? "Bearer required" : "Open"}
-          tone={readTone}
-        />
+        <StatusChip label="Writes" value={writeValue} tone={writeTone} />
+        <StatusChip label="Reads" value={readValue} tone={readTone} />
         <StatusChip
           label="UI token"
           value={hasClient ? "Configured" : "Not set"}
           tone={clientTone}
         />
       </div>
-      {mismatch ? (
+      {contractDrift ? (
+        <p className="fd-alert fd-alert--warn fd-security-strip__detail">
+          <code className="fd-mono fd-mono--sm">/health</code> omitted or returned an unexpected{" "}
+          <code className="fd-mono fd-mono--sm">mutation_auth</code> / <code className="fd-mono fd-mono--sm">read_auth</code>{" "}
+          value. Confirm the server version matches this UI.
+        </p>
+      ) : mismatch ? (
         <p className="fd-alert fd-alert--warn fd-security-strip__detail">
           Server expects <code className="fd-mono fd-mono--sm">Authorization: Bearer</code> for writes and reads, but{" "}
           <code className="fd-mono fd-mono--sm">VITE_FLIGHTDECK_LOCAL_API_TOKEN</code> is unset in this UI build. Set it
           to match <code className="fd-mono fd-mono--sm">FLIGHTDECK_LOCAL_API_TOKEN</code> on the server.
         </p>
-      ) : auth === "bearer" && hasClient ? (
+      ) : mutationAuth === "bearer" && hasClient ? (
         <p className="fd-security-strip__detail fd-muted">
           Confirm the UI token matches the server&apos;s <code className="fd-mono fd-mono--sm">FLIGHTDECK_LOCAL_API_TOKEN</code>.
         </p>

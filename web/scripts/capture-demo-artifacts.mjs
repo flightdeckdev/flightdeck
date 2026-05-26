@@ -20,11 +20,67 @@ const execFileAsync = promisify(execFile);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..", "..");
-const fdBin = path.join(repoRoot, ".venv", "bin", "flightdeck");
+const inCi = Boolean(process.env.GITHUB_ACTIONS);
 const outDir = process.env.FD_DEMO_ARTIFACT_DIR || path.join(repoRoot, "artifacts", "flightdeck-demo-share");
 const ws = path.join(fs.mkdtempSync(path.join("/tmp", "fd-demo-")));
 const port = process.env.FD_DEMO_PORT || "10088";
 const base = `http://127.0.0.1:${port}`;
+
+function resolveFlightdeckRunner() {
+  const venvBin = path.join(repoRoot, ".venv", "bin", "flightdeck");
+  if (fs.existsSync(venvBin)) {
+    return { mode: "direct", bin: venvBin };
+  }
+  if (inCi) return { mode: "uv", bin: "uv" };
+  if (process.platform === "win32") {
+    return { mode: "py", bin: "py" };
+  }
+  const py = process.env.FLIGHTDECK_E2E_PYTHON || "python3";
+  return { mode: "python", bin: py };
+}
+
+async function flightdeckInit(cwd) {
+  const r = resolveFlightdeckRunner();
+  if (r.mode === "direct") {
+    await execFileAsync(r.bin, ["init", "--no-bundled-pricing"], { cwd, stdio: "inherit" });
+    return;
+  }
+  if (r.mode === "uv") {
+    await execFileAsync("uv", ["run", "flightdeck", "init", "--no-bundled-pricing"], { cwd, stdio: "inherit" });
+    return;
+  }
+  if (r.mode === "py") {
+    await execFileAsync(r.bin, ["-3", "-m", "flightdeck.cli.main", "init", "--no-bundled-pricing"], {
+      cwd,
+      stdio: "inherit",
+    });
+    return;
+  }
+  await execFileAsync(r.bin, ["-m", "flightdeck.cli.main", "init", "--no-bundled-pricing"], {
+    cwd,
+    stdio: "inherit",
+  });
+}
+
+function spawnFlightdeckServe(cwd, p) {
+  const r = resolveFlightdeckRunner();
+  if (r.mode === "direct") {
+    return spawn(r.bin, ["serve", "--host", "127.0.0.1", "--port", p], { cwd, stdio: "ignore" });
+  }
+  if (r.mode === "uv") {
+    return spawn("uv", ["run", "flightdeck", "serve", "--host", "127.0.0.1", "--port", p], { cwd, stdio: "ignore" });
+  }
+  if (r.mode === "py") {
+    return spawn(r.bin, ["-3", "-m", "flightdeck.cli.main", "serve", "--host", "127.0.0.1", "--port", p], {
+      cwd,
+      stdio: "ignore",
+    });
+  }
+  return spawn(r.bin, ["-m", "flightdeck.cli.main", "serve", "--host", "127.0.0.1", "--port", p], {
+    cwd,
+    stdio: "ignore",
+  });
+}
 
 async function waitForHealth(maxMs = 60_000) {
   const deadline = Date.now() + maxMs;
@@ -35,7 +91,7 @@ async function waitForHealth(maxMs = 60_000) {
     } catch {
       /* retry */
     }
-    await new Promise((r) => setTimeout(r, 250));
+    await new Promise((res) => setTimeout(res, 250));
   }
   throw new Error("Timed out waiting for /health");
 }
@@ -48,26 +104,23 @@ function killServe(child) {
   }
 }
 
-async function main() {
-  if (!fs.existsSync(fdBin)) {
-    throw new Error(`Missing ${fdBin} — run: uv sync --frozen --extra dev`);
-  }
+async function dwell(ms) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
 
+async function main() {
   fs.mkdirSync(outDir, { recursive: true });
 
-  await execFileAsync(fdBin, ["init", "--no-bundled-pricing"], { cwd: ws, stdio: "inherit" });
+  await flightdeckInit(ws);
 
-  const serve = spawn(fdBin, ["serve", "--host", "127.0.0.1", "--port", port], {
-    cwd: ws,
-    stdio: "ignore",
-    detached: false,
-  });
+  const serve = spawnFlightdeckServe(ws, port);
 
   let exitCode = 0;
+  let browser = null;
   try {
     await waitForHealth();
 
-    const browser = await chromium.launch({
+    browser = await chromium.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-dev-shm-usage"],
     });
@@ -80,61 +133,64 @@ async function main() {
       viewport: { width: 1440, height: 900 },
       recordVideo: { dir: videoDir, size: { width: 1440, height: 900 } },
     });
-    const page = await context.newPage();
-    page.setDefaultTimeout(45_000);
+    try {
+      const page = await context.newPage();
+      page.setDefaultTimeout(45_000);
 
-    const dwell = (ms) => page.waitForTimeout(ms);
+      const shot = async (name) => {
+        const p = path.join(outDir, name);
+        await page.screenshot({ path: p, type: "png" });
+        return p;
+      };
 
-    const shot = async (name) => {
-      const p = path.join(outDir, name);
-      await page.screenshot({ path: p, type: "png" });
-      return p;
-    };
+      await page.goto(`${base}/#/`, { waitUntil: "networkidle" });
+      await page.getByRole("heading", { name: "Overview", level: 2 }).waitFor({ state: "visible" });
+      await page.getByTestId("security-strip").getByText("Loopback open").waitFor({ state: "visible" });
+      await dwell(2200);
+      await shot("01-overview-loopback-chips.png");
 
-    // Overview — security chips + nav (hold for viewers)
-    await page.goto(`${base}/#/`, { waitUntil: "networkidle" });
-    await page.getByRole("heading", { name: "Overview", level: 2 }).waitFor({ state: "visible" });
-    await page.getByRole("status").filter({ hasText: "Loopback open" }).waitFor({ state: "visible" });
-    await dwell(2200);
-    await shot("01-overview-loopback-chips.png");
+      await page.getByTestId("ledger-metrics-toggle").click();
+      await page.getByRole("region", { name: "Ledger metrics" }).waitFor({ state: "visible" });
+      await dwell(1800);
+      await shot("02-overview-ledger-metrics.png");
 
-    await page.getByTestId("ledger-metrics-toggle").click();
-    await page.getByRole("region", { name: "Ledger metrics" }).waitFor({ state: "visible" });
-    await dwell(1800);
-    await shot("02-overview-ledger-metrics.png");
+      await page.goto(`${base}/#/diff`, { waitUntil: "networkidle" });
+      await page.getByRole("heading", { name: "Run diff", level: 2 }).waitFor({ state: "visible" });
+      await dwell(1800);
+      await shot("03-diff-compute.png");
 
-    // Diff
-    await page.goto(`${base}/#/diff`, { waitUntil: "networkidle" });
-    await page.getByRole("heading", { name: "Run diff", level: 2 }).waitFor({ state: "visible" });
-    await dwell(1800);
-    await shot("03-diff-compute.png");
+      await page.goto(`${base}/#/runs`, { waitUntil: "networkidle" });
+      await page.getByRole("heading", { name: "Run events", level: 2 }).waitFor({ state: "visible" });
+      await dwell(1800);
+      await shot("04-runs-query.png");
 
-    // Runs
-    await page.goto(`${base}/#/runs`, { waitUntil: "networkidle" });
-    await page.getByRole("heading", { name: "Run events", level: 2 }).waitFor({ state: "visible" });
-    await dwell(1800);
-    await shot("04-runs-query.png");
+      await page.goto(`${base}/#/actions`, { waitUntil: "networkidle" });
+      await page.getByRole("heading", { name: "Promote & rollback", level: 2 }).waitFor({ state: "visible" });
+      await dwell(1800);
+      await shot("05-actions-promote.png");
 
-    // Actions
-    await page.goto(`${base}/#/actions`, { waitUntil: "networkidle" });
-    await page.getByRole("heading", { name: "Promote & rollback", level: 2 }).waitFor({ state: "visible" });
-    await dwell(1800);
-    await shot("05-actions-promote.png");
+      await page.goto(`${base}/#/settings`, { waitUntil: "networkidle" });
+      await page.getByRole("heading", { name: "Settings", level: 2 }).waitFor({ state: "visible" });
+      await dwell(900);
+      await page.getByRole("radio", { name: "Dark" }).check();
+      await dwell(2000);
+      await shot("06-settings-dark-theme.png");
 
-    // Settings — dark theme (shows theme-color / polish)
-    await page.goto(`${base}/#/settings`, { waitUntil: "networkidle" });
-    await page.getByRole("heading", { name: "Settings", level: 2 }).waitFor({ state: "visible" });
-    await dwell(900);
-    await page.getByRole("radio", { name: "Dark" }).check();
-    await dwell(2000);
-    await shot("06-settings-dark-theme.png");
-
-    await page.goto(`${base}/#/`, { waitUntil: "networkidle" });
-    await page.getByRole("heading", { name: "Overview", level: 2 }).waitFor({ state: "visible" });
-    await dwell(2200);
-
-    await context.close();
-    await browser.close();
+      await page.goto(`${base}/#/`, { waitUntil: "networkidle" });
+      await page.getByRole("heading", { name: "Overview", level: 2 }).waitFor({ state: "visible" });
+      await dwell(2200);
+    } finally {
+      try {
+        await context.close();
+      } catch {
+        /* ignore */
+      }
+      try {
+        await browser.close();
+      } catch {
+        /* ignore */
+      }
+    }
 
     const webms = fs.readdirSync(videoDir).filter((f) => f.endsWith(".webm"));
     const rawVideo = webms.length ? path.join(videoDir, webms[0]) : null;
@@ -162,6 +218,13 @@ async function main() {
     }
   } catch (e) {
     exitCode = 1;
+    if (browser) {
+      try {
+        await browser.close();
+      } catch {
+        /* ignore */
+      }
+    }
     // eslint-disable-next-line no-console
     console.error(e);
   } finally {

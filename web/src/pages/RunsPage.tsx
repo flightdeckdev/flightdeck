@@ -397,10 +397,14 @@ export function RunsPage() {
           <label className="fd-field fd-field--full">
             <span className="fd-field__label">Release ID</span>
             <input
-              className="fd-input"
+              className={`fd-input${rawErr === "Release ID is required." ? " fd-input--invalid" : ""}`}
               value={releaseId}
-              onChange={(e) => setReleaseId(e.target.value)}
+              onChange={(e) => {
+                setReleaseId(e.target.value);
+                if (rawErr === "Release ID is required.") setRawErr(null);
+              }}
               list="fd-release-ids"
+              aria-invalid={rawErr === "Release ID is required."}
             />
             <datalist id="fd-release-ids">
               {releases.map((r) => (
@@ -452,10 +456,22 @@ export function RunsPage() {
           per download). Truncation warnings apply to the returned page, not necessarily the whole ledger.
         </p>
         <div className="fd-actions">
-          <Button variant="primary" loading={busy} loadingLabel="Loading…" onClick={() => void runQuery()}>
+          <Button
+            variant="primary"
+            disabled={busy || exportBusy}
+            loading={busy}
+            loadingLabel="Loading…"
+            onClick={() => void runQuery()}
+          >
             Load runs
           </Button>
-          <Button variant="ghost" loading={exportBusy} loadingLabel="Exporting…" onClick={() => void downloadExport()}>
+          <Button
+            variant="ghost"
+            disabled={busy || exportBusy}
+            loading={exportBusy}
+            loadingLabel="Exporting…"
+            onClick={() => void downloadExport()}
+          >
             Download NDJSON
           </Button>
         </div>
@@ -491,7 +507,7 @@ export function RunsPage() {
               {runsQueryError.detail}
             </p>
             <div className="fd-actions fd-mt-1">
-              <Button variant="primary" loading={busy} loadingLabel="Retrying…" onClick={() => void runQuery()}>
+              <Button variant="primary" disabled={busy || exportBusy} loading={busy} loadingLabel="Retrying…" onClick={() => void runQuery()}>
                 Retry
               </Button>
             </div>

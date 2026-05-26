@@ -35,6 +35,8 @@ export function Button({
   type = "button",
   ...rest
 }: ButtonProps) {
+  const { "aria-busy": ariaBusyFromCaller, ...domRest } = rest;
+
   const classes = [
     "fd-btn",
     variantClass(variant),
@@ -46,9 +48,10 @@ export function Button({
     .join(" ");
 
   const label = loading && loadingLabel !== undefined ? loadingLabel : children;
+  const ariaBusy = loading ? true : ariaBusyFromCaller;
 
   return (
-    <button type={type} className={classes} disabled={disabled || loading} aria-busy={loading || undefined} {...rest}>
+    <button type={type} className={classes} disabled={disabled || loading} aria-busy={ariaBusy} {...domRest}>
       {loading ? <span className="fd-btn__spinner" aria-hidden="true" /> : null}
       <span className="fd-btn__label">{label}</span>
     </button>

@@ -59,6 +59,9 @@ function pickOutcome(data: unknown): ActionOutcomePayload | null {
 
 type Busy = null | "promote" | "rollback" | "request" | "confirm";
 
+/** Client-side validation highlight for promote/confirm forms (not API errors). */
+type ActionsFieldError = null | "step1_reason" | "confirm_request" | "confirm_approval";
+
 export function ActionsPage() {
   useDocumentTitle("Promote & rollback");
   const [searchParams] = useSearchParams();
@@ -78,6 +81,7 @@ export function ActionsPage() {
   const [actOutcome, setActOutcome] = useState<ActionOutcomePayload | null>(null);
   const [actRaw, setActRaw] = useState<string | null>(null);
   const [actErr, setActErr] = useState<string | null>(null);
+  const [actFieldError, setActFieldError] = useState<ActionsFieldError>(null);
   const [busy, setBusy] = useState<Busy>(null);
 
   const [confirmRequestId, setConfirmRequestId] = useState("");
@@ -158,11 +162,13 @@ export function ActionsPage() {
 
   const runAction = async (path: "/v1/promote" | "/v1/rollback") => {
     setActErr(null);
+    setActFieldError(null);
     setActOutcome(null);
     setActRaw(null);
     setRequestRaw(null);
     const reason = actReason.trim();
     if (!reason) {
+      setActFieldError("step1_reason");
       setActErr("Reason is required.");
       return;
     }
@@ -193,6 +199,7 @@ export function ActionsPage() {
       setActRaw(JSON.stringify(data, null, 2));
       notifyTimelineMutated();
     } catch (e) {
+      setActFieldError(null);
       setActErr(String(e));
     } finally {
       setBusy(null);
@@ -201,11 +208,13 @@ export function ActionsPage() {
 
   const runRequestPromotion = async () => {
     setActErr(null);
+    setActFieldError(null);
     setActOutcome(null);
     setActRaw(null);
     setRequestRaw(null);
     const reason = actReason.trim();
     if (!reason) {
+      setActFieldError("step1_reason");
       setActErr("Reason is required for the promotion request.");
       return;
     }
@@ -232,6 +241,7 @@ export function ActionsPage() {
       setListNonce((n) => n + 1);
       notifyTimelineMutated();
     } catch (e) {
+      setActFieldError(null);
       setActErr(String(e));
     } finally {
       setBusy(null);
@@ -240,15 +250,18 @@ export function ActionsPage() {
 
   const runConfirmPromotion = async () => {
     setActErr(null);
+    setActFieldError(null);
     setActOutcome(null);
     setActRaw(null);
     const rid = confirmRequestId.trim();
     const ar = confirmReason.trim();
     if (!rid) {
+      setActFieldError("confirm_request");
       setActErr("Request ID is required to confirm.");
       return;
     }
     if (!ar) {
+      setActFieldError("confirm_approval");
       setActErr("Approval reason is required.");
       return;
     }
@@ -275,6 +288,7 @@ export function ActionsPage() {
       setListNonce((n) => n + 1);
       notifyTimelineMutated();
     } catch (e) {
+      setActFieldError(null);
       setActErr(String(e));
     } finally {
       setBusy(null);
@@ -352,7 +366,7 @@ export function ActionsPage() {
         </section>
       ) : null}
 
-      <section className="fd-card" aria-busy={!canMutate}>
+      <section className="fd-card" aria-busy={workspaceLoading}>
         {approvalOn ? (
           <div className="fd-card__head">
             <h3 className="fd-card__subtitle">1. Request a promotion</h3>
@@ -403,18 +417,26 @@ export function ActionsPage() {
               </span>
             </span>
             <input
-              className={`fd-input${actErr?.includes("Reason is required") ? " fd-input--invalid" : ""}`}
+              className={`fd-input${actFieldError === "step1_reason" ? " fd-input--invalid" : ""}`}
               value={actReason}
-              onChange={(e) => setActReason(e.target.value)}
+              onChange={(e) => {
+                setActReason(e.target.value);
+                if (actFieldError === "step1_reason") setActFieldError(null);
+              }}
               disabled={!canMutate}
               required
               aria-required="true"
+              aria-invalid={actFieldError === "step1_reason"}
             />
           </label>
         </div>
-        {!canMutate ? (
+        {workspaceLoading ? (
           <p className="fd-muted fd-samples" aria-live="polite">
-            Loading workspace mode…
+            Loading workspace…
+          </p>
+        ) : workspaceErr ? (
+          <p className="fd-muted fd-samples" aria-live="polite">
+            Workspace unavailable — resolve the error above before promoting or rolling back.
           </p>
         ) : (
           <p className="fd-muted fd-samples" aria-live="polite">
@@ -541,19 +563,27 @@ export function ActionsPage() {
               <label className="fd-field fd-field--full">
                 <span className="fd-field__label">Request ID</span>
                 <input
-                  className="fd-input"
+                  className={`fd-input${actFieldError === "confirm_request" ? " fd-input--invalid" : ""}`}
                   value={confirmRequestId}
-                  onChange={(e) => setConfirmRequestId(e.target.value)}
+                  onChange={(e) => {
+                    setConfirmRequestId(e.target.value);
+                    if (actFieldError === "confirm_request") setActFieldError(null);
+                  }}
                   placeholder="From the table above or promote-request output"
+                  aria-invalid={actFieldError === "confirm_request"}
                 />
               </label>
               <label className="fd-field fd-field--full">
                 <span className="fd-field__label">Approval reason</span>
                 <input
-                  className="fd-input"
+                  className={`fd-input${actFieldError === "confirm_approval" ? " fd-input--invalid" : ""}`}
                   value={confirmReason}
-                  onChange={(e) => setConfirmReason(e.target.value)}
+                  onChange={(e) => {
+                    setConfirmReason(e.target.value);
+                    if (actFieldError === "confirm_approval") setActFieldError(null);
+                  }}
                   placeholder="Why you are approving this promotion"
+                  aria-invalid={actFieldError === "confirm_approval"}
                 />
               </label>
             </div>

@@ -112,5 +112,5 @@ test("stable root icon URL for favicon crawlers", async ({ request }) => {
 
 test("security status reflects server loopback mode", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("status")).toContainText("Loopback open");
+  await expect(page.getByTestId("security-strip")).toContainText("Loopback open");
 });

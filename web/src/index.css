@@ -1519,6 +1519,12 @@ html[data-theme="dark"] .fd-select {
   color: var(--fd-text);
 }
 
+.fd-status-chip--neutral {
+  /* Explicit default tone; base .fd-status-chip already styles the shell. */
+  border-color: var(--fd-border);
+  background: var(--fd-surface);
+}
+
 .fd-status-chip--pass {
   border-color: color-mix(in srgb, var(--fd-pass-fg) 35%, var(--fd-border));
   background: var(--fd-pass-bg);

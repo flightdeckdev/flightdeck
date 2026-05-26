@@ -34,14 +34,18 @@ export function resolveEffectiveTheme(pref: ThemePreference): "light" | "dark" {
 }
 
 function syncThemeColorMeta(effective: "light" | "dark"): void {
-  let el = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
-  if (!el) {
-    el = document.createElement("meta");
+  const content = effective === "dark" ? "#0c0f14" : "#f3f4f6";
+  const nodes = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
+  if (nodes.length === 0) {
+    const el = document.createElement("meta");
     el.name = "theme-color";
+    el.content = content;
     document.head.appendChild(el);
+    return;
   }
-  // Match `--fd-bg` tokens so mobile browser chrome matches the shell.
-  el.content = effective === "dark" ? "#0c0f14" : "#f3f4f6";
+  for (const el of nodes) {
+    el.content = content;
+  }
 }
 
 export function applyDocumentTheme(effective: "light" | "dark"): void {
