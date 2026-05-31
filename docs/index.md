@@ -6,7 +6,7 @@ This site mirrors the Markdown guides in the [flightdeck repository](https://git
 
 ## Ask AI
 
-Use the **dismissible banner** at the top to open **Perplexity** or **ChatGPT** in a new tab. Mention this documentation site or the GitHub repo so answers stay grounded in the real product surface (CLI, `release.yaml`, HTTP `/v1` routes, policy).
+Use the floating **Ask AI** button in the bottom-right corner to open **Perplexity** in a new tab with this documentation site and the GitHub repo as grounding context (CLI, `release.yaml`, HTTP `/v1` routes, policy). No FlightDeck servers are involved.
 
 ## Quick links
 

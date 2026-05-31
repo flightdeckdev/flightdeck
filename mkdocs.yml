@@ -66,14 +66,6 @@ markdown_extensions:
 
 extra:
   generator: false
-  # Dismissible strip with outbound “Ask AI” helpers (no FlightDeck backend).
-  announce: >-
-    <strong>Ask AI</strong> about FlightDeck (paste the question after the page loads):
-    <a target="_blank" rel="noopener noreferrer" href="https://www.perplexity.ai/search?q=FlightDeck%20AI%20release%20governance%20flightdeck%20CLI%20policy%20gates%20site%3Aflightdeckdev.github.io%2Fflightdeck%20OR%20site%3Agithub.com%2Fflightdeckdev%2Fflightdeck">Perplexity</a>
-    ·
-    <a target="_blank" rel="noopener noreferrer" href="https://chatgpt.com/">ChatGPT</a>
-    ·
-    <a target="_blank" rel="noopener noreferrer" href="https://github.com/flightdeckdev/flightdeck">Repository</a>
 
 extra_css:
   - stylesheets/extra.css
