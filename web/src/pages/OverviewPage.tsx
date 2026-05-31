@@ -269,6 +269,15 @@ export function OverviewPage() {
 
       {data ? (
         <>
+          {data.promoted.length === 0 && data.releases.length === 0 && data.actions.length === 0 ? (
+            <section className="fd-card fd-card--hint" aria-label="Get started">
+              <h3 className="fd-card__subtitle">No releases yet — register your first one</h3>
+              <p className="fd-empty fd-m-0">
+                Run <code className="fd-mono fd-mono--sm">flightdeck release register --agent my-agent --env local --version 0.1.0 --artifact ./build</code>
+                {" "}then refresh. See <a className="fd-link" href="https://github.com/flightdeckdev/flightdeck#quickstart" target="_blank" rel="noreferrer">Quickstart docs</a>.
+              </p>
+            </section>
+          ) : null}
           <TableShell
             title="Promoted releases"
             description="Current promoted release ID per agent and environment — compare with newer registrations below."
@@ -357,6 +366,17 @@ export function OverviewPage() {
                     <option value="not-live">Not promoted</option>
                   </select>
                 </label>
+                <div className="fd-inline fd-mt-md fd-grow-soft">
+                  <span className="fd-muted fd-samples">
+                    Showing {filteredReleases.length} of {data.releases.length}
+                  </span>
+                  {(filterAgent || filterEnv || filterPromoted) ? (
+                    <button type="button" className="fd-btn fd-btn--ghost fd-btn--sm"
+                      onClick={() => { setFilterAgent(""); setFilterEnv(""); setFilterPromoted(""); }}>
+                      Clear filters
+                    </button>
+                  ) : null}
+                </div>
               </div>
             }
           >

@@ -25,7 +25,7 @@ export function DiffPage() {
   const [diffBaseline, setDiffBaseline] = useState("");
   const [diffCandidate, setDiffCandidate] = useState("");
   const [diffWindow, setDiffWindow] = useState("7d");
-  const [diffEnv, setDiffEnv] = useState("local");
+  const [diffEnv, setDiffEnv] = useState("");
   const [diffOut, setDiffOut] = useState<DiffJson | null>(null);
   const [diffErr, setDiffErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -36,7 +36,7 @@ export function DiffPage() {
     const w = pickTrimmedSearch(searchParams, "window");
     setDiffWindow(w !== "" ? w : "7d");
     const e = pickTrimmedSearch(searchParams, "environment");
-    setDiffEnv(e !== "" ? e : "local");
+    setDiffEnv(e);
   }, [searchParams]);
 
   const runDiff = async () => {
@@ -137,11 +137,36 @@ export function DiffPage() {
           </label>
           <label className="fd-field">
             <span className="fd-field__label">Environment</span>
-            <input className="fd-input" value={diffEnv} onChange={(e) => setDiffEnv(e.target.value)} />
+            <input
+              className="fd-input"
+              value={diffEnv}
+              onChange={(e) => setDiffEnv(e.target.value)}
+              placeholder="e.g. staging"
+            />
           </label>
+          <div className="fd-field fd-field--full">
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              onClick={() => {
+                const b = diffBaseline;
+                setDiffBaseline(diffCandidate);
+                setDiffCandidate(b);
+              }}
+            >
+              ⇅ Swap baseline / candidate
+            </Button>
+          </div>
         </div>
         <div className="fd-actions">
-          <Button variant="primary" loading={busy} loadingLabel="Computing…" onClick={() => void runDiff()}>
+          <Button
+            variant="primary"
+            loading={busy}
+            loadingLabel="Computing…"
+            disabled={busy || diffBaseline.trim() === "" || diffCandidate.trim() === ""}
+            onClick={() => void runDiff()}
+          >
             Compute diff
           </Button>
         </div>

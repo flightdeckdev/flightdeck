@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { UI_READ_ONLY } from "../uiConfig";
 
 type Step = {
@@ -61,10 +61,10 @@ export function ReleaseLifecycleStrip() {
               </span>
             ) : null}
             {s.to ? (
-              <Link to={s.to} end={s.end === true} className="fd-lifecycle-strip__link" title={s.linkTitle}>
+              <NavLink to={s.to} end={s.end === true} className="fd-lifecycle-strip__link" title={s.linkTitle}>
                 <span className="fd-lifecycle-strip__label">{s.label}</span>
                 <span className="fd-lifecycle-strip__hint">{s.hint}</span>
-              </Link>
+              </NavLink>
             ) : (
               <span
                 className="fd-lifecycle-strip__link fd-lifecycle-strip__link--static"

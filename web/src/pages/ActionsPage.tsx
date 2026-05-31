@@ -75,9 +75,12 @@ export function ActionsPage() {
   const [listNonce, setListNonce] = useState(0);
 
   const [actRelease, setActRelease] = useState("");
-  const [actEnv, setActEnv] = useState("local");
+  const [actEnv, setActEnv] = useState("");
   const [actWindow, setActWindow] = useState("7d");
   const [actReason, setActReason] = useState("");
+  const [actor, setActor] = useState<string>(
+    () => localStorage.getItem("flightdeck.actor") || "react-ui",
+  );
   const [actOutcome, setActOutcome] = useState<ActionOutcomePayload | null>(null);
   const [actRaw, setActRaw] = useState<string | null>(null);
   const [actErr, setActErr] = useState<string | null>(null);
@@ -152,6 +155,10 @@ export function ActionsPage() {
   }, [refreshPending, listNonce]);
 
   useEffect(() => {
+    localStorage.setItem("flightdeck.actor", actor);
+  }, [actor]);
+
+  useEffect(() => {
     const rid = searchParams.get("release_id");
     const env = searchParams.get("environment");
     const win = searchParams.get("window");
@@ -172,14 +179,19 @@ export function ActionsPage() {
       setActErr("Reason is required.");
       return;
     }
-    const label = path === "/v1/promote" ? "promotion" : "rollback";
+    const label = path === "/v1/promote" ? "promote" : "rollback";
     const rid = actRelease.trim();
     const env = actEnv.trim();
-    if (
-      !window.confirm(
-        `Run ${label} for release ${rid} in ${env}? The server evaluates policy on this window before changing the ledger.`,
-      )
-    ) {
+    if (!env) {
+      setActErr("Environment is required.");
+      return;
+    }
+    const expected = rid.slice(-8);
+    const typed = window.prompt(
+      `Type the last 8 chars of the release ID (${expected}) to ${label}:`,
+    );
+    if (typed?.trim() !== expected) {
+      setActErr(`${label} cancelled (confirmation did not match).`);
       return;
     }
     setBusy(path === "/v1/promote" ? "promote" : "rollback");
@@ -192,7 +204,7 @@ export function ActionsPage() {
           environment: actEnv.trim(),
           window: actWindow.trim(),
           reason,
-          actor: "react-ui",
+          actor: actor.trim() || "react-ui",
         }),
       });
       setActOutcome(pickOutcome(data));
@@ -231,7 +243,7 @@ export function ActionsPage() {
           environment: actEnv.trim(),
           window: actWindow.trim(),
           reason,
-          actor: "react-ui",
+          actor: actor.trim() || "react-ui",
         }),
       });
       setRequestRaw(JSON.stringify(data, null, 2));
@@ -280,7 +292,7 @@ export function ActionsPage() {
         body: JSON.stringify({
           request_id: rid,
           approval_reason: ar,
-          actor: "react-ui",
+          actor: actor.trim() || "react-ui",
         }),
       });
       setActOutcome(pickOutcome(data));
@@ -398,6 +410,7 @@ export function ActionsPage() {
               value={actEnv}
               onChange={(e) => setActEnv(e.target.value)}
               disabled={!canMutate}
+              placeholder="e.g. staging"
             />
           </label>
           <label className="fd-field">
@@ -407,6 +420,15 @@ export function ActionsPage() {
               value={actWindow}
               onChange={(e) => setActWindow(e.target.value)}
               disabled={!canMutate}
+            />
+          </label>
+          <label className="fd-field">
+            <span className="fd-field__label">Your name (audit actor)</span>
+            <input
+              className="fd-input"
+              value={actor}
+              onChange={(e) => setActor(e.target.value)}
+              placeholder="e.g. jane.doe"
             />
           </label>
           <label className="fd-field fd-field--full">
@@ -427,6 +449,7 @@ export function ActionsPage() {
               required
               aria-required="true"
               aria-invalid={actFieldError === "step1_reason"}
+              placeholder="e.g. weekly canary promotion / hot-fix for issue #1234"
             />
           </label>
         </div>
@@ -462,6 +485,7 @@ export function ActionsPage() {
               loading={busy === "promote"}
               loadingLabel="Promoting…"
               onClick={() => void runAction("/v1/promote")}
+              title="Updates the promoted-release pointer in the ledger. Audit-logged."
             >
               Promote
             </Button>

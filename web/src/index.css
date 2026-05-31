@@ -1020,7 +1020,6 @@ code.fd-mono--sm {
   padding: 0.85rem 0.65rem;
   color: var(--fd-muted);
   font-size: 0.9rem;
-  font-style: italic;
 }
 
 .fd-muted {
@@ -1399,7 +1398,8 @@ html[data-theme="dark"] .fd-select {
 .fd-diff-twin__id {
   display: block;
   font-size: 0.82rem;
-  word-break: break-all;
+  overflow-wrap: anywhere;
+  word-break: normal;
   line-height: 1.35;
 }
 
@@ -1982,7 +1982,7 @@ button.fd-skip-link {
 
 .fd-drawer {
   position: relative;
-  width: min(28rem, 100vw);
+  width: min(40rem, 100vw);
   max-width: 100%;
   background: var(--fd-surface);
   border-left: 1px solid var(--fd-border-strong);

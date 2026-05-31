@@ -1,11 +1,11 @@
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import { ThemePreferenceProvider } from "./context/ThemePreferenceContext";
-import { ActionsPage } from "./pages/ActionsPage";
-import { DiffPage } from "./pages/DiffPage";
-import { OverviewPage } from "./pages/OverviewPage";
-import { RunsPage } from "./pages/RunsPage";
 import { UI_READ_ONLY } from "./uiConfig";
+import { OverviewPage } from "./pages/OverviewPage";
+import { DiffPage } from "./pages/DiffPage";
+import { RunsPage } from "./pages/RunsPage";
+import { ActionsPage } from "./pages/ActionsPage";
 
 export function App() {
   return (

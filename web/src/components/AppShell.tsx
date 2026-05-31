@@ -63,14 +63,14 @@ export function AppShell() {
               className="fd-sidebar__collapse"
               onClick={toggleSidebar}
               aria-expanded={!sidebarCollapsed}
-              aria-controls="sidebar-primary-nav sidebar-footer-nav"
+              aria-controls="sidebar-nav-stack"
               title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {sidebarCollapsed ? <IconChevronRight size={18} /> : <IconChevronLeft size={18} />}
               <span className="fd-sr-only">{sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}</span>
             </button>
           </div>
-          <div className="fd-sidebar__nav-stack">
+          <div id="sidebar-nav-stack" className="fd-sidebar__nav-stack">
             <nav id="sidebar-primary-nav" className="fd-sidebar__nav fd-sidebar__nav--primary" aria-label="Primary">
               <SidebarNavLink to="/" end label="Overview" icon={<IconOverview />} />
               <SidebarNavLink to="/diff" label="Diff" icon={<IconDiff />} />

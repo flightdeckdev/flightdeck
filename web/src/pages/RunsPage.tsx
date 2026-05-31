@@ -422,34 +422,55 @@ export function RunsPage() {
             <span className="fd-field__label">Environment (optional)</span>
             <input className="fd-input" value={environment} onChange={(e) => setEnvironment(e.target.value)} />
           </label>
-          <label className="fd-field">
-            <span className="fd-field__label">Tenant (optional)</span>
-            <input className="fd-input" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
-          </label>
-          <label className="fd-field">
-            <span className="fd-field__label">Task (optional)</span>
-            <input className="fd-input" value={taskId} onChange={(e) => setTaskId(e.target.value)} />
-          </label>
-          <label className="fd-field">
-            <span className="fd-field__label">Trace ID (optional)</span>
-            <input className="fd-input" value={traceId} onChange={(e) => setTraceId(e.target.value)} />
-          </label>
-          <label className="fd-field">
-            <span className="fd-field__label">Session ID (optional)</span>
-            <input className="fd-input" value={sessionId} onChange={(e) => setSessionId(e.target.value)} />
-          </label>
-          <label className="fd-field">
-            <span className="fd-field__label">Span ID (optional)</span>
-            <input className="fd-input" value={spanId} onChange={(e) => setSpanId(e.target.value)} />
-          </label>
+          <details className="fd-field fd-field--full">
+            <summary className="fd-field__label" style={{ cursor: "pointer" }}>Advanced filters</summary>
+            <div className="fd-form-grid fd-mt-md">
+              <label className="fd-field">
+                <span className="fd-field__label">Tenant (optional)</span>
+                <input className="fd-input" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
+              </label>
+              <label className="fd-field">
+                <span className="fd-field__label">Task (optional)</span>
+                <input className="fd-input" value={taskId} onChange={(e) => setTaskId(e.target.value)} />
+              </label>
+              <label className="fd-field">
+                <span className="fd-field__label">Trace ID (optional)</span>
+                <input className="fd-input" value={traceId} onChange={(e) => setTraceId(e.target.value)} />
+              </label>
+              <label className="fd-field">
+                <span className="fd-field__label">Session ID (optional)</span>
+                <input className="fd-input" value={sessionId} onChange={(e) => setSessionId(e.target.value)} />
+              </label>
+              <label className="fd-field">
+                <span className="fd-field__label">Span ID (optional)</span>
+                <input className="fd-input" value={spanId} onChange={(e) => setSpanId(e.target.value)} />
+              </label>
+            </div>
+          </details>
           <label className="fd-field">
             <span className="fd-field__label">Offset</span>
-            <input className="fd-input" value={offset} onChange={(e) => setOffset(e.target.value)} />
+            <input className="fd-input" type="number" min="0" inputMode="numeric"
+              value={offset} onChange={(e) => setOffset(e.target.value)} />
           </label>
           <label className="fd-field">
             <span className="fd-field__label">Limit (1–500)</span>
-            <input className="fd-input" value={limit} onChange={(e) => setLimit(e.target.value)} />
+            <input className="fd-input" type="number" min="1" max="500" inputMode="numeric"
+              value={limit} onChange={(e) => setLimit(e.target.value)} />
           </label>
+            <div className="fd-actions fd-mt-md">
+              <Button variant="ghost" size="sm" disabled={Number(offset) <= 0 || busy}
+                onClick={() => setOffset(String(Math.max(0, Number(offset) - Number(limit || 50))))}>
+                ‹ Prev
+              </Button>
+              <Button variant="ghost" size="sm"
+                disabled={busy || !result || Number(offset) + Number(limit || 50) >= (result?.matched_total ?? 0)}
+                onClick={() => setOffset(String(Number(offset) + Number(limit || 50)))}>
+                Next ›
+              </Button>
+              <span className="fd-muted fd-samples">
+                {result ? `Showing ${result.returned} of ${result.matched_total} (offset ${offset})` : null}
+              </span>
+            </div>
         </div>
         <p className="fd-inline fd-muted fd-mt-xl">
           <strong>Export</strong> uses the same filters and <strong>limit</strong> as this form (server cap 500 rows
