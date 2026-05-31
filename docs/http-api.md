@@ -48,6 +48,22 @@ flightdeck serve
 
 See [SECURITY.md](../SECURITY.md) for the full trust model.
 
+### Identity passthrough (audit `actor`)
+
+Mutating routes (`/v1/promote`, `/v1/promote/request`, `/v1/promote/confirm`,
+`/v1/rollback`) prefer two request headers over the body `actor` field when
+populating the audit ledger:
+
+| Header | Source | Precedence |
+|--------|--------|-----------:|
+| `X-FlightDeck-Actor` | Explicit caller-set (CI wrappers, GitHub Actions, scripts) | 1 |
+| `X-Forwarded-User`   | Reverse-proxy / SSO injection (oauth2-proxy, Pomerium, Authelia, Cloudflare Access, nginx `auth_request`) | 2 |
+| body `actor`         | Last-resort fallback (Pydantic default is `"http"`) | 3 |
+
+The header form lets an upstream auth layer authoritatively stamp the audit
+row without trusting caller-controlled JSON. Both headers are stripped of
+surrounding whitespace; whitespace-only values are ignored.
+
 ## Base URL
 
 All paths below are relative to the server base URL, e.g. `http://127.0.0.1:8765`.
