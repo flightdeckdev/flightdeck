@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use FlightDeck in research or publications, please cite it."
+title: "FlightDeck: AI Release Governance for Production Agents"
+authors:
+  - family-names: "Sai Bharath"
+    given-names: "Gottam"
+    website: "https://github.com/Gsbreddy"
+version: "1.2.0"
+date-released: "2026-05-03"
+repository-code: "https://github.com/flightdeckdev/flightdeck"
+license: "Apache-2.0"
+keywords:
+  - ai
+  - agents
+  - llmops
+  - governance
+  - deployment
+  - finops
+  - release-engineering
+abstract: >-
+  FlightDeck is an open-source AI release governance platform for production
+  agents. It provides policy-driven deployment gates, evaluation harnesses,
+  cost and latency budgets, and progressive rollout controls for LLM-backed
+  systems. Operators use FlightDeck to ship agent changes safely via a CLI,
+  HTTP API, and Kubernetes-native integrations while enforcing reproducible
+  release engineering practices across model providers and runtime stacks.

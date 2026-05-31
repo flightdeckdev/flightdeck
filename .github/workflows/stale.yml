@@ -1,0 +1,51 @@
+name: stale
+
+on:
+  schedule:
+    - cron: '30 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark and close stale issues / PRs
+        uses: actions/stale@v9
+        with:
+          days-before-issue-stale: 60
+          days-before-issue-close: 14
+          days-before-pr-stale: 45
+          days-before-pr-close: 14
+          exempt-issue-labels: 'pinned,security,roadmap,keep-open'
+          exempt-pr-labels: 'pinned,security,roadmap,keep-open'
+          stale-issue-label: 'stale'
+          stale-pr-label: 'stale'
+          stale-issue-message: >-
+            Hi, thanks for opening this issue! It has been quiet for 60 days,
+            so we are marking it as stale. If it is still relevant, please
+            leave a comment or share more context and we will take another
+            look. Otherwise it will be closed in 14 days. For questions or
+            use-case discussions, the GitHub Discussions board is a great
+            place: https://github.com/flightdeckdev/flightdeck/discussions —
+            and please report security issues privately via
+            https://github.com/flightdeckdev/flightdeck/security/advisories/new.
+          close-issue-message: >-
+            Closing this issue due to inactivity. Please feel free to reopen
+            or start a thread on Discussions
+            (https://github.com/flightdeckdev/flightdeck/discussions) if it
+            is still relevant. Thanks for helping make FlightDeck better!
+          stale-pr-message: >-
+            Hi, thanks for the contribution! This pull request has been
+            inactive for 45 days, so we are marking it as stale. If you plan
+            to continue, please push an update or leave a comment within the
+            next 14 days. Need a hand or want to discuss the approach? Open
+            a thread on
+            https://github.com/flightdeckdev/flightdeck/discussions.
+          close-pr-message: >-
+            Closing this pull request due to inactivity. Please reopen when
+            you are ready to pick it back up — we are happy to help review.
+          operations-per-run: 100

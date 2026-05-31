@@ -1,5 +1,7 @@
 # FlightDeck
 
+[![PyPI version](https://img.shields.io/pypi/v/flightdeck-ai)](https://pypi.org/project/flightdeck-ai/) [![Python versions](https://img.shields.io/pypi/pyversions/flightdeck-ai)](https://pypi.org/project/flightdeck-ai/) [![CI status](https://github.com/flightdeckdev/flightdeck/actions/workflows/ci.yml/badge.svg)](https://github.com/flightdeckdev/flightdeck/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/flightdeckdev/flightdeck)](LICENSE) [![GitHub stars](https://img.shields.io/github/stars/flightdeckdev/flightdeck?style=social)](https://github.com/flightdeckdev/flightdeck) [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
 **Ship AI agents safely with release diffs, runtime evidence, and policy gates.**
 
 Local-first **CLI + SQLite**. Optional **`flightdeck serve`** exposes a small web UI and **`/v1`** JSON API—data stays on your machine unless you change that.
