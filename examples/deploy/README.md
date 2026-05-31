@@ -40,6 +40,8 @@ Inside the Compose stack, **`exec`** into the running container with **`/workspa
 
 Set **`FLIGHTDECK_LOCAL_API_TOKEN`** in your environment before `docker compose up` (or in an `.env` file beside `docker-compose.yml`). Clients must send **`Authorization: Bearer …`** for **ledger writes**: **`POST /v1/promote*`**, **`POST /v1/rollback`**, and **`POST /v1/events`**. With no token configured, those routes accept only **loopback** callers. **`POST /v1/diff`** stays unauthenticated (read-only); still treat network placement as a trust boundary.
 
+For a public HTTPS demo or staging, see **[Railway](#railway)** or **[Fly.io](#flyio)** below.
+
 ## Railway
 
 [Railway](https://railway.app/) often suits **small demos**; pricing and free allowances change — confirm **[Railway pricing](https://railway.com/pricing)** before relying on **`$0/month`** long term.
@@ -62,6 +64,42 @@ railway variable set FLIGHTDECK_LOCAL_API_TOKEN="$(openssl rand -hex 24)"
 railway up
 railway domain   # generate .railway.app URL if needed
 ```
+
+## Fly.io
+
+Deploy the same Docker image to [Fly Machines](https://fly.io/docs/machines/). This gives you a URL you can open from any browser; treat it as **trusted** or lock it down with **`FLIGHTDECK_LOCAL_API_TOKEN`** (see **[SECURITY.md](../../SECURITY.md)**).
+
+### One-time setup
+
+1. Install [`flyctl`](https://fly.io/docs/hands-on/install-flyctl/) and run **`fly auth login`**.
+2. From **`examples/deploy/`**:
+   - Edit **`fly.toml`**: set **`app`** to a unique name (or run **`fly apps create <name>`** and match).
+   - Optional **persistent ledger**: create a volume in the **same region** as **`primary_region`**:
+     ```bash
+     fly volumes create fd_workspace --region iad --size 1
+     ```
+     Uncomment the **`[mounts]`** block at the bottom of **`fly.toml`** (`source = "fd_workspace"`, `destination = "/workspace"`).
+3. **Secrets** (recommended once you expose the app on the internet):
+   ```bash
+   fly secrets set FLIGHTDECK_LOCAL_API_TOKEN="$(openssl rand -hex 24)"
+   ```
+   The server then expects **`Authorization: Bearer …`** for ledger writes from non-loopback clients. The stock **`examples/deploy` image** does not embed a browser token; use either **read-only UI** (`VITE_FLIGHTDECK_UI_READ_ONLY=true` in a custom image build — see **`docs/web-ui.md`**) or rebuild the image with **`VITE_FLIGHTDECK_LOCAL_API_TOKEN`** matching your secret so the bundled UI can call promote/diff when **`read_auth`** is bearer-gated.
+
+### Deploy
+
+```bash
+cd examples/deploy
+fly deploy --remote-only
+```
+
+Open **`https://<app>.fly.dev/`** — static UI and **`/v1/*`** on the same origin.
+
+### Notes
+
+- **Cold starts:** **`fly.toml`** allows **`min_machines_running = 0`**; first request may wake the Machine.
+- **Demo-only UI:** ship a build with **`VITE_FLIGHTDECK_UI_READ_ONLY=true`** if you only want read-only navigation (rebuild **`web/`** and static bundle per **`docs/web-ui.md`**).
+- **Maintainers:** this repo cannot run **`fly deploy`** for you; use your own Fly org and the steps above.
+
 
 ## Helm (optional single-replica chart)
 
