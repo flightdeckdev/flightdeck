@@ -10,7 +10,7 @@ Build (from this directory):
 docker build -t flightdeck-serve:local .
 ```
 
-The image installs **`flightdeck-ai`** from PyPI and runs **`flightdeck serve`** on **`0.0.0.0:8765`** inside the container.
+The image installs **`flightdeck-ai`** from PyPI and runs **`flightdeck serve`** on **`0.0.0.0`** using port **`8765`** by default. On platforms that set **`PORT`** (for example **Railway**), **`entrypoint.sh`** binds to **`$PORT`** instead.
 
 **`entrypoint.sh`** creates a default **`flightdeck.yaml`** in `/workspace` on first start (`flightdeck init`) if the mounted volume is empty.
 
@@ -39,6 +39,29 @@ Inside the Compose stack, **`exec`** into the running container with **`/workspa
 ### Optional mutation token
 
 Set **`FLIGHTDECK_LOCAL_API_TOKEN`** in your environment before `docker compose up` (or in an `.env` file beside `docker-compose.yml`). Clients must send **`Authorization: Bearer …`** for **ledger writes**: **`POST /v1/promote*`**, **`POST /v1/rollback`**, and **`POST /v1/events`**. With no token configured, those routes accept only **loopback** callers. **`POST /v1/diff`** stays unauthenticated (read-only); still treat network placement as a trust boundary.
+
+## Railway
+
+[Railway](https://railway.app/) often suits **small demos**; pricing and free allowances change — confirm **[Railway pricing](https://railway.com/pricing)** before relying on **`$0/month`** long term.
+
+### Deploy from this repo
+
+1. Create a **new project** → **Deploy from GitHub** (or **`railway init`** / **`railway link`** with the [CLI](https://docs.railway.app/guides/cli)).
+2. Set the service **root directory** to **`examples/deploy`** so Railway builds **`Dockerfile`** and picks up **`railway.toml`** (config-as-code).  
+   If the dashboard root cannot be a subdirectory, set [**`RAILWAY_DOCKERFILE_PATH`**](https://docs.railway.app/guides/dockerfiles) (service variable) to **`examples/deploy/Dockerfile`** and point **config as code** at **`examples/deploy/railway.toml`** per [config-as-code](https://docs.railway.app/guides/config-as-code).
+3. **Networking:** enable **Public Networking** and **Generate Domain** (HTTPS). Railway routes traffic to the **`PORT`** your process listens on; **`entrypoint.sh`** uses **`PORT`** automatically.
+4. **Variables (recommended for any public URL):** add **`FLIGHTDECK_LOCAL_API_TOKEN`** (random secret). The stock PyPI image does **not** embed that token in the browser bundle — use **read-only UI** (`VITE_FLIGHTDECK_UI_READ_ONLY=true` in a **custom image build**) or rebuild static assets with **`VITE_FLIGHTDECK_LOCAL_API_TOKEN`** so the UI can authenticate when **`read_auth`** is bearer-gated — see **`docs/web-ui.md`** and **[SECURITY.md](../../SECURITY.md)**.
+5. **Persistent SQLite (optional):** add a [Railway volume](https://docs.railway.app/guides/volumes) mounted at **`/workspace`** so redeploys keep **`.flightdeck/`**. Without a volume, the ledger may reset when the container is recreated.
+
+CLI sketch (from **`examples/deploy`** after **`railway link`**):
+
+```bash
+railway login
+cd examples/deploy
+railway variable set FLIGHTDECK_LOCAL_API_TOKEN="$(openssl rand -hex 24)"
+railway up
+railway domain   # generate .railway.app URL if needed
+```
 
 ## Helm (optional single-replica chart)
 
