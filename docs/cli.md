@@ -435,6 +435,37 @@ flightdeck pricing show --provider PROVIDER --version VERSION
 
 Both flags are required. If the table does not exist, exits 1 with an error message.
 
+### `flightdeck pricing check`
+
+Check the age of **`flightdeck-bundled-*`** pricing tables in the ledger. Prints one line
+per bundled snapshot with its anchor date and approximate age. Non-bundled tables are
+ignored.
+
+```bash
+flightdeck pricing check [--max-age-days N] [--fail]
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--max-age-days` | `90` | Threshold in days. Tables older than this print `STALE` to stderr (and count toward `--fail`). Tables at or under the limit print `OK`. |
+| `--fail` | off | Exit 1 if any bundled table exceeds `--max-age-days`. Useful as a CI gate. |
+
+**Example output:**
+```
+OK     flightdeck-bundled-2026-05  (~11 days old; max 90)
+```
+
+If no `flightdeck-bundled-*` tables are in the ledger (e.g. after `flightdeck init --no-bundled-pricing`),
+exits 0 and prints `No flightdeck-bundled-* pricing tables in the ledger.`
+
+Use in CI to surface stale bundled snapshots before they silently affect cost estimates:
+```bash
+flightdeck pricing check --max-age-days 90 --fail
+```
+
+See [pricing-catalog.md](pricing-catalog.md) for the bundled snapshot lifecycle and when
+to replace with `flightdeck pricing import`.
+
 ---
 
 ## `flightdeck policy`
