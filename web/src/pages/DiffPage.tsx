@@ -7,6 +7,7 @@ import { DiffDecisionCard } from "../components/diff/DiffDecisionCard";
 import { DiffPolicyPanel } from "../components/diff/DiffPolicyPanel";
 import { DiffReleaseTwin } from "../components/diff/DiffReleaseTwin";
 import { DiffVerdictStack } from "../components/diff/DiffVerdictStack";
+import { Button } from "../components/Button";
 import {
   type DiffJson,
   isRecord,
@@ -15,8 +16,10 @@ import {
 } from "../components/diff/diffPayload";
 import { UI_READ_ONLY } from "../uiConfig";
 import { pickTrimmedSearch, searchParamsFromRecord } from "../urlSearch";
+import { useDocumentTitle } from "../useDocumentTitle";
 
 export function DiffPage() {
+  useDocumentTitle("Run diff");
   const [searchParams, setSearchParams] = useSearchParams();
   const [diffResultSeq, setDiffResultSeq] = useState(0);
   const [diffBaseline, setDiffBaseline] = useState("");
@@ -138,14 +141,9 @@ export function DiffPage() {
           </label>
         </div>
         <div className="fd-actions">
-          <button type="button" className="fd-btn fd-btn--primary" disabled={busy} onClick={() => void runDiff()}>
-            {busy ? "Computing…" : "Compute diff"}
-          </button>
-          {busy ? (
-            <span className="fd-sr-only" aria-live="polite">
-              Computing diff
-            </span>
-          ) : null}
+          <Button variant="primary" loading={busy} loadingLabel="Computing…" onClick={() => void runDiff()}>
+            Compute diff
+          </Button>
         </div>
       </section>
 
