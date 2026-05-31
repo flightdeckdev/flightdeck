@@ -27,7 +27,12 @@ This Code of Conduct applies to all FlightDeck spaces — the GitHub repository 
 
 ## Enforcement
 
-Instances of unacceptable behavior may be reported privately to the maintainers at **conduct@flightdeck.dev**. All complaints will be reviewed and investigated, and will result in a response appropriate to the circumstances. The maintainers are obligated to maintain the confidentiality of the reporter.
+Instances of unacceptable behavior may be reported privately to the maintainers by:
+
+- Opening a **[private security advisory](https://github.com/flightdeckdev/flightdeck/security/advisories/new)** and selecting the "Conduct" category in the report body, or
+- Direct message to the maintainer on GitHub: **[@Gsbreddy](https://github.com/Gsbreddy)**.
+
+All complaints will be reviewed and investigated, and will result in a response appropriate to the circumstances. The maintainers are obligated to maintain the confidentiality of the reporter.
 
 Possible responses include a private warning, a request to edit or remove a comment, a temporary ban from project spaces, or a permanent ban. Decisions will be communicated to the reporter and to the subject of the report.
 
@@ -36,7 +41,3 @@ Possible responses include a private warning, a request to edit or remove a comm
 This Code of Conduct is adapted from the [Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/), available under the Creative Commons Attribution 4.0 license. The Contributor Covenant project also maintains [translations](https://www.contributor-covenant.org/translations) and a more detailed [FAQ](https://www.contributor-covenant.org/faq).
 
 For answers to common questions about this Code of Conduct, see the Contributor Covenant FAQ.
-
----
-
-_Maintainers: update the `conduct@flightdeck.dev` enforcement contact above with a real, monitored mailbox before public launch._

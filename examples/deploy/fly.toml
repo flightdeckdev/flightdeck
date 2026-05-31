@@ -7,7 +7,8 @@
 # Ephemeral ledger: omit [mounts] (data may reset when Fly replaces the Machine).
 # Persistent SQLite: create a volume and uncomment [mounts] (see README).
 
-app = "flightdeck-demo"
+# `app` must be globally unique on Fly.io. Replace before `fly deploy`.
+app = "REPLACE-ME-your-fly-app-name"
 primary_region = "iad"
 
 [build]

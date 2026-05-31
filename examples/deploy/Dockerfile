@@ -1,5 +1,5 @@
 # Reference image for `flightdeck serve` (trusted networks only; see README + SECURITY.md).
-FROM python:3.14-slim
+FROM python:3.13-slim
 
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir "flightdeck-ai>=1.2.0"

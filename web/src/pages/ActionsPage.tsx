@@ -79,7 +79,7 @@ export function ActionsPage() {
   const [actWindow, setActWindow] = useState("7d");
   const [actReason, setActReason] = useState("");
   const [actor, setActor] = useState<string>(
-    () => localStorage.getItem("flightdeck.actor") || "react-ui",
+    () => localStorage.getItem("flightdeck.actor") || "",
   );
   const [actOutcome, setActOutcome] = useState<ActionOutcomePayload | null>(null);
   const [actRaw, setActRaw] = useState<string | null>(null);
@@ -155,7 +155,9 @@ export function ActionsPage() {
   }, [refreshPending, listNonce]);
 
   useEffect(() => {
-    localStorage.setItem("flightdeck.actor", actor);
+    // Only persist non-empty actor values so the audit log never silently picks
+    // up the "react-ui" sentinel without a deliberate user choice (reviewer MAJOR-5).
+    if (actor.trim()) localStorage.setItem("flightdeck.actor", actor);
   }, [actor]);
 
   useEffect(() => {
@@ -182,6 +184,10 @@ export function ActionsPage() {
     const label = path === "/v1/promote" ? "promote" : "rollback";
     const rid = actRelease.trim();
     const env = actEnv.trim();
+    if (!rid) {
+      setActErr("Release ID is required.");
+      return;
+    }
     if (!env) {
       setActErr("Environment is required.");
       return;
@@ -190,7 +196,7 @@ export function ActionsPage() {
     const typed = window.prompt(
       `Type the last 8 chars of the release ID (${expected}) to ${label}:`,
     );
-    if (typed?.trim() !== expected) {
+    if (!typed || typed.trim() !== expected) {
       setActErr(`${label} cancelled (confirmation did not match).`);
       return;
     }
@@ -428,7 +434,8 @@ export function ActionsPage() {
               className="fd-input"
               value={actor}
               onChange={(e) => setActor(e.target.value)}
-              placeholder="e.g. jane.doe"
+              placeholder="e.g. jane.doe — recorded in the audit ledger"
+              autoComplete="username"
             />
           </label>
           <label className="fd-field fd-field--full">

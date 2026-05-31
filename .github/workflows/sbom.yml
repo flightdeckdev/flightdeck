@@ -33,7 +33,9 @@ jobs:
           enable-cache: true
 
       - name: Install cyclonedx-bom
-        run: python -m pip install --upgrade pip "cyclonedx-bom>=4.0"
+        # Pinned so the SBOM tool itself is reproducible across releases. Bump in lockstep
+        # with a deliberate test run; do not auto-upgrade. (Reviewer MAJOR-4)
+        run: python -m pip install --upgrade pip "cyclonedx-bom==6.1.4"
 
       - name: Compile pinned requirements from pyproject.toml
         run: uv pip compile pyproject.toml -o requirements.txt

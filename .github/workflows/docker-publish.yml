@@ -5,6 +5,11 @@ on:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
   workflow_dispatch:
+    inputs:
+      push_latest:
+        description: 'Tag the resulting image as :latest (uncheck for backport / hotfix releases that should not move :latest backwards).'
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -40,7 +45,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest
+            type=raw,value=latest,enable=${{ github.event_name == 'push' || inputs.push_latest }}
           flavor: |
             latest=false
 
