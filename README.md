@@ -158,6 +158,30 @@ Bundled pricing from `init` is a **convenience snapshot**—`flightdeck pricing 
 
 ---
 
+## Webhooks
+
+FlightDeck ships **HMAC-signed outbound webhooks** for `promote.succeeded`,
+`rollback.succeeded`, and `promote.blocked`. Point them at any HTTPS endpoint
+(Slack incoming webhook, Discord, PagerDuty Events v2, Linear inbound webhook, your
+own relay) — FlightDeck owns the signing, not the integrations.
+
+```bash
+flightdeck webhook add \
+  --url https://hooks.slack.com/services/T000/B000/XXXX \
+  --event promote.succeeded --event rollback.succeeded \
+  --description "prod release alerts"
+# Save the printed secret — it will not be shown again.
+
+flightdeck webhook list
+flightdeck webhook test wh_<id>
+```
+
+Receivers verify each delivery by recomputing `HMAC-SHA256(secret, raw_body)` and
+comparing against `X-FlightDeck-Signature: sha256=<hex>` (GitHub convention). Full
+details: **[docs/cli.md](docs/cli.md)** · **[docs/http-api.md](docs/http-api.md)**.
+
+---
+
 ## Contributing (quick CI match)
 
 ```bash

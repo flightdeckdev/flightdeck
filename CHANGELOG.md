@@ -8,6 +8,14 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ### Added
 
+- **Webhooks (v1.3.0):** HMAC-signed outbound webhooks for **`promote.succeeded`**,
+  **`rollback.succeeded`**, and **`promote.blocked`**. New routes **`POST /v1/webhooks`**,
+  **`GET /v1/webhooks`**, **`DELETE /v1/webhooks/{id}`** (same Bearer / loopback gate as
+  promote). New CLI **`flightdeck webhook add | list | remove | test`**. Signing uses
+  GitHub-convention **`X-FlightDeck-Signature: sha256=<hex>`** over the raw body with a
+  per-webhook secret; delivery is best-effort (5 s timeout, 3 attempts, backoff 1 s / 2 s
+  / 4 s) and never breaks the originating promote / rollback. Schema migration **v5** adds
+  the **`webhooks`** table (SQLite + PostgreSQL). No new runtime dependencies.
 - **`flightdeck demo`** — runs the packaged **examples/quickstart** workflow (init → pricing → policy → register → ingest → diff → promote → history) in a **temp workspace**, with no **`sed`** or repo paths; wheels ship fixtures under **`flightdeck/_bundled_quickstart`** via Hatch **`force-include`**. **`FLIGHTDECK_QUICKSTART_ROOT`** overrides fixture resolution for CI or forks.
 - **Web UI (`flightdeck serve`):** **Theme** (Light / Dark / System icon radios, **`flightdeck-theme`**) in the **sidebar Settings** popover; legacy **`/#/settings`** redirects to **`#/`**; collapsible sidebar (**`flightdeck-sidebar-collapsed`**); **offline system font stack** (no remote font CSS); sidebar + favicon use **bundled** **`/assets/flightdeck-icon-*.png`** with stable **`GET /flightdeck-icon.png`** fallback; **`html[data-theme="dark"]`** tokens and Playwright **`web/e2e/`** (`smoke` icon checks, `theme.spec.ts`, `sidebar.spec.ts`).
 - **Documentation (GitHub Pages):** workflow **`.github/workflows/pages.yml`** builds **`docs/`** with MkDocs Material on pushes to **`main`**; published URL on **`[project.urls] Documentation`**, README, **`DEVELOPMENT.md`**, and **`CONTRIBUTING.md`**. The static site includes a floating **Ask AI** shortcut (Perplexity with docs + repo context); no FlightDeck servers are involved.

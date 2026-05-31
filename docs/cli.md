@@ -622,3 +622,19 @@ flightdeck doctor
 The `flightdeck-quickstart-verify` command (or `python -m flightdeck.quickstart_smoke`)
 runs this entire workflow end-to-end using the bundled example fixtures in
 `examples/quickstart/`.
+
+## `flightdeck webhook ...`
+
+Manage HMAC-signed outbound webhooks. Each subscription stores a per-webhook secret and
+fires for one or more of `promote.succeeded`, `rollback.succeeded`, `promote.blocked`.
+
+- `flightdeck webhook add --url URL --event EVENT [--event EVENT ...] [--description TEXT]`
+  Creates a subscription and prints the freshly generated secret **once** — save it,
+  it will not be shown again.
+- `flightdeck webhook list` — tabular view of all subscriptions; secrets are redacted.
+- `flightdeck webhook remove WEBHOOK_ID [--yes]` — delete (confirms unless `--yes`).
+- `flightdeck webhook test WEBHOOK_ID` — POST a synthetic `test.ping` payload using the
+  same signing path; prints the HTTP status and the first 200 chars of the response body.
+
+The HTTP equivalents live under `/v1/webhooks` (see
+[http-api.md](http-api.md#webhooks-post-v1webhooks-get-v1webhooks-delete-v1webhooksid)).

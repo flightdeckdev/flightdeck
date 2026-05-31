@@ -908,5 +908,143 @@ def release_history(agent_id: str | None, environment: str | None) -> None:
             click.echo(f"  - {reason_text}")
 
 
+@cli.group()
+def webhook() -> None:
+    """Manage HMAC-signed outbound webhooks (Slack / Discord / PagerDuty / Linear …)."""
+
+
+@webhook.command("add")
+@click.option("--url", required=True, help="HTTPS endpoint (HTTP allowed for local dev only).")
+@click.option(
+    "--event",
+    "events",
+    multiple=True,
+    required=True,
+    help="Subscribed event name. Pass --event multiple times to subscribe to several.",
+)
+@click.option("--description", default=None, help="Free-form note shown in `webhook list`.")
+def webhook_add(url: str, events: tuple[str, ...], description: str | None) -> None:
+    """Create a webhook subscription and print the freshly generated secret."""
+    from flightdeck.webhooks import EVENT_TYPES, generate_secret
+
+    if not events:
+        raise click.ClickException("at least one --event is required")
+    bad = sorted({e for e in events if e not in EVENT_TYPES})
+    if bad:
+        allowed = ", ".join(sorted(EVENT_TYPES))
+        raise click.ClickException(f"unknown event(s): {bad}. Allowed: {allowed}")
+
+    cfg = load_config()
+    storage = storage_from_config(cfg)
+    storage.migrate()
+
+    webhook_id = f"wh_{uuid4().hex}"
+    secret = generate_secret()
+    created_at = utc_now().isoformat()
+    storage.insert_webhook(
+        webhook_id=webhook_id,
+        url=url,
+        events=list(events),
+        secret=secret,
+        description=description,
+        created_at=created_at,
+    )
+
+    click.echo(f"Created webhook {webhook_id} for {url}")
+    click.echo(f"  events: {', '.join(events)}")
+    click.echo("")
+    click.echo("!!! SAVE THIS SECRET — IT WILL NOT BE SHOWN AGAIN !!!")
+    click.echo(f"  secret: {secret}")
+
+
+@webhook.command("list")
+def webhook_list() -> None:
+    """List configured webhooks (secrets are redacted)."""
+    from rich.console import Console
+    from rich.table import Table
+
+    cfg = load_config()
+    storage = storage_from_config(cfg)
+    storage.migrate()
+
+    rows = storage.list_webhooks(enabled_only=False)
+    table = Table(title="FlightDeck webhooks")
+    table.add_column("webhook_id", style="bold")
+    table.add_column("url")
+    table.add_column("events")
+    table.add_column("enabled")
+    table.add_column("created_at")
+    table.add_column("secret_preview")
+    table.add_column("description")
+    for row in rows:
+        secret = str(row["secret"])
+        preview = f"{secret[:6]}…{secret[-4:]}" if len(secret) > 10 else "…"
+        table.add_row(
+            row["webhook_id"],
+            row["url"],
+            ", ".join(row["events"]),
+            "yes" if row["enabled"] else "no",
+            row["created_at"],
+            preview,
+            row.get("description") or "",
+        )
+    Console().print(table)
+
+
+@webhook.command("remove")
+@click.argument("webhook_id")
+@click.option("--yes", "assume_yes", is_flag=True, default=False, help="Skip confirmation prompt.")
+def webhook_remove(webhook_id: str, assume_yes: bool) -> None:
+    """Delete a webhook subscription."""
+    cfg = load_config()
+    storage = storage_from_config(cfg)
+    storage.migrate()
+
+    if not assume_yes:
+        click.confirm(f"Delete webhook {webhook_id}?", abort=True)
+    if not storage.delete_webhook(webhook_id):
+        raise click.ClickException(f"unknown webhook: {webhook_id}")
+    click.echo(f"Deleted {webhook_id}")
+
+
+@webhook.command("test")
+@click.argument("webhook_id")
+def webhook_test(webhook_id: str) -> None:
+    """Send a synthetic test.ping payload to the webhook URL using the same signing path."""
+    import httpx
+
+    from flightdeck.webhooks import build_event_payload, sign_payload
+
+    cfg = load_config()
+    storage = storage_from_config(cfg)
+    storage.migrate()
+
+    row = storage.get_webhook(webhook_id)
+    if not row:
+        raise click.ClickException(f"unknown webhook: {webhook_id}")
+
+    payload = build_event_payload(
+        "test.ping",
+        {"webhook_id": webhook_id, "note": "synthetic ping from `flightdeck webhook test`"},
+    )
+    body = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "X-FlightDeck-Signature": sign_payload(str(row["secret"]), body),
+        "X-FlightDeck-Event": "test.ping",
+        "X-FlightDeck-Delivery": str(payload["delivery_id"]),
+        "User-Agent": "FlightDeck-Webhook/1",
+    }
+    try:
+        with httpx.Client(timeout=5.0, follow_redirects=False) as client:
+            resp = client.post(str(row["url"]), content=body, headers=headers)
+    except httpx.HTTPError as exc:
+        raise click.ClickException(f"transport error: {type(exc).__name__}: {exc}") from exc
+
+    snippet = resp.text[:200].replace("\n", " ")
+    click.echo(f"HTTP {resp.status_code} from {row['url']}")
+    click.echo(f"  body[:200]: {snippet}")
+
+
 if __name__ == "__main__":
     cli()

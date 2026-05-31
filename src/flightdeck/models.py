@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class DiffConfig(BaseModel):
@@ -281,3 +281,47 @@ class PromotionRequestRecord(BaseModel):
     resolved_at: datetime | None = None
     completed_action_id: str | None = None
 
+
+class WebhookCreate(BaseModel):
+    """Create-request body for ``POST /v1/webhooks``."""
+
+    url: str = Field(min_length=1)
+    events: list[str] = Field(min_length=1)
+    description: str | None = None
+
+    @field_validator("events")
+    @classmethod
+    def _validate_events(cls, value: list[str]) -> list[str]:
+        # Import inside validator to avoid a circular import at module load.
+        from flightdeck.webhooks import EVENT_TYPES
+
+        bad = [e for e in value if e not in EVENT_TYPES]
+        if bad:
+            raise ValueError(
+                f"Unsupported event(s): {sorted(set(bad))}. Allowed: {sorted(EVENT_TYPES)}"
+            )
+        return value
+
+
+class WebhookPublic(BaseModel):
+    """Wire shape for ``POST /v1/webhooks`` (with ``secret``) and ``GET /v1/webhooks`` (with ``secret_preview``)."""
+
+    api_version: Literal["v1"] = "v1"
+    kind: Literal["Webhook"] = "Webhook"
+    webhook_id: str
+    url: str
+    events: list[str]
+    enabled: bool
+    created_at: str
+    description: str | None = None
+    # ``secret`` is populated only on the create response (the one and only time the
+    # caller sees the cleartext). ``secret_preview`` is populated only on list.
+    secret: str | None = None
+    secret_preview: str | None = None
+
+
+class WebhookListResponse(BaseModel):
+    api_version: Literal["v1"] = "v1"
+    kind: Literal["WebhookList"] = "WebhookList"
+    webhooks: list[WebhookPublic]
+    total: int

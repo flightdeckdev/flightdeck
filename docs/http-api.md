@@ -31,6 +31,7 @@ Two access tiers:
 | `POST /v1/promote` | loopback only | `Authorization: Bearer <token>` required |
 | `POST /v1/promote/request`, `POST /v1/promote/confirm` | loopback only | `Authorization: Bearer <token>` required |
 | `POST /v1/rollback` | loopback only | `Authorization: Bearer <token>` required |
+| `POST /v1/webhooks`, `GET /v1/webhooks`, `DELETE /v1/webhooks/{id}` | loopback only | `Authorization: Bearer <token>` required |
 
 `POST /v1/events` uses the **same** loopback / Bearer gate as promote and rollback
 (`require_ledger_write_access` in `server/mutation_access.py`). **`GET /v1/*`** uses
@@ -688,6 +689,32 @@ Validation errors (Pydantic) return an array under `detail`:
   ]
 }
 ```
+
+---
+
+## Webhooks (`POST /v1/webhooks`, `GET /v1/webhooks`, `DELETE /v1/webhooks/{id}`)
+
+Outbound HMAC-signed notifications for `promote.succeeded`, `rollback.succeeded`, and
+`promote.blocked`. Same Bearer / loopback gate as `POST /v1/promote`.
+
+- **`POST /v1/webhooks`** — body `{url, events: [str], description?}`. Response is the full
+  webhook record including the freshly generated `secret` (this is the **only** time the
+  cleartext secret is returned — store it).
+- **`GET /v1/webhooks`** — list. Secrets are redacted to `secret_preview` (e.g. `abc123…wxyz`).
+- **`DELETE /v1/webhooks/{webhook_id}`** — delete. Returns `404` if not found.
+
+When an event fires, FlightDeck POSTs the JSON payload to every enabled subscribed webhook
+(5 s timeout, 3 attempts with exponential backoff: 1 s, 2 s, 4 s) with these headers:
+
+| Header | Value |
+|--------|-------|
+| `X-FlightDeck-Signature` | `sha256=<hex>` — `HMAC-SHA256(secret, raw_body)` (GitHub convention) |
+| `X-FlightDeck-Event` | event name (e.g. `promote.succeeded`) |
+| `X-FlightDeck-Delivery` | per-delivery UUID for receiver-side deduplication |
+
+Verify on the receiver by re-computing `HMAC-SHA256` over the raw request body with the
+shared secret and comparing against the header (constant-time compare). Delivery failures
+are logged but never break the originating promote / rollback.
 
 ---
 
