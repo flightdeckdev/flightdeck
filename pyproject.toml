@@ -78,6 +78,7 @@ flightdeck-quickstart-verify = "flightdeck.quickstart_smoke:quickstart_verify_ma
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/flightdeck"]
+force-include = { "examples/quickstart" = "src/flightdeck/_bundled_quickstart" }
 
 [tool.uv]
 # Contributor installs: `uv sync --extra dev` (see DEVELOPMENT.md). After changing

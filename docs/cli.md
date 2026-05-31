@@ -15,9 +15,11 @@ serve` see [http-api.md](http-api.md).
 | `--version` | Print the installed version and exit |
 | `--help` | Print help for any command or subcommand |
 
-All commands require a `flightdeck.yaml` in the working directory (or the default path
+Most commands require `flightdeck.yaml` in the working directory (or the default path
 `./flightdeck.yaml`). Run `flightdeck init` to create one. **`flightdeck init`** writes the
 config, then loads it to migrate the ledger and (by default) import bundled pricing.
+
+**`flightdeck demo`** is an exception: it creates a **temporary** workspace and does not read `./flightdeck.yaml` from your shell cwd.
 
 ## Actor resolution
 
@@ -73,6 +75,27 @@ enabled. Edit `diff.*` thresholds or `db_path` before using in a shared repo. Fo
 set **`database_url`** to a `postgresql://…` (or `postgres://…`) DSN and install **`psycopg`**
 (`uv sync --extra postgres`); **`db_path`** is ignored when **`database_url`** is set.
 **`flightdeck doctor --backup`** remains SQLite-only. See [release-artifact.md § Workspace config](release-artifact.md) and [pricing-catalog.md](pricing-catalog.md) (bundled snapshot).
+
+---
+
+## `flightdeck demo`
+
+Run the **examples/quickstart** workflow end-to-end in a **disposable temp directory**: **`init`** → custom **`pricing import`** (both YAMLs) → **`policy set`** → **`release register`** (both bundles) → substitute **`release_id`** placeholders in JSONL → **`runs ingest`** → **`release diff`** → **`release promote`** (baseline under policy) → **`release history`**.
+
+Does **not** require **`flightdeck.yaml`** in the current directory. Fixtures resolve in order: **`--quickstart-root`**, **`FLIGHTDECK_QUICKSTART_ROOT`**, **`examples/quickstart`** relative to a git checkout, then **`flightdeck/_bundled_quickstart`** packaged in the wheel (PyPI installs).
+
+```bash
+flightdeck demo [--quickstart-root DIR] [--verify / --no-verify] [--doctor / --no-doctor] [--keep-workspace]
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--quickstart-root` | (see above) | Directory containing `policy.yaml`, pricing YAMLs, `*-events.jsonl`, and `baseline-release` / `candidate-release` |
+| `--verify` | off | Also run **`release verify`** on the baseline bundle (parity with **`flightdeck-quickstart-verify`**) |
+| `--doctor` | off | Also run **`flightdeck doctor`** |
+| `--keep-workspace` | off | Keep the temp workspace and print its path |
+
+On success, prints a short confirmation. Exit **0** on success, **1** on failure (same as subprocess failures from underlying CLI steps).
 
 ---
 

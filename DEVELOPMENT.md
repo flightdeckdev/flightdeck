@@ -73,8 +73,11 @@ python -m ruff check src tests
 python -m pytest
 flightdeck --help
 flightdeck doctor
+flightdeck demo
 flightdeck-quickstart-verify
 ```
+
+**Fast path for contributors:** **`flightdeck demo`** runs the same core ledger steps as below in a **temp workspace** (fixtures from **`examples/quickstart`**, or **`flightdeck/_bundled_quickstart`** inside an installed wheel). **`flightdeck-quickstart-verify`** adds **`release verify`** + **`doctor`**.
 
 Match **CI**’s CLI smoke: **`flightdeck --help`** must run successfully after changes to the CLI surface.
 
@@ -150,6 +153,14 @@ The workflow runs **ruff**, **pytest**, schema drift, **`uv build`**, publishes 
 If **PyPI** rejects **attestations** for your project, set **`attestations: false`** on **`pypa/gh-action-pypi-publish`** in **`.github/workflows/release-pypi.yml`** until the registry side is sorted.
 
 ## Local Demo
+
+**One command** (uses bundled **`examples/quickstart`** fixtures; no **`sed`**):
+
+```bash
+flightdeck demo
+```
+
+**Manual** (same story as **`flightdeck demo`**, in your cwd):
 
 ```bash
 flightdeck init

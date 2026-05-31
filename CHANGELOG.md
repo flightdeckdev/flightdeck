@@ -8,6 +8,7 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ### Added
 
+- **`flightdeck demo`** — runs the packaged **examples/quickstart** workflow (init → pricing → policy → register → ingest → diff → promote → history) in a **temp workspace**, with no **`sed`** or repo paths; wheels ship fixtures under **`flightdeck/_bundled_quickstart`** via Hatch **`force-include`**. **`FLIGHTDECK_QUICKSTART_ROOT`** overrides fixture resolution for CI or forks.
 - **Web UI (`flightdeck serve`):** **`/#/settings`** for appearance (Light / Dark / System, **`flightdeck-theme`**); collapsible sidebar (**`flightdeck-sidebar-collapsed`**); **offline system font stack** (no remote font CSS); sidebar + favicon use **bundled** **`/assets/flightdeck-icon-*.png`** with stable **`GET /flightdeck-icon.png`** fallback; **`html[data-theme="dark"]`** tokens and Playwright **`web/e2e/`** (`smoke` icon checks, `theme.spec.ts`, `sidebar.spec.ts`).
 - **`flightdeck pricing check`** — reports **`flightdeck-bundled-*`** snapshot age vs **`--max-age-days`** (default **90**); **`--fail`** for CI. **`release diff`** / **`POST /v1/diff`** append **`pricing.warnings`** when bundled snapshots exceed the same age threshold.
 - **`flightdeck.integrations.telemetry.configure_otel_tracing()`** — optional OTLP HTTP **`TracerProvider`** wiring when the **`telemetry`** extra is installed (see **`docs/sdk-integrations.md`**).

@@ -14,6 +14,7 @@ from click.exceptions import Exit as ClickExit
 
 from flightdeck import __version__
 from flightdeck.bundle import bundle_checksum
+from flightdeck.demo_flow import demo_session
 from flightdeck.bundled_pricing_bootstrap import (
     BUNDLED_PRICING_VERSION,
     DEFAULT_CATALOG_RELATIVE_PATH,
@@ -104,6 +105,65 @@ def init(path_: str, no_bundled_pricing: bool) -> None:
             f"Bundled pricing snapshot ({BUNDLED_PRICING_VERSION}): imported openai, anthropic, google; "
             f"wrote catalog to {rel}"
         )
+
+
+@cli.command()
+@click.option(
+    "--quickstart-root",
+    "quickstart_root_opt",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=None,
+    help="Directory with quickstart YAML/JSONL fixtures (default: repo examples/ or bundled wheel copy).",
+)
+@click.option(
+    "--verify/--no-verify",
+    default=False,
+    show_default=True,
+    help="Also run release verify on the baseline bundle (matches flightdeck-quickstart-verify).",
+)
+@click.option(
+    "--doctor/--no-doctor",
+    default=False,
+    show_default=True,
+    help="Also run flightdeck doctor after the workflow.",
+)
+@click.option(
+    "--keep-workspace",
+    is_flag=True,
+    default=False,
+    help="Keep the temp workspace and print its path (for inspection).",
+)
+def demo(
+    quickstart_root_opt: Path | None,
+    verify: bool,
+    doctor: bool,
+    keep_workspace: bool,
+) -> None:
+    """Run the bundled quickstart end-to-end in a disposable workspace (no manual sed).
+
+    Typical install: ``pip install flightdeck-ai`` then ``flightdeck demo``. Next: ``flightdeck init``
+    in your project and wire ``runs ingest`` / ``release diff`` from real agents.
+    """
+    ws = demo_session(
+        verify=verify,
+        doctor=doctor,
+        qs_dir=str(quickstart_root_opt) if quickstart_root_opt is not None else None,
+        promote_reason="demo",
+        keep_workspace=keep_workspace,
+    )
+    click.echo(
+        "Demo OK — workspace initialized, releases registered, runs ingested, "
+        "diff computed, baseline promoted under policy."
+    )
+    extras = []
+    if verify:
+        extras.append("verify")
+    if doctor:
+        extras.append("doctor")
+    if extras:
+        click.echo(f"(also ran: {', '.join(extras)})")
+    if keep_workspace and ws is not None:
+        click.echo(f"Workspace: {ws}")
 
 
 @cli.command("doctor")
