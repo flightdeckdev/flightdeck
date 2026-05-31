@@ -1,0 +1,30 @@
+/* Slightly stronger “Ask AI” strip (Material theme `extra.announce`) */
+.md-banner {
+  font-size: 0.85rem;
+}
+
+.md-banner a {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Floating Perplexity shortcut (paired with docs/javascripts/ask-ai.js) */
+#fd-floating-ask-ai {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 200;
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  background: var(--md-primary-fg-color);
+  color: var(--md-primary-bg-color) !important;
+  font-weight: 600;
+  font-size: 0.8rem;
+  box-shadow: var(--md-shadow-z2);
+  text-decoration: none !important;
+}
+
+#fd-floating-ask-ai:hover {
+  opacity: 0.92;
+}

@@ -137,6 +137,8 @@ Bundled pricing from `init` is a **convenience snapshot**—`flightdeck pricing 
 
 ## Documentation
 
+**Published site (GitHub Pages):** [flightdeckdev.github.io/flightdeck](https://flightdeckdev.github.io/flightdeck/) — built from `docs/` on each push to `main` (`.github/workflows/pages.yml`). Enable **Pages → GitHub Actions** in the repository settings if the site is not live yet.
+
 | Area | Links |
 |------|--------|
 | CLI | [docs/cli.md](docs/cli.md) |

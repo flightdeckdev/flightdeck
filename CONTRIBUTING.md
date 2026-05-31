@@ -55,6 +55,10 @@ If you change **`pyproject.toml`** dependencies, run **`uv lock`** and commit **
 
 Details, Windows notes, and doctrine: **`AGENTS.md`** (Verification), **`DEVELOPMENT.md`**, **`web/README.md`**.
 
+## GitHub Pages (maintainers)
+
+The **Deploy documentation to GitHub Pages** workflow publishes **`docs/`** on pushes to **`main`**. In the GitHub repo, use **Settings → Pages → Build and deployment → Source: GitHub Actions** so the workflow can attach the **`github-pages`** environment. The live URL is linked from the root **`README.md`** and **`pyproject.toml`** **`Documentation`** URL.
+
 ## Private files and pushing to GitHub
 
 Do not commit credentials, customer data, internal strategy docs, or local ledger data. The repo ignores **`.flightdeck/`**, **`.env*`**, optional **`private/`** / **`secrets/`**, and common key/credential patterns—see **`.gitignore`** and **[SECURITY.md](SECURITY.md)**.
