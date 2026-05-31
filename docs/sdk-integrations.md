@@ -155,6 +155,88 @@ on loopback or a private network unless you add your own controls. See **[SECURI
 
 Copy-paste scripts: **[examples/integration/adoption/](../examples/integration/adoption/README.md)**.
 
+## Outbound webhooks — Slack, Discord, PagerDuty, Linear, …
+
+FlightDeck fires HMAC-signed POSTs to any URL you register for the events
+`promote.succeeded`, `rollback.succeeded`, and `promote.blocked`. The
+payload shape is **generic JSON** (envelope: `event`, `delivery_id`,
+`created_at`, `data`) — most chat / on-call tools want a vendor-specific
+shape, so the canonical pattern is a **3-line adapter** in front of the
+webhook URL.
+
+### Slack
+
+Slack [incoming webhooks](https://api.slack.com/messaging/webhooks) accept
+a `{"text": "..."}` body. Use [webhook.site](https://webhook.site/) or
+[Pipedream](https://pipedream.com/) (free tier) as the adapter, or a tiny
+Cloudflare Worker / AWS Lambda:
+
+```js
+// Cloudflare Worker — receives FlightDeck, forwards to Slack
+export default {
+  async fetch(req, env) {
+    const evt = await req.json();
+    const text = `:rocket: *${evt.event}* — release ${evt.data.release_id} ` +
+                 `(${evt.data.environment}) by ${evt.data.actor}\n` +
+                 `_${evt.data.reason}_`;
+    await fetch(env.SLACK_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    return new Response("ok");
+  },
+};
+```
+
+Then register the Worker URL with FlightDeck:
+
+```bash
+flightdeck webhook add \
+  --url https://flightdeck-slack.YOUR-SUBDOMAIN.workers.dev \
+  --event promote.succeeded \
+  --event rollback.succeeded \
+  --event promote.blocked \
+  --description "Slack #releases"
+```
+
+The Worker should also **verify the `X-FlightDeck-Signature` header**
+against the per-webhook secret (`hmac.sha256(secret, raw_body)`) — same
+shape as GitHub webhooks. See `src/flightdeck/webhooks.py::sign_payload`
+for the canonical signing function.
+
+### Discord
+
+Discord webhook URLs accept `{"content": "..."}`. Same adapter pattern as
+Slack; swap the body to `{ content: text }` and set
+`https://discord.com/api/webhooks/...` as the destination.
+
+### PagerDuty
+
+For incidents on `rollback.succeeded` or `promote.blocked`, the adapter
+posts to the [PagerDuty Events API v2](https://developer.pagerduty.com/api-reference/YXBpOjI3NDgyNjU-pager-duty-v2-events-api)
+with `event_action: "trigger"`, `severity` mapped from the event name,
+and `payload.summary` derived from `data.reason` + `data.release_id`.
+
+### Linear / Jira / Asana
+
+For project-tracker auto-comments, the adapter looks up the ticket id in
+`data.reason` (e.g. `"hot-fix for issue #1234"`), then posts a comment via
+the tracker's REST API.
+
+### Verifying signatures (any language)
+
+```python
+import hmac, hashlib
+
+def verify(secret: str, raw_body: bytes, signature_header: str) -> bool:
+    expected = "sha256=" + hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, signature_header)
+```
+
+Always use `hmac.compare_digest` (or your language's equivalent) — a
+string `==` comparison is timing-attack vulnerable.
+
 ## Policy boundary (contributors)
 
 Contributor rules in **`AGENTS.md`** distinguish **in-product agent frameworks** (non-goals) from

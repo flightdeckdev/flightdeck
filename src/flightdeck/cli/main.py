@@ -78,6 +78,24 @@ def cli() -> None:
     """Ship AI agents safely — release diffs, runtime evidence, policy gates."""
 
 
+@cli.command("version")
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Emit machine-readable JSON (for CI scripts, chatops bots, dashboards).",
+)
+def version_cmd(as_json: bool) -> None:
+    """Print the FlightDeck version (default: human; --json: machine-readable)."""
+    if as_json:
+        import json
+
+        click.echo(json.dumps({"name": "flightdeck-ai", "version": __version__}))
+    else:
+        click.echo(f"flightdeck {__version__}")
+
+
 @cli.command()
 @click.option("--path", "path_", default=DEFAULT_CONFIG_FILENAME, show_default=True)
 @click.option(

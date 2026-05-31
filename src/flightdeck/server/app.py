@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from flightdeck.config import load_config
+from flightdeck.server.middleware import RequestContextMiddleware
 from flightdeck.server.routes import include_routes
 from flightdeck.storage import storage_from_config
 
@@ -25,6 +26,7 @@ def create_app() -> FastAPI:
         yield
 
     app = FastAPI(title="FlightDeck", version="local", lifespan=lifespan)
+    app.add_middleware(RequestContextMiddleware)
     include_routes(app)
     static_dir = Path(__file__).resolve().parent / "static"
     assets_dir = static_dir / "assets"
