@@ -29,8 +29,11 @@ export class FlightDeckClient {
   private readonly actor: string;
 
   constructor(options: FlightDeckClientOptions) {
-    // Strip trailing slash so we can always prepend a path with a leading slash
-    this.serverUrl = options.serverUrl.replace(/\/+$/, "");
+    // Strip trailing slashes without a quantified regex — CodeQL flags /\/+$/ on
+    // user-supplied strings as a potential ReDoS vector (CWE-1333).
+    let url = options.serverUrl;
+    while (url.endsWith("/")) url = url.slice(0, -1);
+    this.serverUrl = url;
     this.apiToken = options.apiToken;
     this.releaseId = options.releaseId;
     this.actor = options.actor ?? "node-sdk";
