@@ -28,6 +28,20 @@ The same contract works from the CLI, the HTTP API (`POST /v1/promote`), and the
 
 ---
 
+## Where to start
+
+| I want to… | Go here |
+|---|---|
+| Try it in 30 seconds | `pip install flightdeck-ai && flightdeck demo` |
+| Wire it to my real agent | [Getting started](getting-started.md) |
+| See all CLI commands | [CLI reference](cli.md) |
+| Use the HTTP API | [HTTP API](http-api.md) |
+| Understand policy gates | [Operations & policy](operations-and-policy.md) |
+| Self-host `flightdeck serve` | [HTTP API — starting the server](http-api.md#starting-the-server) |
+| Something broke | [Troubleshooting](troubleshooting.md) |
+
+---
+
 ## Quick reference
 
 | Topic | Doc |

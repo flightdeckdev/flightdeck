@@ -4,6 +4,32 @@ This document covers common problems encountered while developing FlightDeck or 
 `flightdeck serve`. For the operational runbook (SQLite busy errors, backup/restore,
 interpreting `doctor` failures) see [operations-and-policy.md](operations-and-policy.md).
 
+## First 5 things to check
+
+Run through this checklist before reading the detailed sections. Most failures come from
+one of these five causes:
+
+1. **Python version too old.** FlightDeck requires CPython 3.11+. Run `python --version`
+   or `uv python list`. If you see 3.10 or earlier, install a newer interpreter.
+
+2. **`flightdeck.yaml` not found.** Almost all CLI commands read `flightdeck.yaml` from
+   the current working directory. If you see `Workspace config not found: flightdeck.yaml`,
+   either run `flightdeck init` to create one or `cd` to the directory that contains it.
+
+3. **`flightdeck` not on PATH.** After `pip install` or `uv sync`, the console script is
+   only on PATH inside the active venv. Use `uv run flightdeck --help` or
+   `source .venv/bin/activate` first.
+
+4. **Missing pricing table.** `flightdeck release diff` needs a pricing table for each
+   release's `spec.pricing_reference`. If you skipped the pricing import step, run
+   `flightdeck pricing import <your-pricing.yaml>` — or re-run `flightdeck init` to import
+   the bundled tables automatically.
+
+5. **`release_id` placeholder not substituted.** If `runs ingest` reports
+   `Inserted 0 events` on a non-empty file, check whether the `release_id` values in
+   the file still contain a placeholder like `__BASELINE_RELEASE_ID__` instead of the
+   real ID from `flightdeck release register`.
+
 ---
 
 ## Developer environment

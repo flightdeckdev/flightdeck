@@ -8,6 +8,83 @@ For the on-disk formats the CLI reads and writes see
 [release-artifact.md](release-artifact.md). For the HTTP API exposed by `flightdeck
 serve` see [http-api.md](http-api.md).
 
+## Common patterns
+
+Copy-paste recipes for the most frequent workflows. Full flag reference follows below.
+
+### Pattern 1: Register, ingest, and diff in one shell session
+
+The core loop from scratch — useful when you already have event JSONL files ready:
+
+```bash
+flightdeck init
+BASELINE=$(flightdeck release register ./baseline-release)
+CANDIDATE=$(flightdeck release register ./candidate-release)
+
+# Substitute the placeholder release IDs in your JSONL files, then ingest:
+sed "s/__BASELINE_RELEASE_ID__/${BASELINE}/g" baseline-events.jsonl > /tmp/be.jsonl
+sed "s/__CANDIDATE_RELEASE_ID__/${CANDIDATE}/g" candidate-events.jsonl > /tmp/ce.jsonl
+flightdeck runs ingest /tmp/be.jsonl
+flightdeck runs ingest /tmp/ce.jsonl
+
+flightdeck release diff "$BASELINE" "$CANDIDATE" --window 7d
+```
+
+### Pattern 2: Policy-gated CI step
+
+Exit 1 when policy fails — wire this as a blocking CI step:
+
+```bash
+flightdeck release diff "$BASELINE" "$CANDIDATE" --window 7d --fail-on-policy
+# Exit 0 → policy passed; Exit 1 → blocked (diff output already printed)
+```
+
+For JSON output suitable for `jq` parsing in CI:
+
+```bash
+flightdeck release diff "$BASELINE" "$CANDIDATE" --window 7d \
+  --fail-on-policy --output json | jq '.policy.passed'
+```
+
+See `examples/ci/ledger_gate.py` for the complete cross-platform CI pattern and
+`examples/ci/github-actions/` for GitHub Actions workflow templates.
+
+### Pattern 3: Weekly health check
+
+Run on a schedule to confirm the ledger is intact and pricing tables are not stale:
+
+```bash
+flightdeck doctor
+flightdeck pricing check --max-age-days 90 --fail
+```
+
+`doctor` exits 0 when all schema, pointer, and sequence checks pass. `pricing check` exits 1
+when any bundled table is older than `--max-age-days` and `--fail` is set. Together they make
+a clean recurring health probe.
+
+### Pattern 4: Setting up outbound webhooks for Slack
+
+Get a Slack notify on every promote or rollback:
+
+```bash
+# Register the webhook (prints the secret once — save it)
+flightdeck webhook add \
+  --url https://your-adapter.example.com/flightdeck \
+  --event promote.succeeded \
+  --event rollback.succeeded \
+  --event promote.blocked \
+  --description "Slack #releases"
+
+# Test delivery before going live
+flightdeck webhook test <webhook_id>
+```
+
+FlightDeck sends HMAC-signed `POST` requests; most chat tools need a thin adapter to reshape
+the payload. See [SDK integrations — Slack](sdk-integrations.md#slack) for a ready-made
+Cloudflare Worker example.
+
+---
+
 ## Global flags
 
 | Flag | Description |
