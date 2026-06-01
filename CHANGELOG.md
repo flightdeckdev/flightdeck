@@ -8,6 +8,7 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ### Added
 
+- **`GET /metrics`:** Prometheus text exposition format scrape endpoint (no new dependencies). Same Bearer / loopback gate as `GET /v1/metrics`. Configure Prometheus with `metrics_path: /metrics` and `bearer_token: <FLIGHTDECK_LOCAL_API_TOKEN>` (when token is set). Metrics: `flightdeck_releases_total`, `flightdeck_run_events_total`, `flightdeck_promoted_pointers_total`, `flightdeck_actions_total`, `flightdeck_actions_by_type{action=...}`, `flightdeck_pricing_tables_total`, `flightdeck_schema_version`.
 - **Identity passthrough → audit actor:** HTTP mutating routes (`POST /v1/promote*`, `POST /v1/rollback`) now read **`X-FlightDeck-Actor`** (first) and **`X-Forwarded-User`** (second) before falling back to the body `actor` field. Lets a reverse-proxy / SSO layer stamp the audit ledger authoritatively. Trust model documented in **`SECURITY.md`** and **`docs/http-api.md`**.
 - **`flightdeck workspace info [--json]`** — one-screen snapshot of workspace path, database backend, schema version, ledger counters (releases / promoted / actions / run events), configuration (policy, pricing catalog, approval mode), and webhook count. JSON mode for CI / chatops pipelines.
 - **`flightdeck version [--json]`** — explicit version subcommand alongside the existing `--version` flag; `--json` emits `{"name":"flightdeck-ai","version":"1.3.0"}` for scripts and dashboards.
@@ -236,11 +237,11 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ### Added
 
-- **[docs/cli.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/cli.md)**: CLI reference (synopsis, flags, exit codes, pointers to quickstart examples).
+- **[docs/cli.md](https://flightdeckdev.github.io/flightdeck/cli/)**: CLI reference (synopsis, flags, exit codes, pointers to quickstart examples).
 - **`scripts/quickstart_smoke.py`**: cross-platform quickstart smoke (**no bash**): temp workspace, Python placeholder substitution, **`release verify`**, **`doctor`**.
 - **CI:** run quickstart smoke on **Ubuntu** and **Windows** matrix jobs (alongside pytest and schema drift).
 - **Tests:** `tests/test_quickstart_smoke.py` exercises the smoke script.
-- **0.8 milestone planning** (CLI + CI): archived under **`docs/reviews/`** in development clones; shipped CLI narrative is **[docs/cli.md](https://github.com/flightdeckdev/flightdeck/blob/main/docs/cli.md)** on the canonical repo; this tree ships **`scripts/quickstart_smoke.py`** / **`flightdeck-quickstart-verify`** (see **Unreleased**).
+- **0.8 milestone planning** (CLI + CI): archived under **`docs/reviews/`** in development clones; shipped CLI narrative is **[docs/cli.md](https://flightdeckdev.github.io/flightdeck/cli/)** on the canonical repo; this tree ships **`scripts/quickstart_smoke.py`** / **`flightdeck-quickstart-verify`** (see **Unreleased**).
 
 ### Changed
 

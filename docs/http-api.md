@@ -116,6 +116,66 @@ Read-only JSON snapshot of aggregate counts in the local SQLite ledger (releases
 
 ---
 
+## `GET /metrics`
+
+Prometheus text exposition format scrape endpoint. Returns the same ledger counters as `GET /v1/metrics` but formatted as Prometheus `text/plain; version=0.0.4; charset=utf-8` — the standard content-type expected by a Prometheus scrape.
+
+**Auth:** Same as `GET /v1/metrics` — `Authorization: Bearer <token>` required when `FLIGHTDECK_LOCAL_API_TOKEN` is set; open when no token is configured (see [Authentication and access control](#authentication-and-access-control)).
+
+**Content-Type:** `text/plain; version=0.0.4; charset=utf-8`
+
+**Sample output**
+
+```
+# generated_at 2026-05-03T12:00:00+00:00
+
+# HELP flightdeck_releases_total Registered release artifacts
+# TYPE flightdeck_releases_total gauge
+flightdeck_releases_total 3
+
+# HELP flightdeck_run_events_total Ingested RunEvent records
+# TYPE flightdeck_run_events_total gauge
+flightdeck_run_events_total 120
+
+# HELP flightdeck_promoted_pointers_total Active promotion pointers
+# TYPE flightdeck_promoted_pointers_total gauge
+flightdeck_promoted_pointers_total 1
+
+# HELP flightdeck_actions_total Ledger actions (promote + rollback)
+# TYPE flightdeck_actions_total gauge
+flightdeck_actions_total 5
+
+# HELP flightdeck_actions_by_type Ledger actions broken down by type
+# TYPE flightdeck_actions_by_type gauge
+flightdeck_actions_by_type{action="promote"} 4
+flightdeck_actions_by_type{action="rollback"} 1
+
+# HELP flightdeck_pricing_tables_total Imported pricing tables
+# TYPE flightdeck_pricing_tables_total gauge
+flightdeck_pricing_tables_total 1
+
+# HELP flightdeck_schema_version Current ledger schema migration version
+# TYPE flightdeck_schema_version gauge
+flightdeck_schema_version 5
+```
+
+**Prometheus configuration**
+
+```yaml
+scrape_configs:
+  - job_name: flightdeck
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["127.0.0.1:8765"]
+    # Include the next two lines only when FLIGHTDECK_LOCAL_API_TOKEN is set:
+    authorization:
+      credentials: <FLIGHTDECK_LOCAL_API_TOKEN>
+```
+
+No new runtime dependencies — the Prometheus text format is generated inline. All metric values are valid floats as required by the Prometheus exposition format specification.
+
+---
+
 ## `GET /v1/workspace`
 
 Read-only flags derived from `flightdeck.yaml` plus the running package version. Used by the web UI and automation to choose **direct promote** vs **request/confirm** without embedding workspace YAML in the client. No secrets and no catalog file contents — only whether a **non-empty** `pricing_catalog_path` is set (`pricing_catalog_configured`).

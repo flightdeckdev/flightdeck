@@ -26,6 +26,46 @@ docker compose up --build
 - **Compose healthcheck:** `docker-compose.yml` probes **`/health`** so orchestrators can mark the service ready (see `healthcheck:` in that file).
 - **Data:** named Docker volume **`fd_workspace`** (SQLite under **`.flightdeck/`** inside the volume). Remove with `docker compose down -v` when you want a clean ledger.
 
+### Using PostgreSQL
+
+For team or production deployments, add a `postgres` service alongside `flightdeck serve`
+and wire the connection URL via `FLIGHTDECK_DATABASE_URL`. Create a
+`docker-compose.postgres.yml` override (or extend the existing `docker-compose.yml`):
+
+```yaml
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: flightdeck
+      POSTGRES_USER: flightdeck
+      POSTGRES_PASSWORD: changeme
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flightdeck"]
+      interval: 5s
+      retries: 5
+
+  flightdeck:
+    build: .
+    environment:
+      FLIGHTDECK_DATABASE_URL: postgresql://flightdeck:changeme@db:5432/flightdeck
+      FLIGHTDECK_LOCAL_API_TOKEN: "${FLIGHTDECK_LOCAL_API_TOKEN}"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8765:8765"
+
+volumes:
+  pg_data:
+```
+
+Install the PostgreSQL extra in the image by adding `pip install "flightdeck-ai[postgres]"`
+to the `Dockerfile`, or set it as a build arg. Schema migrations run automatically on
+startup. Back up with `pg_dump flightdeck` on your preferred schedule.
+
 ### SQLite backups
 
 FlightDeck stores the ledger in **`.flightdeck/flightdeck.db`** under the workspace root. For a **hot copy** while the server is stopped or idle, run from the workspace directory:

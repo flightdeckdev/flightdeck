@@ -12,6 +12,88 @@ For most workflows the CLI is sufficient. Use the SDK when you need to:
 - drive diff / promote / rollback from Python (CI automation, notebooks)
 - integrate FlightDeck into an async service
 
+## Quickstart
+
+A complete end-to-end example: start the server, register a release, emit events, run a diff,
+and check policy — all from Python in under 20 lines.
+
+```python
+import subprocess, uuid
+from datetime import datetime, timezone
+from flightdeck.sdk import FlightdeckClient
+from flightdeck.models import RunEvent
+
+# --- 1. Start the server in a subprocess (or run `flightdeck serve` separately) ---
+# Assumes `flightdeck init` has already been run in the working directory.
+server = subprocess.Popen(["flightdeck", "serve"])
+
+# --- 2. Register two releases via the CLI and capture their IDs ---
+baseline_id = subprocess.check_output(
+    ["flightdeck", "release", "register", "./baseline-release"], text=True
+).strip()
+candidate_id = subprocess.check_output(
+    ["flightdeck", "release", "register", "./candidate-release"], text=True
+).strip()
+
+# --- 3. Create the SDK client ---
+client = FlightdeckClient("http://127.0.0.1:8765")
+print(client.health())  # {"status": "ok", ...}
+
+# --- 4. Emit run events for the baseline release ---
+events = [
+    RunEvent(
+        timestamp=datetime.now(timezone.utc),
+        agent_id="my-agent",        # must match spec.agent.agent_id in release.yaml
+        release_id=baseline_id,
+        run_id=str(uuid.uuid4()),   # unique per run; duplicates are silently skipped
+        tenant_id="tenant_a",
+        task_id="support_ticket",
+        environment="production",
+        usage={
+            "model": {
+                "provider": "openai",
+                "model": "gpt-4o-mini",
+                "input_tokens": 900,
+                "output_tokens": 310,
+            }
+        },
+        metrics={"success": True, "latency_ms": 820},
+    )
+    # In production, collect hundreds of events before diffing
+    for _ in range(5)
+]
+inserted = client.ingest_run_events(events)
+print(f"Inserted {inserted} baseline events")
+
+# --- 5. Compute a diff ---
+diff = client.post_diff(
+    baseline_release_id=baseline_id,
+    candidate_release_id=candidate_id,
+    window="7d",
+    environment="production",
+)
+print("Confidence:", diff["samples"]["confidence"])
+print("Policy passed:", diff["policy"]["passed"])
+# Policy reasons (when blocked): diff["policy"]["reasons"]
+
+# --- 6. Promote if policy passed ---
+if diff["policy"]["passed"]:
+    result = client.post_promote(
+        release_id=candidate_id,
+        environment="production",
+        window="7d",
+        reason="candidate validated via SDK quickstart",
+    )
+    print("Promoted:", result["promoted_pointer_changed"])
+
+client.close()
+server.terminate()
+```
+
+The server-start and CLI register steps are usually done outside Python (e.g. in a Makefile
+or CI step). The SDK's job is emitting events and driving diff / promote from within your
+agent process or notebook.
+
 ## Installation
 
 ```bash

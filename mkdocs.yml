@@ -19,6 +19,7 @@ validation:
 
 nav:
   - Home: index.md
+  - Getting started: getting-started.md
   - CLI: cli.md
   - HTTP API: http-api.md
   - Operations & policy: operations-and-policy.md
