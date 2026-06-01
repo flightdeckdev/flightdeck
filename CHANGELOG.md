@@ -8,6 +8,14 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 
 ### Added
 
+- **Identity passthrough → audit actor:** HTTP mutating routes (`POST /v1/promote*`, `POST /v1/rollback`) now read **`X-FlightDeck-Actor`** (first) and **`X-Forwarded-User`** (second) before falling back to the body `actor` field. Lets a reverse-proxy / SSO layer stamp the audit ledger authoritatively. Trust model documented in **`SECURITY.md`** and **`docs/http-api.md`**.
+- **`flightdeck workspace info [--json]`** — one-screen snapshot of workspace path, database backend, schema version, ledger counters (releases / promoted / actions / run events), configuration (policy, pricing catalog, approval mode), and webhook count. JSON mode for CI / chatops pipelines.
+- **`flightdeck version [--json]`** — explicit version subcommand alongside the existing `--version` flag; `--json` emits `{"name":"flightdeck-ai","version":"1.3.0"}` for scripts and dashboards.
+- **Request-context middleware (`flightdeck serve`):** every response now carries **`X-Request-Id`** (per-request UUID, echoes the caller's header if provided) and **`X-FlightDeck-Server-Version`** (package version). Enables end-to-end log correlation alongside webhook **`delivery_id`**.
+- **Webhooks — SSRF defence:** `POST /v1/webhooks` validates the URL on creation; rejects non-http(s) schemes (no `file://`, `gopher://`, etc.), link-local IPv4/IPv6 (covers AWS IMDS `169.254.169.254`, ECS `169.254.170.2`, and IPv6 `fe80::/10`), and known cloud-metadata hostnames. Private RFC1918 addresses and loopback are allowed (self-hosted receivers). 21 tests.
+- **Web UI UX fixes:** Diff result auto-scrolls into view after Compute diff (verdict was below the fold at 1440 × 900); typed-confirm error message now shows exactly what to type; pricing hints/warnings moved to collapsible `<details>` accordions (no longer prominent alert boxes); Runs Release ID input carries a datalist affordance hint.
+- **Community / supply-chain:** `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), `GOVERNANCE.md` (BDFL model + steering-committee transition criteria), `CITATION.cff` (CFF 1.2.0), `FUNDING.yml`, `.github/ISSUE_TEMPLATE/config.yml`. OpenSSF Scorecard, CycloneDX SBOM (attached to GitHub Releases), Trivy filesystem + container scans, multi-arch container image to GHCR (`ghcr.io/flightdeckdev/flightdeck`) with SLSA provenance + SBOM attestations, stale-issues bot.
+- **CI matrix:** Python 3.11 / 3.12 / 3.13 × Linux / Windows (was single Python version). CodeQL SAST for Python and JavaScript/TypeScript. Dependabot for pip, npm (`web/`), and GitHub Actions.
 - **Webhooks (v1.3.0):** HMAC-signed outbound webhooks for **`promote.succeeded`**,
   **`rollback.succeeded`**, and **`promote.blocked`**. New routes **`POST /v1/webhooks`**,
   **`GET /v1/webhooks`**, **`DELETE /v1/webhooks/{id}`** (same Bearer / loopback gate as
@@ -23,8 +31,13 @@ This project follows [Semantic Versioning](https://semver.org/). From **v1.0.0**
 - **`flightdeck.integrations.telemetry.configure_otel_tracing()`** — optional OTLP HTTP **`TracerProvider`** wiring when the **`telemetry`** extra is installed (see **`docs/sdk-integrations.md`**).
 - **SDK:** **`flightdeck.sdk.http_common`** shared serializers and retry policy; parity tests keep sync/async clients aligned. **`pytest-cov`** no longer omits **`sdk/client.py`**.
 
+### Fixed
+
+- **`pymdown-extensions` bump 10.16 → 10.21.3:** patches CVE-2026-46338 (MEDIUM — sibling-prefix path traversal in `pymdownx.snippets`) and CVE-2025-68142 (LOW — ReDoS in figure caption extension) in the GitHub Pages build dependency (`docs/requirements.txt`). Not a runtime dependency.
+
 ### Changed
 
+- **README:** `pip install flightdeck-ai && flightdeck demo` promoted to top of landing; install section split into user vs contributor; demo video and screenshot gallery added; stale "~31%" cost-regression example removed; `docs/index.md` completely rewritten for first-time visitors.
 - **`[project.optional-dependencies] dev`:** **`ruff`** is **`>=0.15,<0.16`** (was an exact patch pin) so **`pip install`** / shared venvs can resolve alongside other tools; **`uv sync --frozen`** still follows **`uv.lock`**. **`docs/troubleshooting.md`** notes checking **`uv.lock`** for the resolved **`0.15.x`** wheel.
 - **Docs / positioning:** README local-first and ICP copy; bundled pricing cadence, vendor pricing URLs in YAML comments, and **`docs/pricing-catalog.md`** / **ROADMAP** / **RELEASE_NOTES** staleness commitments.
 - **Web UI (`flightdeck serve`):** Sidebar **Settings** popover shows a **Settings** heading and **Theme** as sun / moon / monitor icon radios (replacing text-only appearance controls in that surface).
