@@ -57,13 +57,16 @@ def _to_prometheus_text(counters: dict, schema_version: int) -> str:
         counters.get("actions_total", 0),
     )
 
-    # actions_by_type — one labeled series per action type
+    # actions_by_type — one labeled series per action type.
+    # Skip the block entirely when empty: the Prometheus 0.0.4 spec forbids
+    # # HELP / # TYPE headers with zero time-series beneath them.
     actions_by_action: dict[str, int] = counters.get("actions_by_action", {})
-    lines.append("# HELP flightdeck_actions_by_type Ledger actions broken down by type")
-    lines.append("# TYPE flightdeck_actions_by_type gauge")
-    for action_name, action_count in actions_by_action.items():
-        lines.append(f'flightdeck_actions_by_type{{action="{action_name}"}} {action_count}')
-    lines.append("")
+    if actions_by_action:
+        lines.append("# HELP flightdeck_actions_by_type Ledger actions broken down by type")
+        lines.append("# TYPE flightdeck_actions_by_type gauge")
+        for action_name, action_count in actions_by_action.items():
+            lines.append(f'flightdeck_actions_by_type{{action="{action_name}"}} {action_count}')
+        lines.append("")
 
     _metric(
         "flightdeck_pricing_tables_total",

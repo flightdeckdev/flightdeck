@@ -28,8 +28,8 @@
   "peerDependencies": {
     "openai": ">=4.0.0"
   },
-  "peerDependenciesOptional": {
-    "openai": true
+  "peerDependenciesMeta": {
+    "openai": { "optional": true }
   },
   "devDependencies": {
     "tsup": "^8.0.0",

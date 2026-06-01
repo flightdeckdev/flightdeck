@@ -29,7 +29,7 @@ def test_prometheus_metrics_content_type(tmp_path: Path, monkeypatch: pytest.Mon
     with TestClient(create_app()) as client:
         r = client.get("/metrics")
     assert r.status_code == 200
-    assert "text/plain" in r.headers.get("content-type", "")
+    assert r.headers.get("content-type", "").startswith("text/plain; version=0.0.4")
 
 
 def test_prometheus_metrics_contains_releases_total(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
