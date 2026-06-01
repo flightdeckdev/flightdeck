@@ -124,6 +124,10 @@ test.describe("overview copy & mocked diff interactions", () => {
     await expect(page.getByTestId("diff-per-1k-prices-title")).not.toBeVisible();
     await expand.click();
     await expect(page.getByTestId("diff-per-1k-prices-title")).toBeVisible();
+    // Pricing warnings are now inside a <details> accordion (UX fix: was a prominent
+    // colored alert box). Open the disclosure before asserting the text is visible.
+    const warningsDisclosure = page.locator("details").filter({ hasText: "Pricing warnings" }).first();
+    await warningsDisclosure.click();
     await expect(page.getByText("Synthetic pricing warning for e2e.")).toBeVisible();
   });
 
