@@ -1,14 +1,34 @@
-# FlightDeck documentation
+# FlightDeck
 
-FlightDeck helps teams **ship AI agents safely** with **release diffs**, **runtime evidence**, and **policy gates**.
+**Ship AI agents safely** — release diffs, runtime evidence, and policy gates.
 
-This site mirrors the Markdown guides in the [flightdeck repository](https://github.com/flightdeckdev/flightdeck). Use the navigation on the left for the full reference. Repository-only pages (for example `SECURITY.md` at the repo root) are linked from the guides where relevant—open those on GitHub when you need the latest wording.
+FlightDeck is a local-first CLI + SQLite + optional web UI that versions your agent builds, collects runtime evidence (cost, latency, errors), diffs a baseline against a candidate, and blocks promote until policy passes. Apache-2.0.
 
-## Ask AI
+---
 
-Use the floating **Ask AI** button in the bottom-right corner to open **Perplexity** in a new tab with this documentation site and the GitHub repo as grounding context (CLI, `release.yaml`, HTTP `/v1` routes, policy). No FlightDeck servers are involved.
+## Try it — 30 seconds, no account needed
 
-## Quick links
+```bash
+pip install flightdeck-ai
+flightdeck demo
+```
+
+`flightdeck demo` runs the full register → ingest → diff → promote loop in a temporary workspace. Nothing leaves your machine.
+
+---
+
+## How it works
+
+1. **Register** an immutable release snapshot (`release.yaml` + checksum).
+2. **Ingest** runtime evidence from your agent (cost, latency, errors, confidence).
+3. **Diff** baseline vs candidate — cost per run, latency delta, error rate, pricing catalog.
+4. **Promote** only when policy passes; optional human approval before the ledger moves.
+
+The same contract works from the CLI, the HTTP API (`POST /v1/promote`), and the bundled web UI (`flightdeck serve`).
+
+---
+
+## Quick reference
 
 | Topic | Doc |
 |--------|-----|
@@ -22,12 +42,41 @@ Use the floating **Ask AI** button in the bottom-right corner to open **Perplexi
 | Shipped web UI vs roadmap | [Web UI](web-ui.md) · [UI roadmap](ui-roadmap.md) |
 | Common failures | [Troubleshooting](troubleshooting.md) |
 
-## Install (local)
+Full examples and CI templates: [github.com/flightdeckdev/flightdeck/examples](https://github.com/flightdeckdev/flightdeck/tree/main/examples)
+
+---
+
+## Who should use this?
+
+- **ML / platform engineering** teams shipping LLM agents to production who want a policy-gated promote path — not just a dashboard.
+- **Regulated or compliance-sensitive** teams (fintech, healthcare) where data residency and audit trails matter. Local-first by default; self-host `flightdeck serve` to keep data on-prem.
+- Engineers who want to answer "is this candidate safe to ship?" with **numbers and policy**, not gut feel.
+
+---
+
+## Install options
+
+**User (recommended):**
 
 ```bash
-uv sync --extra dev
-uv run flightdeck --help
-uv run flightdeck-quickstart-verify
+pip install flightdeck-ai
 ```
 
-See [DEVELOPMENT.md](https://github.com/flightdeckdev/flightdeck/blob/main/DEVELOPMENT.md) on GitHub for full contributor setup, web bundle rebuild, and CI parity.
+Optional extras: `flightdeck-ai[openai]`, `flightdeck-ai[anthropic]`, `flightdeck-ai[postgres]`, `flightdeck-ai[telemetry]`
+
+**Contributor (uv):**
+
+```bash
+git clone https://github.com/flightdeckdev/flightdeck
+cd flightdeck
+uv sync --extra dev
+uv run flightdeck --help
+```
+
+See [DEVELOPMENT.md](https://github.com/flightdeckdev/flightdeck/blob/main/DEVELOPMENT.md) for web bundle, schema generation, and CI parity.
+
+---
+
+## Ask AI
+
+Use the floating **Ask AI** button (bottom-right) to open Perplexity with this docs site and the GitHub repo as context. No FlightDeck servers are involved.
