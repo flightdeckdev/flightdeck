@@ -217,6 +217,88 @@ def doctor_cmd(backup_path: Path | None) -> None:
     click.echo(f"Doctor: {len(checks)} check(s), all passed.")
 
 
+@cli.group("workspace")
+def workspace_cmd() -> None:
+    """Inspect the current FlightDeck workspace."""
+
+
+@workspace_cmd.command("info")
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Emit machine-readable JSON (for CI scripts, chatops bots, dashboards).",
+)
+def workspace_info(as_json: bool) -> None:
+    """Snapshot of workspace, ledger, policy, and webhooks at a glance."""
+    cfg = load_config()
+    storage = storage_from_config(cfg)
+    storage.migrate()
+
+    backend = "postgresql" if cfg.database_url else "sqlite"
+    db_target = cfg.database_url or str(cfg.db_path)
+    counters = storage.get_ledger_counters()
+    migrations = storage.list_applied_migrations()
+    webhooks = storage.list_webhooks()
+    webhooks_enabled = sum(1 for w in webhooks if w.get("enabled"))
+    active_policy = storage.get_active_policy()
+    catalog_path = cfg.pricing_catalog_path
+    catalog_present = bool(catalog_path) and Path(str(catalog_path)).is_file()
+
+    snapshot: dict[str, object] = {
+        "workspace_path": str(Path.cwd()),
+        "server_version": __version__,
+        "db_backend": backend,
+        "db_target": db_target,
+        "schema_version": max(migrations) if migrations else 0,
+        "default_environment": cfg.default_environment,
+        "releases_total": counters["releases_total"],
+        "promoted_pointers_total": counters["promoted_pointers_total"],
+        "actions_total": counters["actions_total"],
+        "run_events_total": counters["run_events_total"],
+        "pricing_tables_total": counters["pricing_tables_total"],
+        "policy_configured": active_policy is not None,
+        "pricing_catalog_configured": catalog_present,
+        "pricing_catalog_path": str(catalog_path) if catalog_path else None,
+        "promotion_requires_approval": bool(cfg.promotion_requires_approval),
+        "webhooks_configured": len(webhooks),
+        "webhooks_enabled": webhooks_enabled,
+    }
+
+    if as_json:
+        import json
+
+        click.echo(json.dumps(snapshot, indent=2, sort_keys=True))
+        return
+
+    def _yn(value: object) -> str:
+        return "yes" if value else "no"
+
+    click.echo(f"FlightDeck workspace info ({__version__})")
+    click.echo("─" * 48)
+    click.echo(f"  workspace path        {snapshot['workspace_path']}")
+    click.echo(f"  database backend      {backend}")
+    click.echo(f"  database target       {db_target}")
+    click.echo(f"  schema version        v{snapshot['schema_version']}")
+    click.echo("")
+    click.echo("Ledger")
+    click.echo(f"  releases              {counters['releases_total']}")
+    click.echo(f"  promoted pointers     {counters['promoted_pointers_total']}")
+    click.echo(f"  audit actions         {counters['actions_total']}")
+    click.echo(f"  ingested run events   {counters['run_events_total']}")
+    click.echo("")
+    click.echo("Configuration")
+    click.echo(f"  default environment   {cfg.default_environment}")
+    click.echo(f"  policy configured     {_yn(active_policy is not None)}")
+    click.echo(f"  pricing catalog       {_yn(catalog_present)}")
+    click.echo(f"  promotion approval    {_yn(cfg.promotion_requires_approval)}")
+    click.echo("")
+    click.echo("Webhooks")
+    click.echo(f"  configured            {len(webhooks)}")
+    click.echo(f"  enabled               {webhooks_enabled}")
+
+
 @cli.command()
 @click.option("--host", default="127.0.0.1", show_default=True)
 @click.option("--port", default=8765, show_default=True)
