@@ -9,7 +9,7 @@ description = "Ship AI agents safely with release diffs, runtime evidence, and p
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.11,<4"
-authors = [{ name = "FlightDeck" }]
+authors = [{ name = "Gottam Sai Bharath", email = "gsbreddy@users.noreply.github.com" }]
 keywords = ["ai", "agents", "control-plane", "finops", "deployment", "policy", "operations"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -68,6 +68,7 @@ integrations-ci = [
 
 [project.urls]
 Homepage = "https://github.com/flightdeckdev/flightdeck"
+Documentation = "https://flightdeckdev.github.io/flightdeck/"
 Repository = "https://github.com/flightdeckdev/flightdeck"
 Issues = "https://github.com/flightdeckdev/flightdeck/issues"
 Changelog = "https://github.com/flightdeckdev/flightdeck/blob/main/CHANGELOG.md"
@@ -78,6 +79,7 @@ flightdeck-quickstart-verify = "flightdeck.quickstart_smoke:quickstart_verify_ma
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/flightdeck"]
+force-include = { "examples/quickstart" = "src/flightdeck/_bundled_quickstart" }
 
 [tool.uv]
 # Contributor installs: `uv sync --extra dev` (see DEVELOPMENT.md). After changing

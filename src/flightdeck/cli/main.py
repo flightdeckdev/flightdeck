@@ -14,6 +14,7 @@ from click.exceptions import Exit as ClickExit
 
 from flightdeck import __version__
 from flightdeck.bundle import bundle_checksum
+from flightdeck.demo_flow import demo_session
 from flightdeck.bundled_pricing_bootstrap import (
     BUNDLED_PRICING_VERSION,
     DEFAULT_CATALOG_RELATIVE_PATH,
@@ -77,6 +78,24 @@ def cli() -> None:
     """Ship AI agents safely — release diffs, runtime evidence, policy gates."""
 
 
+@cli.command("version")
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Emit machine-readable JSON (for CI scripts, chatops bots, dashboards).",
+)
+def version_cmd(as_json: bool) -> None:
+    """Print the FlightDeck version (default: human; --json: machine-readable)."""
+    if as_json:
+        import json
+
+        click.echo(json.dumps({"name": "flightdeck-ai", "version": __version__}))
+    else:
+        click.echo(f"flightdeck {__version__}")
+
+
 @cli.command()
 @click.option("--path", "path_", default=DEFAULT_CONFIG_FILENAME, show_default=True)
 @click.option(
@@ -104,6 +123,65 @@ def init(path_: str, no_bundled_pricing: bool) -> None:
             f"Bundled pricing snapshot ({BUNDLED_PRICING_VERSION}): imported openai, anthropic, google; "
             f"wrote catalog to {rel}"
         )
+
+
+@cli.command()
+@click.option(
+    "--quickstart-root",
+    "quickstart_root_opt",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=None,
+    help="Directory with quickstart YAML/JSONL fixtures (default: repo examples/ or bundled wheel copy).",
+)
+@click.option(
+    "--verify/--no-verify",
+    default=False,
+    show_default=True,
+    help="Also run release verify on the baseline bundle (matches flightdeck-quickstart-verify).",
+)
+@click.option(
+    "--doctor/--no-doctor",
+    default=False,
+    show_default=True,
+    help="Also run flightdeck doctor after the workflow.",
+)
+@click.option(
+    "--keep-workspace",
+    is_flag=True,
+    default=False,
+    help="Keep the temp workspace and print its path (for inspection).",
+)
+def demo(
+    quickstart_root_opt: Path | None,
+    verify: bool,
+    doctor: bool,
+    keep_workspace: bool,
+) -> None:
+    """Run the bundled quickstart end-to-end in a disposable workspace (no manual sed).
+
+    Typical install: ``pip install flightdeck-ai`` then ``flightdeck demo``. Next: ``flightdeck init``
+    in your project and wire ``runs ingest`` / ``release diff`` from real agents.
+    """
+    ws = demo_session(
+        verify=verify,
+        doctor=doctor,
+        qs_dir=str(quickstart_root_opt) if quickstart_root_opt is not None else None,
+        promote_reason="demo",
+        keep_workspace=keep_workspace,
+    )
+    click.echo(
+        "Demo OK — workspace initialized, releases registered, runs ingested, "
+        "diff computed, baseline promoted under policy."
+    )
+    extras = []
+    if verify:
+        extras.append("verify")
+    if doctor:
+        extras.append("doctor")
+    if extras:
+        click.echo(f"(also ran: {', '.join(extras)})")
+    if keep_workspace and ws is not None:
+        click.echo(f"Workspace: {ws}")
 
 
 @cli.command("doctor")
@@ -137,6 +215,88 @@ def doctor_cmd(backup_path: Path | None) -> None:
     if failed:
         raise click.ClickException("Doctor found one or more problems.")
     click.echo(f"Doctor: {len(checks)} check(s), all passed.")
+
+
+@cli.group("workspace")
+def workspace_cmd() -> None:
+    """Inspect the current FlightDeck workspace."""
+
+
+@workspace_cmd.command("info")
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Emit machine-readable JSON (for CI scripts, chatops bots, dashboards).",
+)
+def workspace_info(as_json: bool) -> None:
+    """Snapshot of workspace, ledger, policy, and webhooks at a glance."""
+    cfg = load_config()
+    storage = storage_from_config(cfg)
+    storage.migrate()
+
+    backend = "postgresql" if cfg.database_url else "sqlite"
+    db_target = cfg.database_url or str(cfg.db_path)
+    counters = storage.get_ledger_counters()
+    migrations = storage.list_applied_migrations()
+    webhooks = storage.list_webhooks()
+    webhooks_enabled = sum(1 for w in webhooks if w.get("enabled"))
+    active_policy = storage.get_active_policy()
+    catalog_path = cfg.pricing_catalog_path
+    catalog_present = bool(catalog_path) and Path(str(catalog_path)).is_file()
+
+    snapshot: dict[str, object] = {
+        "workspace_path": str(Path.cwd()),
+        "server_version": __version__,
+        "db_backend": backend,
+        "db_target": db_target,
+        "schema_version": max(migrations) if migrations else 0,
+        "default_environment": cfg.default_environment,
+        "releases_total": counters["releases_total"],
+        "promoted_pointers_total": counters["promoted_pointers_total"],
+        "actions_total": counters["actions_total"],
+        "run_events_total": counters["run_events_total"],
+        "pricing_tables_total": counters["pricing_tables_total"],
+        "policy_configured": active_policy is not None,
+        "pricing_catalog_configured": catalog_present,
+        "pricing_catalog_path": str(catalog_path) if catalog_path else None,
+        "promotion_requires_approval": bool(cfg.promotion_requires_approval),
+        "webhooks_configured": len(webhooks),
+        "webhooks_enabled": webhooks_enabled,
+    }
+
+    if as_json:
+        import json
+
+        click.echo(json.dumps(snapshot, indent=2, sort_keys=True))
+        return
+
+    def _yn(value: object) -> str:
+        return "yes" if value else "no"
+
+    click.echo(f"FlightDeck workspace info ({__version__})")
+    click.echo("─" * 48)
+    click.echo(f"  workspace path        {snapshot['workspace_path']}")
+    click.echo(f"  database backend      {backend}")
+    click.echo(f"  database target       {db_target}")
+    click.echo(f"  schema version        v{snapshot['schema_version']}")
+    click.echo("")
+    click.echo("Ledger")
+    click.echo(f"  releases              {counters['releases_total']}")
+    click.echo(f"  promoted pointers     {counters['promoted_pointers_total']}")
+    click.echo(f"  audit actions         {counters['actions_total']}")
+    click.echo(f"  ingested run events   {counters['run_events_total']}")
+    click.echo("")
+    click.echo("Configuration")
+    click.echo(f"  default environment   {cfg.default_environment}")
+    click.echo(f"  policy configured     {_yn(active_policy is not None)}")
+    click.echo(f"  pricing catalog       {_yn(catalog_present)}")
+    click.echo(f"  promotion approval    {_yn(cfg.promotion_requires_approval)}")
+    click.echo("")
+    click.echo("Webhooks")
+    click.echo(f"  configured            {len(webhooks)}")
+    click.echo(f"  enabled               {webhooks_enabled}")
 
 
 @cli.command()
@@ -846,6 +1006,144 @@ def release_history(agent_id: str | None, environment: str | None) -> None:
         )
         for reason_text in r.policy_result.reasons:
             click.echo(f"  - {reason_text}")
+
+
+@cli.group()
+def webhook() -> None:
+    """Manage HMAC-signed outbound webhooks (Slack / Discord / PagerDuty / Linear …)."""
+
+
+@webhook.command("add")
+@click.option("--url", required=True, help="HTTPS endpoint (HTTP allowed for local dev only).")
+@click.option(
+    "--event",
+    "events",
+    multiple=True,
+    required=True,
+    help="Subscribed event name. Pass --event multiple times to subscribe to several.",
+)
+@click.option("--description", default=None, help="Free-form note shown in `webhook list`.")
+def webhook_add(url: str, events: tuple[str, ...], description: str | None) -> None:
+    """Create a webhook subscription and print the freshly generated secret."""
+    from flightdeck.webhooks import EVENT_TYPES, generate_secret
+
+    if not events:
+        raise click.ClickException("at least one --event is required")
+    bad = sorted({e for e in events if e not in EVENT_TYPES})
+    if bad:
+        allowed = ", ".join(sorted(EVENT_TYPES))
+        raise click.ClickException(f"unknown event(s): {bad}. Allowed: {allowed}")
+
+    cfg = load_config()
+    storage = storage_from_config(cfg)
+    storage.migrate()
+
+    webhook_id = f"wh_{uuid4().hex}"
+    secret = generate_secret()
+    created_at = utc_now().isoformat()
+    storage.insert_webhook(
+        webhook_id=webhook_id,
+        url=url,
+        events=list(events),
+        secret=secret,
+        description=description,
+        created_at=created_at,
+    )
+
+    click.echo(f"Created webhook {webhook_id} for {url}")
+    click.echo(f"  events: {', '.join(events)}")
+    click.echo("")
+    click.echo("!!! SAVE THIS SECRET — IT WILL NOT BE SHOWN AGAIN !!!")
+    click.echo(f"  secret: {secret}")
+
+
+@webhook.command("list")
+def webhook_list() -> None:
+    """List configured webhooks (secrets are redacted)."""
+    from rich.console import Console
+    from rich.table import Table
+
+    cfg = load_config()
+    storage = storage_from_config(cfg)
+    storage.migrate()
+
+    rows = storage.list_webhooks(enabled_only=False)
+    table = Table(title="FlightDeck webhooks")
+    table.add_column("webhook_id", style="bold")
+    table.add_column("url")
+    table.add_column("events")
+    table.add_column("enabled")
+    table.add_column("created_at")
+    table.add_column("secret_preview")
+    table.add_column("description")
+    for row in rows:
+        secret = str(row["secret"])
+        preview = f"{secret[:6]}…{secret[-4:]}" if len(secret) > 10 else "…"
+        table.add_row(
+            row["webhook_id"],
+            row["url"],
+            ", ".join(row["events"]),
+            "yes" if row["enabled"] else "no",
+            row["created_at"],
+            preview,
+            row.get("description") or "",
+        )
+    Console().print(table)
+
+
+@webhook.command("remove")
+@click.argument("webhook_id")
+@click.option("--yes", "assume_yes", is_flag=True, default=False, help="Skip confirmation prompt.")
+def webhook_remove(webhook_id: str, assume_yes: bool) -> None:
+    """Delete a webhook subscription."""
+    cfg = load_config()
+    storage = storage_from_config(cfg)
+    storage.migrate()
+
+    if not assume_yes:
+        click.confirm(f"Delete webhook {webhook_id}?", abort=True)
+    if not storage.delete_webhook(webhook_id):
+        raise click.ClickException(f"unknown webhook: {webhook_id}")
+    click.echo(f"Deleted {webhook_id}")
+
+
+@webhook.command("test")
+@click.argument("webhook_id")
+def webhook_test(webhook_id: str) -> None:
+    """Send a synthetic test.ping payload to the webhook URL using the same signing path."""
+    import httpx
+
+    from flightdeck.webhooks import build_event_payload, sign_payload
+
+    cfg = load_config()
+    storage = storage_from_config(cfg)
+    storage.migrate()
+
+    row = storage.get_webhook(webhook_id)
+    if not row:
+        raise click.ClickException(f"unknown webhook: {webhook_id}")
+
+    payload = build_event_payload(
+        "test.ping",
+        {"webhook_id": webhook_id, "note": "synthetic ping from `flightdeck webhook test`"},
+    )
+    body = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "X-FlightDeck-Signature": sign_payload(str(row["secret"]), body),
+        "X-FlightDeck-Event": "test.ping",
+        "X-FlightDeck-Delivery": str(payload["delivery_id"]),
+        "User-Agent": "FlightDeck-Webhook/1",
+    }
+    try:
+        with httpx.Client(timeout=5.0, follow_redirects=False) as client:
+            resp = client.post(str(row["url"]), content=body, headers=headers)
+    except httpx.HTTPError as exc:
+        raise click.ClickException(f"transport error: {type(exc).__name__}: {exc}") from exc
+
+    snippet = resp.text[:200].replace("\n", " ")
+    click.echo(f"HTTP {resp.status_code} from {row['url']}")
+    click.echo(f"  body[:200]: {snippet}")
 
 
 if __name__ == "__main__":

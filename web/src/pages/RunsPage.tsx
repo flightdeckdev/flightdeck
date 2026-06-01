@@ -2,8 +2,10 @@ import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 
 import { Link, useSearchParams } from "react-router-dom";
 import type { ReleaseRow, RunsListPayload } from "../api";
 import { fetchRuns, fetchRunsExportBlob, loadTimeline } from "../api";
+import { Button } from "../components/Button";
 import { JsonPanel } from "../components/JsonPanel";
 import { pickTrimmedSearch } from "../urlSearch";
+import { useDocumentTitle } from "../useDocumentTitle";
 
 function shortId(id: string, keepStart = 12, keepEnd = 6) {
   if (id.length <= keepStart + keepEnd + 1) return id;
@@ -102,6 +104,7 @@ function buildTraceGroups(events: unknown[]): { key: string; rows: Record<string
 }
 
 export function RunsPage() {
+  useDocumentTitle("Run events");
   const drawerTitleId = useId();
   const [searchParams] = useSearchParams();
   const closeBtnRef = useRef<HTMLButtonElement>(null);
@@ -394,10 +397,14 @@ export function RunsPage() {
           <label className="fd-field fd-field--full">
             <span className="fd-field__label">Release ID</span>
             <input
-              className="fd-input"
+              className={`fd-input${rawErr === "Release ID is required." ? " fd-input--invalid" : ""}`}
               value={releaseId}
-              onChange={(e) => setReleaseId(e.target.value)}
+              onChange={(e) => {
+                setReleaseId(e.target.value);
+                if (rawErr === "Release ID is required.") setRawErr(null);
+              }}
               list="fd-release-ids"
+              aria-invalid={rawErr === "Release ID is required."}
             />
             <datalist id="fd-release-ids">
               {releases.map((r) => (
@@ -415,51 +422,79 @@ export function RunsPage() {
             <span className="fd-field__label">Environment (optional)</span>
             <input className="fd-input" value={environment} onChange={(e) => setEnvironment(e.target.value)} />
           </label>
-          <label className="fd-field">
-            <span className="fd-field__label">Tenant (optional)</span>
-            <input className="fd-input" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
-          </label>
-          <label className="fd-field">
-            <span className="fd-field__label">Task (optional)</span>
-            <input className="fd-input" value={taskId} onChange={(e) => setTaskId(e.target.value)} />
-          </label>
-          <label className="fd-field">
-            <span className="fd-field__label">Trace ID (optional)</span>
-            <input className="fd-input" value={traceId} onChange={(e) => setTraceId(e.target.value)} />
-          </label>
-          <label className="fd-field">
-            <span className="fd-field__label">Session ID (optional)</span>
-            <input className="fd-input" value={sessionId} onChange={(e) => setSessionId(e.target.value)} />
-          </label>
-          <label className="fd-field">
-            <span className="fd-field__label">Span ID (optional)</span>
-            <input className="fd-input" value={spanId} onChange={(e) => setSpanId(e.target.value)} />
-          </label>
+          <details className="fd-field fd-field--full">
+            <summary className="fd-field__label" style={{ cursor: "pointer" }}>Advanced filters</summary>
+            <div className="fd-form-grid fd-mt-md">
+              <label className="fd-field">
+                <span className="fd-field__label">Tenant (optional)</span>
+                <input className="fd-input" value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
+              </label>
+              <label className="fd-field">
+                <span className="fd-field__label">Task (optional)</span>
+                <input className="fd-input" value={taskId} onChange={(e) => setTaskId(e.target.value)} />
+              </label>
+              <label className="fd-field">
+                <span className="fd-field__label">Trace ID (optional)</span>
+                <input className="fd-input" value={traceId} onChange={(e) => setTraceId(e.target.value)} />
+              </label>
+              <label className="fd-field">
+                <span className="fd-field__label">Session ID (optional)</span>
+                <input className="fd-input" value={sessionId} onChange={(e) => setSessionId(e.target.value)} />
+              </label>
+              <label className="fd-field">
+                <span className="fd-field__label">Span ID (optional)</span>
+                <input className="fd-input" value={spanId} onChange={(e) => setSpanId(e.target.value)} />
+              </label>
+            </div>
+          </details>
           <label className="fd-field">
             <span className="fd-field__label">Offset</span>
-            <input className="fd-input" value={offset} onChange={(e) => setOffset(e.target.value)} />
+            <input className="fd-input" type="number" min="0" inputMode="numeric"
+              value={offset} onChange={(e) => setOffset(e.target.value)} />
           </label>
           <label className="fd-field">
             <span className="fd-field__label">Limit (1–500)</span>
-            <input className="fd-input" value={limit} onChange={(e) => setLimit(e.target.value)} />
+            <input className="fd-input" type="number" min="1" max="500" inputMode="numeric"
+              value={limit} onChange={(e) => setLimit(e.target.value)} />
           </label>
+            <div className="fd-actions fd-mt-md">
+              <Button variant="ghost" size="sm" disabled={Number(offset) <= 0 || busy}
+                onClick={() => setOffset(String(Math.max(0, Number(offset) - Number(limit || 50))))}>
+                ‹ Prev
+              </Button>
+              <Button variant="ghost" size="sm"
+                disabled={busy || !result || Number(offset) + Number(limit || 50) >= (result?.matched_total ?? 0)}
+                onClick={() => setOffset(String(Number(offset) + Number(limit || 50)))}>
+                Next ›
+              </Button>
+              <span className="fd-muted fd-samples">
+                {result ? `Showing ${result.returned} of ${result.matched_total} (offset ${offset})` : null}
+              </span>
+            </div>
         </div>
         <p className="fd-inline fd-muted fd-mt-xl">
           <strong>Export</strong> uses the same filters and <strong>limit</strong> as this form (server cap 500 rows
           per download). Truncation warnings apply to the returned page, not necessarily the whole ledger.
         </p>
         <div className="fd-actions">
-          <button type="button" className="fd-btn fd-btn--primary" disabled={busy} onClick={() => void runQuery()}>
-            {busy ? "Loading…" : "Load runs"}
-          </button>
-          <button
-            type="button"
-            className="fd-btn fd-btn--ghost"
-            disabled={exportBusy}
+          <Button
+            variant="primary"
+            disabled={busy || exportBusy}
+            loading={busy}
+            loadingLabel="Loading…"
+            onClick={() => void runQuery()}
+          >
+            Load runs
+          </Button>
+          <Button
+            variant="ghost"
+            disabled={busy || exportBusy}
+            loading={exportBusy}
+            loadingLabel="Exporting…"
             onClick={() => void downloadExport()}
           >
-            {exportBusy ? "Exporting…" : "Download NDJSON"}
-          </button>
+            Download NDJSON
+          </Button>
         </div>
         {rawErr ? <p className="fd-alert fd-alert--error">{rawErr}</p> : null}
       </section>
@@ -493,9 +528,9 @@ export function RunsPage() {
               {runsQueryError.detail}
             </p>
             <div className="fd-actions fd-mt-1">
-              <button type="button" className="fd-btn fd-btn--primary" disabled={busy} onClick={() => void runQuery()}>
-                {busy ? "Retrying…" : "Retry"}
-              </button>
+              <Button variant="primary" disabled={busy || exportBusy} loading={busy} loadingLabel="Retrying…" onClick={() => void runQuery()}>
+                Retry
+              </Button>
             </div>
           </div>
         </section>
@@ -568,7 +603,7 @@ export function RunsPage() {
                         )}
                       </summary>
                       <div className="fd-table-wrap">
-                        <table className="fd-table fd-table--hover">
+                        <table className="fd-table fd-table--hover fd-table--striped">
                           {tableHead}
                           <tbody>{g.rows.map((rec, idx) => renderEventRow(rec, idx, g.key))}</tbody>
                         </table>
@@ -579,7 +614,7 @@ export function RunsPage() {
               </div>
             ) : (
               <div className="fd-table-wrap">
-                <table className="fd-table fd-table--hover">
+                <table className="fd-table fd-table--hover fd-table--striped">
                   {tableHead}
                   <tbody>
                     {result.events.length === 0 ? (

@@ -15,9 +15,11 @@ serve` see [http-api.md](http-api.md).
 | `--version` | Print the installed version and exit |
 | `--help` | Print help for any command or subcommand |
 
-All commands require a `flightdeck.yaml` in the working directory (or the default path
+Most commands require `flightdeck.yaml` in the working directory (or the default path
 `./flightdeck.yaml`). Run `flightdeck init` to create one. **`flightdeck init`** writes the
 config, then loads it to migrate the ledger and (by default) import bundled pricing.
+
+**`flightdeck demo`** is an exception: it creates a **temporary** workspace and does not read `./flightdeck.yaml` from your shell cwd.
 
 ## Actor resolution
 
@@ -73,6 +75,27 @@ enabled. Edit `diff.*` thresholds or `db_path` before using in a shared repo. Fo
 set **`database_url`** to a `postgresql://…` (or `postgres://…`) DSN and install **`psycopg`**
 (`uv sync --extra postgres`); **`db_path`** is ignored when **`database_url`** is set.
 **`flightdeck doctor --backup`** remains SQLite-only. See [release-artifact.md § Workspace config](release-artifact.md) and [pricing-catalog.md](pricing-catalog.md) (bundled snapshot).
+
+---
+
+## `flightdeck demo`
+
+Run the **examples/quickstart** workflow end-to-end in a **disposable temp directory**: **`init`** → custom **`pricing import`** (both YAMLs) → **`policy set`** → **`release register`** (both bundles) → substitute **`release_id`** placeholders in JSONL → **`runs ingest`** → **`release diff`** → **`release promote`** (baseline under policy) → **`release history`**.
+
+Does **not** require **`flightdeck.yaml`** in the current directory. Fixtures resolve in order: **`--quickstart-root`**, **`FLIGHTDECK_QUICKSTART_ROOT`**, **`examples/quickstart`** relative to a git checkout, then **`flightdeck/_bundled_quickstart`** packaged in the wheel (PyPI installs).
+
+```bash
+flightdeck demo [--quickstart-root DIR] [--verify / --no-verify] [--doctor / --no-doctor] [--keep-workspace]
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--quickstart-root` | (see above) | Directory containing `policy.yaml`, pricing YAMLs, `*-events.jsonl`, and `baseline-release` / `candidate-release` |
+| `--verify` | off | Also run **`release verify`** on the baseline bundle (parity with **`flightdeck-quickstart-verify`**) |
+| `--doctor` | off | Also run **`flightdeck doctor`** |
+| `--keep-workspace` | off | Keep the temp workspace and print its path |
+
+On success, prints a short confirmation. Exit **0** on success, **1** on failure (same as subprocess failures from underlying CLI steps).
 
 ---
 
@@ -412,6 +435,37 @@ flightdeck pricing show --provider PROVIDER --version VERSION
 
 Both flags are required. If the table does not exist, exits 1 with an error message.
 
+### `flightdeck pricing check`
+
+Check the age of **`flightdeck-bundled-*`** pricing tables in the ledger. Prints one line
+per bundled snapshot with its anchor date and approximate age. Non-bundled tables are
+ignored.
+
+```bash
+flightdeck pricing check [--max-age-days N] [--fail]
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--max-age-days` | `90` | Threshold in days. Tables older than this print `STALE` to stderr (and count toward `--fail`). Tables at or under the limit print `OK`. |
+| `--fail` | off | Exit 1 if any bundled table exceeds `--max-age-days`. Useful as a CI gate. |
+
+**Example output:**
+```
+OK     flightdeck-bundled-2026-05  (~11 days old; max 90)
+```
+
+If no `flightdeck-bundled-*` tables are in the ledger (e.g. after `flightdeck init --no-bundled-pricing`),
+exits 0 and prints `No flightdeck-bundled-* pricing tables in the ledger.`
+
+Use in CI to surface stale bundled snapshots before they silently affect cost estimates:
+```bash
+flightdeck pricing check --max-age-days 90 --fail
+```
+
+See [pricing-catalog.md](pricing-catalog.md) for the bundled snapshot lifecycle and when
+to replace with `flightdeck pricing import`.
+
 ---
 
 ## `flightdeck policy`
@@ -568,3 +622,19 @@ flightdeck doctor
 The `flightdeck-quickstart-verify` command (or `python -m flightdeck.quickstart_smoke`)
 runs this entire workflow end-to-end using the bundled example fixtures in
 `examples/quickstart/`.
+
+## `flightdeck webhook ...`
+
+Manage HMAC-signed outbound webhooks. Each subscription stores a per-webhook secret and
+fires for one or more of `promote.succeeded`, `rollback.succeeded`, `promote.blocked`.
+
+- `flightdeck webhook add --url URL --event EVENT [--event EVENT ...] [--description TEXT]`
+  Creates a subscription and prints the freshly generated secret **once** — save it,
+  it will not be shown again.
+- `flightdeck webhook list` — tabular view of all subscriptions; secrets are redacted.
+- `flightdeck webhook remove WEBHOOK_ID [--yes]` — delete (confirms unless `--yes`).
+- `flightdeck webhook test WEBHOOK_ID` — POST a synthetic `test.ping` payload using the
+  same signing path; prints the HTTP status and the first 200 chars of the response body.
+
+The HTTP equivalents live under `/v1/webhooks` (see
+[http-api.md](http-api.md#webhooks-post-v1webhooks-get-v1webhooks-delete-v1webhooksid)).

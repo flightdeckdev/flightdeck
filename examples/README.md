@@ -30,7 +30,7 @@ Use this as a **discoverability** pass for the **[ROADMAP.md](../ROADMAP.md)** s
 |------|---------|
 | [quickstart/](quickstart/) | Minimal workspace used by `flightdeck-quickstart-verify`. |
 | [ci/](ci/README.md) | Policy gate script, sample policy YAML, GitHub Actions job snippets. |
-| [deploy/](deploy/README.md) | Dockerfile and compose for `flightdeck serve`. |
+| [deploy/](deploy/README.md) | Dockerfile and compose for `flightdeck serve`; optional **Railway** (`railway.toml`) and **Fly.io** (`fly.toml`). |
 | [integration/](integration/README.md) | Sample event emitter for HTTP ingest. |
 | [integration/adoption/](integration/adoption/README.md) | OpenAI, Anthropic, LangChain, Agents SDK, CrewAI-style totals, Temporal labels → `RunEvent`. |
 | [fleet/](fleet/README.md) | Multi-workspace naming, optional catalog path, approval workflow notes. |

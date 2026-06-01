@@ -1,0 +1,6 @@
+# Pinned for reproducible GitHub Pages builds (not part of the Python package).
+# Transitive pin for pymdown-extensions guards against the strict-mode build
+# failing on a silent transitive bump (reviewer MAJOR-6).
+mkdocs==1.6.1
+mkdocs-material==9.6.14
+pymdown-extensions==10.16

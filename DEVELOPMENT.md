@@ -73,8 +73,11 @@ python -m ruff check src tests
 python -m pytest
 flightdeck --help
 flightdeck doctor
+flightdeck demo
 flightdeck-quickstart-verify
 ```
+
+**Fast path for contributors:** **`flightdeck demo`** runs the same core ledger steps as below in a **temp workspace** (fixtures from **`examples/quickstart`**, or **`flightdeck/_bundled_quickstart`** inside an installed wheel). **`flightdeck-quickstart-verify`** adds **`release verify`** + **`doctor`**.
 
 Match **CI**’s CLI smoke: **`flightdeck --help`** must run successfully after changes to the CLI surface.
 
@@ -150,6 +153,14 @@ The workflow runs **ruff**, **pytest**, schema drift, **`uv build`**, publishes 
 If **PyPI** rejects **attestations** for your project, set **`attestations: false`** on **`pypa/gh-action-pypi-publish`** in **`.github/workflows/release-pypi.yml`** until the registry side is sorted.
 
 ## Local Demo
+
+**One command** (uses bundled **`examples/quickstart`** fixtures; no **`sed`**):
+
+```bash
+flightdeck demo
+```
+
+**Manual** (same story as **`flightdeck demo`**, in your cwd):
 
 ```bash
 flightdeck init
@@ -282,3 +293,14 @@ Use **`uv run python -m pytest`** from the repo root so imports like **`from tes
 | `VITE_FLIGHTDECK_LOCAL_API_TOKEN` | Web dev server | Build-time variable for the React UI dev server (Vite). Copy `web/.env.example` → `web/.env.local` to set it when testing mutations through `npm run dev` against a token-protected server. |
 | `VITE_DEV_PROXY_TARGET` | Web dev server | Overrides the Vite proxy target for `/v1` (default: `http://127.0.0.1:8765`). |
 | `TMPDIR` / `TEMP` / `TMP` | Tests / OS | Standard temp directory environment variables. Set any of these to a repo-local `.tmp/` path if the OS default is restricted or permissions cause pytest failures. |
+
+## Documentation site (MkDocs)
+
+The Markdown under **`docs/`** is also built as a static site for **[GitHub Pages](https://flightdeckdev.github.io/flightdeck/)** (workflow **`.github/workflows/pages.yml`**). To preview locally:
+
+```bash
+pip install -r docs/requirements.txt
+mkdocs serve
+```
+
+Then open the URL MkDocs prints (usually **http://127.0.0.1:8000/**). The build output directory **`site/`** is gitignored; CI uploads it as the Pages artifact.

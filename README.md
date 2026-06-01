@@ -1,5 +1,7 @@
 # FlightDeck
 
+[![PyPI version](https://img.shields.io/pypi/v/flightdeck-ai)](https://pypi.org/project/flightdeck-ai/) [![Python versions](https://img.shields.io/pypi/pyversions/flightdeck-ai)](https://pypi.org/project/flightdeck-ai/) [![CI status](https://github.com/flightdeckdev/flightdeck/actions/workflows/ci.yml/badge.svg)](https://github.com/flightdeckdev/flightdeck/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/flightdeckdev/flightdeck)](LICENSE) [![GitHub stars](https://img.shields.io/github/stars/flightdeckdev/flightdeck?style=social)](https://github.com/flightdeckdev/flightdeck) [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
 **Ship AI agents safely with release diffs, runtime evidence, and policy gates.**
 
 Local-first **CLI + SQLite**. Optional **`flightdeck serve`** exposes a small web UI and **`/v1`** JSON API—data stays on your machine unless you change that.
@@ -67,11 +69,33 @@ flowchart LR
 
 ---
 
+## Fast start
+
+After **`pip install flightdeck-ai`** (or **`uv tool install flightdeck-ai`**):
+
+```bash
+flightdeck demo
+```
+
+**`flightdeck demo`** runs the full quickstart ledger flow in a disposable temp workspace—no **`sed`**, no fixture paths—using **`examples/quickstart`** from your checkout or packaged **`flightdeck/_bundled_quickstart`** from PyPI.
+
+**Web UI** (needs a workspace in the current directory):
+
+```bash
+flightdeck init
+flightdeck serve
+```
+
+Open **http://127.0.0.1:8765/**. Same end-to-end checks CI uses: **`flightdeck-quickstart-verify`** (contributors: **`uv run flightdeck-quickstart-verify`**).
+
+---
+
 ## Install and smoke-test
 
 ```bash
 uv sync --extra dev
 uv run flightdeck --help
+uv run flightdeck demo
 uv run flightdeck-quickstart-verify
 ```
 
@@ -115,6 +139,8 @@ Bundled pricing from `init` is a **convenience snapshot**—`flightdeck pricing 
 
 ## Documentation
 
+**Published site (GitHub Pages):** [flightdeckdev.github.io/flightdeck](https://flightdeckdev.github.io/flightdeck/) — built from `docs/` on each push to `main` (`.github/workflows/pages.yml`). Enable **Pages → GitHub Actions** in the repository settings if the site is not live yet.
+
 | Area | Links |
 |------|--------|
 | CLI | [docs/cli.md](docs/cli.md) |
@@ -132,12 +158,37 @@ Bundled pricing from `init` is a **convenience snapshot**—`flightdeck pricing 
 
 ---
 
+## Webhooks
+
+FlightDeck ships **HMAC-signed outbound webhooks** for `promote.succeeded`,
+`rollback.succeeded`, and `promote.blocked`. Point them at any HTTPS endpoint
+(Slack incoming webhook, Discord, PagerDuty Events v2, Linear inbound webhook, your
+own relay) — FlightDeck owns the signing, not the integrations.
+
+```bash
+flightdeck webhook add \
+  --url https://hooks.slack.com/services/T000/B000/XXXX \
+  --event promote.succeeded --event rollback.succeeded \
+  --description "prod release alerts"
+# Save the printed secret — it will not be shown again.
+
+flightdeck webhook list
+flightdeck webhook test wh_<id>
+```
+
+Receivers verify each delivery by recomputing `HMAC-SHA256(secret, raw_body)` and
+comparing against `X-FlightDeck-Signature: sha256=<hex>` (GitHub convention). Full
+details: **[docs/cli.md](docs/cli.md)** · **[docs/http-api.md](docs/http-api.md)**.
+
+---
+
 ## Contributing (quick CI match)
 
 ```bash
 uv sync --frozen --extra dev
 uv run python -m ruff check src tests
 uv run python -m pytest
+uv run flightdeck demo
 uv run flightdeck-quickstart-verify
 uv run flightdeck --help
 ```
