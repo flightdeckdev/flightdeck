@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { fetchJson } from "../api";
 import { JsonPanel } from "../components/JsonPanel";
@@ -29,6 +29,7 @@ export function DiffPage() {
   const [diffOut, setDiffOut] = useState<DiffJson | null>(null);
   const [diffErr, setDiffErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setDiffBaseline(pickTrimmedSearch(searchParams, "baseline"));
@@ -67,6 +68,9 @@ export function DiffPage() {
       });
       setDiffOut(data);
       setDiffResultSeq((n) => n + 1);
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
     } catch (e) {
       setDiffErr(String(e));
     } finally {
@@ -186,7 +190,7 @@ export function DiffPage() {
       ) : null}
 
       {diffOut ? (
-        <>
+        <div ref={resultRef}>
           <DiffReleaseTwin
             diffBaseline={diffBaseline}
             diffCandidate={diffCandidate}
@@ -204,7 +208,7 @@ export function DiffPage() {
           <DiffChangeImpact samples={samples} metrics={metrics} pricing={pricing} pricingResetKey={diffResultSeq} />
 
           <JsonPanel title="Raw diff JSON" value={JSON.stringify(diffOut, null, 2)} defaultOpen={false} />
-        </>
+        </div>
       ) : null}
     </>
   );

@@ -80,24 +80,28 @@ export function DiffPricingExpand({
             );
           })()}
           {pricing.warnings.length > 0 ? (
-            <>
-              <p className="fd-diff-section__title fd-mb-035">Pricing warnings</p>
-              <ul className="fd-alert fd-alert--warn fd-reasons fd-mt-0">
+            <details className="fd-block-mb-065">
+              <summary className="fd-diff-section__title" style={{ cursor: "pointer" }}>
+                Pricing warnings ({pricing.warnings.length})
+              </summary>
+              <ul className="fd-reasons fd-muted fd-mt-sm" style={{ paddingLeft: "1.25rem" }}>
                 {pricing.warnings.map((w) => (
                   <li key={w}>{w}</li>
                 ))}
               </ul>
-            </>
+            </details>
           ) : null}
           {pricing.hints.length > 0 ? (
-            <>
-              <p className="fd-diff-section__title fd-block-mt-065-mb-035">Hints</p>
-              <ul className="fd-alert fd-alert--info fd-reasons fd-mt-0">
+            <details className="fd-block-mt-065-mb-035">
+              <summary className="fd-diff-section__title" style={{ cursor: "pointer" }}>
+                Pricing hints ({pricing.hints.length})
+              </summary>
+              <ul className="fd-reasons fd-muted fd-mt-sm" style={{ paddingLeft: "1.25rem" }}>
                 {pricing.hints.map((h) => (
                   <li key={h}>{h}</li>
                 ))}
               </ul>
-            </>
+            </details>
           ) : null}
           {pricing.catalog && (pricing.catalog.enabled || pricing.catalog.warnings.length > 0) ? (
             <>

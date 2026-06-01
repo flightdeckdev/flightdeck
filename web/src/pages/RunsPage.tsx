@@ -405,7 +405,11 @@ export function RunsPage() {
               }}
               list="fd-release-ids"
               aria-invalid={rawErr === "Release ID is required."}
+              placeholder="type or paste a release ID"
             />
+            <span className="fd-muted" style={{ fontSize: "0.78rem", marginTop: "2px", display: "block" }}>
+              Type to search known IDs, or paste from Overview
+            </span>
             <datalist id="fd-release-ids">
               {releases.map((r) => (
                 <option key={r.release_id} value={r.release_id}>

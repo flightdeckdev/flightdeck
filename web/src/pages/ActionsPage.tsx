@@ -197,7 +197,9 @@ export function ActionsPage() {
       `Type the last 8 chars of the release ID (${expected}) to ${label}:`,
     );
     if (!typed || typed.trim() !== expected) {
-      setActErr(`${label} cancelled (confirmation did not match).`);
+      setActErr(
+        `${label} cancelled. To confirm, type the last 8 characters of the release ID: "${expected}"`,
+      );
       return;
     }
     setBusy(path === "/v1/promote" ? "promote" : "rollback");
