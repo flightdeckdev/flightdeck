@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class DiffConfig(BaseModel):
@@ -281,3 +281,109 @@ class PromotionRequestRecord(BaseModel):
     resolved_at: datetime | None = None
     completed_action_id: str | None = None
 
+
+class WebhookCreate(BaseModel):
+    """Create-request body for ``POST /v1/webhooks``."""
+
+    url: str = Field(min_length=1)
+    events: list[str] = Field(min_length=1)
+    description: str | None = None
+
+    @field_validator("url")
+    @classmethod
+    def _validate_url(cls, value: str) -> str:
+        # Defence-in-depth against SSRF (reviewer MAJOR-7). An operator with
+        # ledger-write access can register a webhook URL; that URL receives
+        # every promote / rollback payload. Without validation, a careless
+        # or malicious entry could point at a cloud metadata service (AWS
+        # IMDS, GCP metadata, Azure IMDS) and either fan out audit data to
+        # a host the operator did not intend, or probe the host file system
+        # via file:// URLs.
+        #
+        # This validator enforces the minimum:
+        #   - scheme must be http or https (no file://, gopher://, ftp://, ...)
+        #   - link-local IPv4 + IPv6 are rejected (covers all standard cloud
+        #     metadata endpoints: 169.254.169.254 / fe80::/10)
+        #   - a small allowlist of known-metadata hostnames is rejected
+        # Private RFC1918 and loopback are intentionally allowed (FlightDeck
+        # is local-first and self-hosted Slack / Discord receivers commonly
+        # live on private nets). HTTP scheme is allowed but operators should
+        # use HTTPS in production.
+        #
+        # Test coverage lives in ``tests/test_webhooks_url_validation.py``.
+        from urllib.parse import urlparse
+        import ipaddress
+
+        try:
+            parsed = urlparse(value)
+        except ValueError as exc:
+            raise ValueError(f"Invalid webhook URL: {exc}") from exc
+
+        scheme = (parsed.scheme or "").lower()
+        if scheme not in {"http", "https"}:
+            raise ValueError(
+                f"Webhook URL scheme must be http or https (got {scheme!r})."
+            )
+        host = (parsed.hostname or "").strip().lower()
+        if not host:
+            raise ValueError("Webhook URL must include a host.")
+
+        _METADATA_HOSTNAMES = {
+            "metadata.google.internal",
+            "metadata",
+            "instance-data",
+            "instance-data.ec2.internal",
+        }
+        if host in _METADATA_HOSTNAMES:
+            raise ValueError(
+                "Webhook URL targets a cloud-metadata hostname; refusing to register."
+            )
+
+        try:
+            ip = ipaddress.ip_address(host)
+        except ValueError:
+            ip = None
+        if ip is not None and ip.is_link_local:
+            # Catches IPv4 169.254.0.0/16 (AWS IMDS 169.254.169.254, ECS
+            # 169.254.170.2) and IPv6 fe80::/10 in one check.
+            raise ValueError(
+                "Webhook URL targets a link-local address (cloud-metadata range); refusing."
+            )
+        return value
+
+    @field_validator("events")
+    @classmethod
+    def _validate_events(cls, value: list[str]) -> list[str]:
+        # Import inside validator to avoid a circular import at module load.
+        from flightdeck.webhooks import EVENT_TYPES
+
+        bad = [e for e in value if e not in EVENT_TYPES]
+        if bad:
+            raise ValueError(
+                f"Unsupported event(s): {sorted(set(bad))}. Allowed: {sorted(EVENT_TYPES)}"
+            )
+        return value
+
+
+class WebhookPublic(BaseModel):
+    """Wire shape for ``POST /v1/webhooks`` (with ``secret``) and ``GET /v1/webhooks`` (with ``secret_preview``)."""
+
+    api_version: Literal["v1"] = "v1"
+    kind: Literal["Webhook"] = "Webhook"
+    webhook_id: str
+    url: str
+    events: list[str]
+    enabled: bool
+    created_at: str
+    description: str | None = None
+    # ``secret`` is populated only on the create response (the one and only time the
+    # caller sees the cleartext). ``secret_preview`` is populated only on list.
+    secret: str | None = None
+    secret_preview: str | None = None
+
+
+class WebhookListResponse(BaseModel):
+    api_version: Literal["v1"] = "v1"
+    kind: Literal["WebhookList"] = "WebhookList"
+    webhooks: list[WebhookPublic]
+    total: int

@@ -1,0 +1,14 @@
+# Railway config-as-code for FlightDeck reference image.
+# Deploy with repo root directory set to `examples/deploy` (GitHub integration),
+# or run `railway up` from this directory after `railway link`.
+#
+# Docs: https://docs.railway.app/guides/config-as-code
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"

@@ -9,6 +9,9 @@ web/node_modules/
 .tools/
 build/
 dist/
+
+# MkDocs (local `mkdocs build`; GitHub Pages uploads `site/` from CI only)
+/site/
 *.egg-info/
 .coverage
 htmlcov/

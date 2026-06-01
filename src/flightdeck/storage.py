@@ -54,7 +54,7 @@ def storage_from_config(cfg: WorkspaceConfig) -> Storage:
 
 
 # Highest migration version applied by `Storage.migrate()` — keep in sync with migration blocks below.
-LATEST_SCHEMA_MIGRATION_VERSION = 4
+LATEST_SCHEMA_MIGRATION_VERSION = 5
 
 
 @dataclass(frozen=True)
@@ -276,6 +276,25 @@ class Storage:
                       completed_action_id TEXT
                     )
                     """,
+                ],
+            )
+
+            # v5: HMAC-signed outbound webhooks (Slack / Discord / PagerDuty / Linear etc.).
+            apply(
+                5,
+                [
+                    """
+                    CREATE TABLE IF NOT EXISTS webhooks (
+                      webhook_id TEXT PRIMARY KEY,
+                      url TEXT NOT NULL,
+                      events_json TEXT NOT NULL,
+                      secret TEXT NOT NULL,
+                      enabled INTEGER NOT NULL DEFAULT 1,
+                      created_at TEXT NOT NULL,
+                      description TEXT
+                    )
+                    """,
+                    "CREATE INDEX IF NOT EXISTS idx_webhooks_enabled ON webhooks(enabled)",
                 ],
             )
 
@@ -897,3 +916,94 @@ class Storage:
             ).fetchall()
             return [RunEvent.model_validate_json(r["event_json"]) for r in rows]
 
+    # ------------------------------------------------------------------
+    # Webhooks (outbound HMAC-signed notifications)
+    # ------------------------------------------------------------------
+
+    def insert_webhook(
+        self,
+        *,
+        webhook_id: str,
+        url: str,
+        events: list[str],
+        secret: str,
+        description: str | None,
+        created_at: str,
+    ) -> None:
+        events_json = json.dumps(list(events), sort_keys=False, separators=(",", ":"))
+        with self.connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO webhooks
+                  (webhook_id, url, events_json, secret, enabled, created_at, description)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (webhook_id, url, events_json, secret, 1, created_at, description),
+            )
+
+    def list_webhooks(self, *, enabled_only: bool = False) -> list[dict[str, Any]]:
+        sql = (
+            "SELECT webhook_id, url, events_json, secret, enabled, created_at, description "
+            "FROM webhooks"
+        )
+        params: tuple[Any, ...] = ()
+        if enabled_only:
+            sql += " WHERE enabled = ?"
+            params = (1,)
+        sql += " ORDER BY created_at DESC"
+        with self.connect() as conn:
+            rows = conn.execute(sql, params).fetchall()
+        out: list[dict[str, Any]] = []
+        for r in rows:
+            try:
+                events = json.loads(r["events_json"]) if r["events_json"] else []
+            except (TypeError, ValueError):
+                events = []
+            out.append(
+                {
+                    "webhook_id": str(r["webhook_id"]),
+                    "url": str(r["url"]),
+                    "events": list(events) if isinstance(events, list) else [],
+                    "secret": str(r["secret"]),
+                    "enabled": bool(int(r["enabled"])),
+                    "created_at": str(r["created_at"]),
+                    "description": (None if r["description"] is None else str(r["description"])),
+                }
+            )
+        return out
+
+    def get_webhook(self, webhook_id: str) -> dict[str, Any] | None:
+        with self.connect() as conn:
+            row = conn.execute(
+                """
+                SELECT webhook_id, url, events_json, secret, enabled, created_at, description
+                FROM webhooks WHERE webhook_id = ?
+                """,
+                (webhook_id,),
+            ).fetchone()
+        if not row:
+            return None
+        try:
+            events = json.loads(row["events_json"]) if row["events_json"] else []
+        except (TypeError, ValueError):
+            events = []
+        return {
+            "webhook_id": str(row["webhook_id"]),
+            "url": str(row["url"]),
+            "events": list(events) if isinstance(events, list) else [],
+            "secret": str(row["secret"]),
+            "enabled": bool(int(row["enabled"])),
+            "created_at": str(row["created_at"]),
+            "description": (None if row["description"] is None else str(row["description"])),
+        }
+
+    def delete_webhook(self, webhook_id: str) -> bool:
+        with self.connect() as conn:
+            existing = conn.execute(
+                "SELECT 1 FROM webhooks WHERE webhook_id = ?",
+                (webhook_id,),
+            ).fetchone()
+            if not existing:
+                return False
+            conn.execute("DELETE FROM webhooks WHERE webhook_id = ?", (webhook_id,))
+        return True

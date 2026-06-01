@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -568,6 +569,22 @@ def _evaluate_promotion_or_rollback(
 
     if not policy_result.passed:
         storage.insert_promotion_record(record)
+        if action == "promote":
+            _dispatch_webhook_safe(
+                storage,
+                "promote.blocked",
+                {
+                    "action_id": action_id,
+                    "release_id": release_id,
+                    "agent_id": agent_id,
+                    "environment": environment,
+                    "window": window,
+                    "actor": actor,
+                    "reason": reason,
+                    "baseline_release_id": current_release_id,
+                    "policy_reasons": list(policy_result.reasons),
+                },
+            )
         return ActionOutcome(
             action_id=action_id,
             action=action,
@@ -580,6 +597,20 @@ def _evaluate_promotion_or_rollback(
         )
 
     storage.commit_promotion(record, new_promoted_release_id=release_id)
+    _dispatch_webhook_safe(
+        storage,
+        "promote.succeeded" if action == "promote" else "rollback.succeeded",
+        {
+            "action_id": action_id,
+            "release_id": release_id,
+            "agent_id": agent_id,
+            "environment": environment,
+            "window": window,
+            "actor": actor,
+            "reason": reason,
+            "baseline_release_id": current_release_id,
+        },
+    )
     return ActionOutcome(
         action_id=action_id,
         action=action,
@@ -590,6 +621,19 @@ def _evaluate_promotion_or_rollback(
         promoted_pointer_changed=True,
         policy=policy_result,
     )
+
+
+def _dispatch_webhook_safe(storage: Storage, event: str, data: dict) -> None:
+    """Best-effort fan-out. Webhook errors must never break the promote / rollback path."""
+    try:
+        # Local import keeps ``operations`` free of an httpx import at module load.
+        from flightdeck.webhooks import dispatch_event
+
+        dispatch_event(storage, event, data)
+    except Exception:
+        logging.getLogger(__name__).warning(
+            "Webhook dispatch failed for event=%s", event, exc_info=True
+        )
 
 
 def promote_release(

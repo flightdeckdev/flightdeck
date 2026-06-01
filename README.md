@@ -1,22 +1,40 @@
 # FlightDeck
 
+[![PyPI version](https://img.shields.io/pypi/v/flightdeck-ai)](https://pypi.org/project/flightdeck-ai/) [![Python versions](https://img.shields.io/pypi/pyversions/flightdeck-ai)](https://pypi.org/project/flightdeck-ai/) [![CI status](https://github.com/flightdeckdev/flightdeck/actions/workflows/ci.yml/badge.svg)](https://github.com/flightdeckdev/flightdeck/actions/workflows/ci.yml) [![Docs](https://img.shields.io/badge/docs-flightdeckdev.github.io-blue)](https://flightdeckdev.github.io/flightdeck/) [![License](https://img.shields.io/github/license/flightdeckdev/flightdeck)](LICENSE) [![GitHub stars](https://img.shields.io/github/stars/flightdeckdev/flightdeck?style=social)](https://github.com/flightdeckdev/flightdeck) [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
 **Ship AI agents safely with release diffs, runtime evidence, and policy gates.**
 
 Local-first **CLI + SQLite**. Optional **`flightdeck serve`** exposes a small web UI and **`/v1`** JSON API—data stays on your machine unless you change that.
 
-**Core loop:** register releases → ingest run evidence → diff baseline vs candidate → promote or rollback under policy (optional human approval).
+> **Try it now — runs in 30 seconds, no account needed:**
+> ```bash
+> pip install flightdeck-ai
+> flightdeck demo  # end-to-end release diff in a temp workspace
+> ```
+
+**How it works:** you tag an agent build as a release, collect run evidence (cost, latency, errors), diff a baseline against a candidate, and then promote or rollback only when a policy gate says the numbers are acceptable — with an optional human approval step before the ledger moves.
 
 ## Product snapshot
 
 ![FlightDeck — AI release governance (illustrative)](docs/images/flightdeck-overview.png)
 
-*Illustrative composite, not a screenshot of the shipped UI.* Policy is threshold-based on rollups from ingested runs—not built-in PII scanners. [Theming notes](docs/web-ui.md#theming-and-brand-alignment)
+*Marketing composite. See the [demo video](#demo) and [actual screenshots](artifacts/flightdeck-demo-share/) for the shipped UI.* Policy is threshold-based on rollups from ingested runs—not built-in PII scanners. [Theming notes](docs/web-ui.md#theming-and-brand-alignment)
 
 | | FlightDeck | Tracing SaaS | Git/CI alone |
 |--|--------------|----------------|--------------|
 | Focus | Release + promote governance | Sessions / traces / evals | Source + pipelines |
 | Versioned release artifact | Yes | No | DIY |
 | Cost/latency diff + policy gate | Yes | Different lens | DIY |
+
+## Demo
+
+<a href="docs/screenshots/flightdeck-demo.webm">
+  <img src="docs/screenshots/overview.png"
+       alt="FlightDeck UI demo — click to play"
+       width="800" />
+</a>
+
+*Click the image to play the demo video · [Download WebM](docs/screenshots/flightdeck-demo.webm)*
 
 ## In ~20 seconds
 
@@ -38,7 +56,7 @@ Small prompt or model changes can move **cost**, **latency**, and **error rate**
 
 ## Example outcome
 
-You ship a candidate whose **prompt or model** shifts slightly; under your tariffs the diff shows **cost per run** rising while policy caps spend. **`flightdeck release promote`** (or the HTTP promote path) **stays blocked** until you change the model, adjust policy with intent, or gather more evidence—not because CI is slow, but because the **ledger** says no. The **~31%** style story in [examples/quickstart/](examples/quickstart/) uses **two custom pricing YAMLs**; **`flightdeck init`** alone seeds a **bundled** snapshot so your first cost-aware diff is not empty.
+You ship a candidate whose **prompt or model** shifts slightly; under your tariffs the diff shows **cost per run** rising while policy caps spend. **`flightdeck release promote`** (or the HTTP promote path) **stays blocked** until you change the model, adjust policy with intent, or gather more evidence — not because CI is slow, but because the **ledger** says no. The [examples/quickstart/](examples/quickstart/) scenario uses **two custom pricing YAMLs** (baseline and candidate tariffs) to show a concrete cost delta across releases; **`flightdeck init`** alone seeds a **bundled** snapshot so your first cost-aware diff is not empty.
 
 ## How it fits your stack
 
@@ -67,11 +85,42 @@ flowchart LR
 
 ---
 
+## Fast start
+
+After **`pip install flightdeck-ai`** (or **`uv tool install flightdeck-ai`**):
+
+```bash
+flightdeck demo
+```
+
+**`flightdeck demo`** runs the full quickstart ledger flow in a disposable temp workspace—no **`sed`**, no fixture paths—using **`examples/quickstart`** from your checkout or packaged **`flightdeck/_bundled_quickstart`** from PyPI.
+
+**Web UI** (needs a workspace in the current directory):
+
+```bash
+flightdeck init
+flightdeck serve
+```
+
+Open **http://127.0.0.1:8765/**. Same end-to-end checks CI uses: **`flightdeck-quickstart-verify`** (contributors: **`uv run flightdeck-quickstart-verify`**).
+
+---
+
 ## Install and smoke-test
+
+**User install (recommended):**
+
+```bash
+pip install flightdeck-ai
+flightdeck demo
+```
+
+**Contributor / development install (uv):**
 
 ```bash
 uv sync --extra dev
 uv run flightdeck --help
+uv run flightdeck demo
 uv run flightdeck-quickstart-verify
 ```
 
@@ -115,6 +164,8 @@ Bundled pricing from `init` is a **convenience snapshot**—`flightdeck pricing 
 
 ## Documentation
 
+**Published site (GitHub Pages):** [flightdeckdev.github.io/flightdeck](https://flightdeckdev.github.io/flightdeck/) — built from `docs/` on each push to `main` (`.github/workflows/pages.yml`). Enable **Pages → GitHub Actions** in the repository settings if the site is not live yet.
+
 | Area | Links |
 |------|--------|
 | CLI | [docs/cli.md](docs/cli.md) |
@@ -132,17 +183,54 @@ Bundled pricing from `init` is a **convenience snapshot**—`flightdeck pricing 
 
 ---
 
+## Webhooks
+
+FlightDeck ships **HMAC-signed outbound webhooks** for `promote.succeeded`,
+`rollback.succeeded`, and `promote.blocked`. Point them at any HTTPS endpoint
+(Slack incoming webhook, Discord, PagerDuty Events v2, Linear inbound webhook, your
+own relay) — FlightDeck owns the signing, not the integrations.
+
+```bash
+flightdeck webhook add \
+  --url https://hooks.slack.com/services/T000/B000/XXXX \
+  --event promote.succeeded --event rollback.succeeded \
+  --description "prod release alerts"
+# Save the printed secret — it will not be shown again.
+
+flightdeck webhook list
+flightdeck webhook test wh_<id>
+```
+
+Receivers verify each delivery by recomputing `HMAC-SHA256(secret, raw_body)` and
+comparing against `X-FlightDeck-Signature: sha256=<hex>` (GitHub convention). Full
+details: **[docs/cli.md](docs/cli.md)** · **[docs/http-api.md](docs/http-api.md)**.
+
+---
+
 ## Contributing (quick CI match)
 
 ```bash
 uv sync --frozen --extra dev
 uv run python -m ruff check src tests
 uv run python -m pytest
+uv run flightdeck demo
 uv run flightdeck-quickstart-verify
 uv run flightdeck --help
 ```
 
 Full gates (web static, schemas, e2e): [DEVELOPMENT.md](DEVELOPMENT.md)
+
+---
+
+## Screenshots
+
+| Overview — releases + promotion ledger | Diff — policy PASS verdict |
+|---|---|
+| ![Overview](docs/screenshots/overview.png) | ![Diff result](docs/screenshots/diff-result.png) |
+
+| Runs — forensics with datalist search | Dark mode |
+|---|---|
+| ![Runs](docs/screenshots/runs.png) | ![Dark mode](docs/screenshots/dark-mode.png) |
 
 ---
 

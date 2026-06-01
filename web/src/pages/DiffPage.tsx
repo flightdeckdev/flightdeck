@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { fetchJson } from "../api";
 import { JsonPanel } from "../components/JsonPanel";
@@ -7,6 +7,7 @@ import { DiffDecisionCard } from "../components/diff/DiffDecisionCard";
 import { DiffPolicyPanel } from "../components/diff/DiffPolicyPanel";
 import { DiffReleaseTwin } from "../components/diff/DiffReleaseTwin";
 import { DiffVerdictStack } from "../components/diff/DiffVerdictStack";
+import { Button } from "../components/Button";
 import {
   type DiffJson,
   isRecord,
@@ -15,17 +16,20 @@ import {
 } from "../components/diff/diffPayload";
 import { UI_READ_ONLY } from "../uiConfig";
 import { pickTrimmedSearch, searchParamsFromRecord } from "../urlSearch";
+import { useDocumentTitle } from "../useDocumentTitle";
 
 export function DiffPage() {
+  useDocumentTitle("Run diff");
   const [searchParams, setSearchParams] = useSearchParams();
   const [diffResultSeq, setDiffResultSeq] = useState(0);
   const [diffBaseline, setDiffBaseline] = useState("");
   const [diffCandidate, setDiffCandidate] = useState("");
   const [diffWindow, setDiffWindow] = useState("7d");
-  const [diffEnv, setDiffEnv] = useState("local");
+  const [diffEnv, setDiffEnv] = useState("");
   const [diffOut, setDiffOut] = useState<DiffJson | null>(null);
   const [diffErr, setDiffErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setDiffBaseline(pickTrimmedSearch(searchParams, "baseline"));
@@ -33,7 +37,7 @@ export function DiffPage() {
     const w = pickTrimmedSearch(searchParams, "window");
     setDiffWindow(w !== "" ? w : "7d");
     const e = pickTrimmedSearch(searchParams, "environment");
-    setDiffEnv(e !== "" ? e : "local");
+    setDiffEnv(e);
   }, [searchParams]);
 
   const runDiff = async () => {
@@ -64,6 +68,9 @@ export function DiffPage() {
       });
       setDiffOut(data);
       setDiffResultSeq((n) => n + 1);
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
     } catch (e) {
       setDiffErr(String(e));
     } finally {
@@ -134,18 +141,38 @@ export function DiffPage() {
           </label>
           <label className="fd-field">
             <span className="fd-field__label">Environment</span>
-            <input className="fd-input" value={diffEnv} onChange={(e) => setDiffEnv(e.target.value)} />
+            <input
+              className="fd-input"
+              value={diffEnv}
+              onChange={(e) => setDiffEnv(e.target.value)}
+              placeholder="e.g. staging"
+            />
           </label>
+          <div className="fd-field fd-field--full">
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              onClick={() => {
+                const b = diffBaseline;
+                setDiffBaseline(diffCandidate);
+                setDiffCandidate(b);
+              }}
+            >
+              ⇅ Swap baseline / candidate
+            </Button>
+          </div>
         </div>
         <div className="fd-actions">
-          <button type="button" className="fd-btn fd-btn--primary" disabled={busy} onClick={() => void runDiff()}>
-            {busy ? "Computing…" : "Compute diff"}
-          </button>
-          {busy ? (
-            <span className="fd-sr-only" aria-live="polite">
-              Computing diff
-            </span>
-          ) : null}
+          <Button
+            variant="primary"
+            loading={busy}
+            loadingLabel="Computing…"
+            disabled={busy || diffBaseline.trim() === "" || diffCandidate.trim() === ""}
+            onClick={() => void runDiff()}
+          >
+            Compute diff
+          </Button>
         </div>
       </section>
 
@@ -163,7 +190,7 @@ export function DiffPage() {
       ) : null}
 
       {diffOut ? (
-        <>
+        <div ref={resultRef}>
           <DiffReleaseTwin
             diffBaseline={diffBaseline}
             diffCandidate={diffCandidate}
@@ -181,7 +208,7 @@ export function DiffPage() {
           <DiffChangeImpact samples={samples} metrics={metrics} pricing={pricing} pricingResetKey={diffResultSeq} />
 
           <JsonPanel title="Raw diff JSON" value={JSON.stringify(diffOut, null, 2)} defaultOpen={false} />
-        </>
+        </div>
       ) : null}
     </>
   );

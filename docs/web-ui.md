@@ -20,7 +20,7 @@ The **[README product overview](../README.md#product-overview)** image is a **ma
 
 | Art direction | Application in this repo |
 |---------------|---------------------------|
-| Dark navy / near-black shell | **`html[data-theme="dark"]`** in `web/src/index.css` mirrors semantic tokens; **Appearance** control in the sidebar defaults to **Light** (stored under **`localStorage`** key **`flightdeck-theme`**). |
+| Dark navy / near-black shell | **`html[data-theme="dark"]`** in `web/src/index.css` mirrors semantic tokens; **Theme** (sun / moon / monitor icons) in the sidebar **Settings** popover defaults to **Light** (stored under **`localStorage`** key **`flightdeck-theme`**). |
 | Cyan → purple gradient | CSS variables (for example `--fd-accent-gradient`) for **active nav**, **primary buttons**, and **focus-visible** accents—used sparingly so trust/safety UI stays calm. |
 | High-contrast titles | Tune `--fd-type-*` and weights under dark mode; avoid shrinking body text for density. |
 | “Neon” feel | Reserve for **interactive** states, not large background fills. |
@@ -30,7 +30,7 @@ The **[README product overview](../README.md#product-overview)** image is a **ma
 
 1. **Token foundation** — Extend `:root` with any missing semantics (`--fd-surface-elevated`, gradient stops, optional `--fd-bg-subtle`). Replace scattered literals in `web/src/index.css` (for example warning callout backgrounds) with variables so dark mode does not require hunting hex values.
 2. **`[data-theme="dark"]` block** — Mirror every semantic token used by `.fd-shell`, sidebar, cards, tables, `Badge`, drawers, and `JsonPanel`; set `color-scheme: dark` on `html` when active. Validate **WCAG AA** for body text and links.
-3. **Preference UI** — **`/#/settings`** (and room for more prefs later): **Light** / **Dark** / **System**; listen to `prefers-color-scheme` when System is selected. Persist `localStorage` key **`flightdeck-theme`** (`light` \| `dark` \| `system`).
+3. **Preference UI** — **Sidebar Settings** popover (and room for more prefs later): **Theme** as sun / moon / monitor icon radios for **Light** / **Dark** / **System**; listen to `prefers-color-scheme` when System is selected. Persist `localStorage` key **`flightdeck-theme`** (`light` \| `dark` \| `system`). Legacy **`/#/settings`** redirects to **`#/`**.
 4. **Brand accents** — Apply the gradient token to **active** `.fd-nav__link--active` (left rail) and primary submit-style buttons; keep destructive actions on existing red semantics.
 5. **Light theme polish** — Even before dark ships: align spacing rhythm and card shadows with the same tokens so both themes stay maintainable.
 6. **Verification** — From `web/`: **`npm ci`**, **`npm run build`**, commit **`src/flightdeck/server/static/`**; **`npm run test:e2e`** (includes **`e2e/theme.spec.ts`**: default light, dark persistence, system / `prefers-color-scheme`, overview smoke in dark). Manually smoke **Diff** and **Actions** in both themes (policy panels, JSON drawer, rollback affordances).
@@ -54,11 +54,11 @@ The app uses **HashRouter** (`react-router-dom`) so all navigation stays within 
 
 | Hash path | Component | HTTP calls | Notes |
 |-----------|-----------|-----------|-------|
-| `#/` | `OverviewPage` | `GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions`, `GET /v1/metrics` (parallel where applicable) | Ledger metrics (read-only); short per-counter hints; skeleton on first load; **auto-refresh** every 30s when the tab is visible + on timeline **`generation`** bump; links to Diff/Runs |
-| `#/diff` | `DiffPage` | `POST /v1/diff` | Sections: policy gate (incl. `evaluated_at`), evidence window, pricing/catalog/hints (incl. provider/version skew callout when sides differ), per-1k prices when present, cost/quality rollups; raw JSON panel |
+| `#/` | `OverviewPage` | `GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions`, `GET /v1/metrics` | `ReleaseLifecycleStrip` + optional `?release=` hero; promoted table first; releases table with filter row and copy/diff shortcuts; collapsible ledger metrics; **auto-refresh** every 30 s while tab is visible + on timeline **`generation`** bump |
+| `#/diff` | `DiffPage` | `POST /v1/diff` | URL params prefill form (`baseline`, `candidate`, `window`, `environment`); result rendered through `DiffVerdictStack` → `DiffReleaseTwin` → `DiffPolicyPanel` → `DiffChangeImpact` (with collapsible `DiffPricingExpand`) → `DiffDecisionCard` + **Continue to promote** link → raw JSON panel |
 | `#/runs` | `RunsPage` | `GET /v1/releases` (for datalist), `GET /v1/runs`, `GET /v1/runs/export` | Forensics: filters, table (trace/status, trace band rows or **Group by trace_id**), **View** drawer (focus trap, session/span ids), typed **run-query error** card with **Retry**, empty/offset/truncation hints, NDJSON download |
-| `#/settings` | `SettingsPage` | *(none)* | **Color theme** (Light / Dark / System) via `ThemeToggle`; more preferences later. |
-| `#/actions` | `ActionsPage` | `GET /v1/workspace`, `GET /v1/promotion-requests` (when `promotion_requires_approval`), `POST /v1/promote` **or** `POST /v1/promote/request` + `POST /v1/promote/confirm`, `POST /v1/rollback` | Workspace skeleton then strip; approval path: numbered steps, pending **Refresh list** / **Use for confirm**; **Rollback** danger-styled; see **ActionsPage** below |
+| `#/settings` | *(redirect)* | — | Redirects to **`#/`**; **Theme** (Light / Dark / System) lives in the **sidebar Settings** dialog (`SidebarSettingsMenu` + icon `ThemeToggle`). |
+| `#/actions` | `ActionsPage` | `GET /v1/workspace`, `GET /v1/promotion-requests` (when `promotion_requires_approval`), `POST /v1/promote` **or** `POST /v1/promote/request` + `POST /v1/promote/confirm`, `POST /v1/rollback` | URL params prefill form (`release_id`, `environment`, `window`); workspace skeleton then strip; approval path: numbered steps, pending **Refresh list** / **Use for confirm**; **Rollback** danger-styled; see **ActionsPage** below |
 | `#/*` (any other) | — | Redirects to `#/` | |
 
 `App.tsx` declares the route tree. `AppShell` is the layout wrapper rendered for all routes.
@@ -81,17 +81,29 @@ ThemePreferenceProvider (`App.tsx`)
                 ├── aside.fd-sidebar (brand, collapse chevron, primary nav, footer nav → Settings)
                 └── div.fd-shell__content
                     ├── SecurityStatusBar
-                    └── main#main-content → OverviewPage | DiffPage | RunsPage | ActionsPage | SettingsPage
+                    └── main#main-content
+                        ├── OverviewPage
+                        │   ├── ReleaseLifecycleStrip
+                        │   └── focused release hero (when ?release= is set)
+                        ├── DiffPage
+                        │   ├── DiffVerdictStack
+                        │   ├── DiffReleaseTwin
+                        │   ├── DiffPolicyPanel
+                        │   ├── DiffChangeImpact → DiffPricingExpand
+                        │   ├── DiffDecisionCard
+                        │   └── JsonPanel
+                        ├── RunsPage
+                        └── ActionsPage
 ```
 
 ---
 
 ## `AppShell` (`web/src/components/AppShell.tsx`)
 
-Renders a fixed-width **left sidebar** (`aside.fd-sidebar`) with brand (gradient **FlightDeck** wordmark, mark in a **raised tile**), a **collapse** control (SVG chevrons, `localStorage` **`flightdeck-sidebar-collapsed`**), a **primary** nav (inline SVG icons + labels; icon-only when collapsed), and a **footer** nav pinned to the bottom of the rail with **Settings** → `#/settings`. Then a **`fd-shell__content`** column with `SecurityStatusBar` and
+Renders a fixed-width **left sidebar** (`aside.fd-sidebar`) with brand (gradient **FlightDeck** wordmark, mark in a **raised tile**), a **collapse** control (SVG chevrons, `localStorage` **`flightdeck-sidebar-collapsed`**), a **primary** nav (inline SVG icons + labels; icon-only when collapsed), and a **footer** **Settings** control that opens a compact **Settings** popover (portal, **Theme** row with sun / moon / monitor icon radios). Legacy `#/settings` redirects to `#/`. Then a **`fd-shell__content`** column with `SecurityStatusBar` and
 `<main>` wrapping an `<Outlet>` for the active page. On narrow viewports the sidebar stacks
 above the content with a horizontal nav row; a **collapsed** rail is expanded back to full labels in that breakpoint. Wraps the subtree in `TimelineRefreshProvider`
-so any descendant can access the refresh context. `ThemePreferenceProvider` (from `App.tsx`) wraps the router so `ThemeToggle` on **Settings** can read and update **`flightdeck-theme`**; `main.tsx` applies the effective theme before the first paint to avoid a flash of the wrong scheme.
+so any descendant can access the refresh context. `ThemePreferenceProvider` (from `App.tsx`) wraps the router so `ThemeToggle` in the popover can read and update **`flightdeck-theme`**; `main.tsx` applies the effective theme before the first paint to avoid a flash of the wrong scheme.
 
 A **Skip to main content** link (class `fd-skip-link`) appears first in the shell; it uses
 `preventDefault` + `focus()` on `#main-content` so **HashRouter** hash URLs (`#/…`) are not
@@ -172,20 +184,50 @@ fail. This is a configuration hint only — the server enforces the actual gate.
 
 ## `OverviewPage` (`web/src/pages/OverviewPage.tsx`)
 
-Read-only dashboard. Renders a **Ledger metrics** card from `fetchMetrics()` plus three tables from `loadTimeline()` output:
+Read-only dashboard. Layout:
 
-| Block | Source | Content |
-|-------|--------|---------|
-| Ledger metrics | `GET /v1/metrics` | Releases, pricing tables, run events, promoted pointers, and actions totals (plus `actions_by_action` breakdown), `schema_version`, `generated_at` |
-| Releases | `GET /v1/releases` | Release ID, Agent, Version, Environment, Checksum, Created |
-| Promoted | `GET /v1/promoted` | Agent, Environment, Active release |
-| Recent actions | `GET /v1/actions` | When, Action, Policy (PASS/FAIL badge), Release, Environment, Reason |
+1. **`ReleaseLifecycleStrip`** — horizontal workflow guide showing the four stages
+   (Register → Ingest → Diff & policy → Promote & rollback) as linked steps. Each step
+   links to the relevant page; the Promote step is static (no link) in read-only builds.
+   Includes a note that deep links prefill forms but do not auto-submit.
+
+2. **Focused release hero** — when `?release=<release_id>` is present in the URL, a hero
+   section appears above the tables. It shows agent, version, environment, abbreviated
+   release ID (with **Copy ID** button), checksum, and the current promoted baseline for
+   that agent/environment pair (or a note that no pointer exists). Action buttons link to
+   Diff, Runs, and Promote with the release, environment, and a default `7d` window
+   pre-filled. A **Clear focus** button removes the `?release=` param. If the ID does not
+   match any registered release, a warning is shown instead.
+
+3. **Promoted releases table** — lists current `(agent_id, environment)` → `release_id`
+   pointers. Each row has a **View** link to `#/?release=<id>` to focus that release.
+
+4. **Releases table** — lists all registered releases with Agent, Version, Environment, ID,
+   Checksum, and Created columns. A **Status** badge shows **Live** (the release matches the
+   current promoted pointer for that agent/environment) or **Registered**. A filter row
+   (agent substring, environment substring, and Live / Not live / All dropdown) reduces the
+   table without re-fetching. **Copy** buttons (via `CopyTextButton`) copy the release ID.
+   Each row has a **Diff** shortcut (links to `#/diff` with baseline = promoted pointer,
+   candidate = this release, environment and `7d` window pre-filled) and a **Focus** link.
+
+5. **Recent actions table** — promote/rollback audit rows: When, Action, Policy badge,
+   Release, Environment, Reason.
+
+6. **Ledger metrics** — collapsible panel (collapsed by default, toggle via button). Shows
+   raw counters from `GET /v1/metrics`: releases, pricing tables, run events, promoted
+   pointers, actions totals + breakdown, `schema_version`, `generated_at`.
 
 Long IDs are abbreviated with `shortId(id, keepStart, keepEnd)` and shown in full on hover
 via the HTML `title` attribute.
 
+**URL params for OverviewPage:**
+
+| Param | Effect |
+|-------|--------|
+| `?release=<id>` | Activates the focused release hero. The releases table filter and tables remain visible below. |
+
 **Refresh:** while the document tab is visible, the page **auto-polls** metrics and the
-timeline on an interval and uses **silent** fetches after the first load. The `generation`
+timeline every 30 s and uses **silent** fetches after the first load. The `generation`
 counter from `TimelineRefreshContext` triggers an immediate refresh after mutations from
 `ActionsPage`.
 
@@ -193,14 +235,18 @@ counter from `TimelineRefreshContext` triggers an immediate refresh after mutati
 
 ## `DiffPage` (`web/src/pages/DiffPage.tsx`)
 
-Form-based interface for `POST /v1/diff`. Fields mirror the request body:
+Form-based interface for `POST /v1/diff`. The page reads initial field values from URL
+search params and writes them back on each submission, enabling **deep links** that
+pre-fill the form:
 
-| Field | Default | Maps to |
-|-------|---------|---------|
-| Baseline release ID | (empty) | `baseline_release_id` |
-| Candidate release ID | (empty) | `candidate_release_id` |
-| Window | `7d` | `window` |
-| Environment | `local` | `environment` (sent as `null` when empty) |
+| URL param | Form field | Default |
+|-----------|-----------|---------|
+| `baseline` | Baseline release ID | (empty) |
+| `candidate` | Candidate release ID | (empty) |
+| `window` | Time window | `7d` |
+| `environment` | Environment | `local` |
+
+Example: `#/diff?baseline=rel_abc&candidate=rel_xyz&window=7d&environment=production`
 
 `tenant_id` and `task_id` are **not exposed** in the UI form. To run a diff narrowed to a
 specific tenant or task, use the CLI (`flightdeck release diff --tenant <id> --task <id>`)
@@ -209,31 +255,48 @@ or call `POST /v1/diff` directly with the `tenant_id` and `task_id` fields. See
 [operations-and-policy.md § compute_diff vs. promote_release filter scope](operations-and-policy.md#compute_diff-vs-promote_release--rollback_release-filter-scope)
 for details on what those filters affect.
 
-On submit, the raw diff response is parsed and rendered as:
+On submit, the response is parsed via helpers in `diffPayload.tsx` and rendered through a
+sequence of dedicated components:
 
-- **Summary card:** policy badge (PASS / FAIL), failure reasons list, sample counts and
-  confidence label (including `confidence_reason` when present).
-- **Pricing table warnings:** when `pricing.warnings` is a non-empty string array, a
-  `fd-alert--warn` list is shown above the pricing/model-change banner (diagnostic only).
-- **Catalog / hints:** when `pricing.catalog` or `pricing.hints` is present, the UI surfaces
-  catalog enabled state, lines, and hint strings (see [pricing-catalog.md](pricing-catalog.md)).
-- **Pricing change warning:** when the diff response includes a `pricing` block with
-  `pricing_or_model_changed: true`, a `fd-alert--warn` banner is shown in the summary
-  card. It names the baseline and candidate provider/version/model so the user knows the
-  cost delta includes pricing assumption changes, not just usage changes. When the response
-  also includes a `pricing.prices` block with all four per-1k token rates present, the
-  banner additionally shows a **Per-1k token prices** line (baseline → candidate, input and
-  output separately) so the user can separate tariff moves from token volume changes in the
-  cost delta. Rates are rendered to six decimal places via `toFixed(6)`.
-- **Metric cards:** cost/run (USD), latency avg (ms), error rate — each showing baseline,
-  candidate, and delta.
-- **Raw diff JSON** panel (collapsed by default via `JsonPanel`).
+1. **`DiffVerdictStack`** — full-width strip at the top. Shows a **Blocked** banner with the
+   first policy reason when policy fails, then a **verdict strip** (green PASS / red FAIL
+   with a short narrative). If the diff response contains no `policy` block, a warning is
+   shown instead.
+2. **`DiffReleaseTwin`** — side-by-side baseline vs candidate IDs, environment, window, and
+   resolved `provider/version model` lines from each side's pricing block.
+3. **`DiffPolicyPanel`** — card showing the policy PASS/FAIL badge, `evaluated_at`
+   timestamp, and full reasons list.
+4. **`DiffChangeImpact`** — card with three sub-sections:
+   - **Sample coverage** — baseline/candidate run counts and confidence label (with `confidence_reason` when present).
+   - **Cost and quality rollups** — `DiffMetric` cards for cost/run (USD), latency avg (ms), error rate, each with baseline → candidate and delta.
+   - **`DiffPricingExpand`** — collapsible pricing & model section (collapsed on each new diff result). Shows baseline vs candidate `provider/version model` inline. Expands to reveal: provider/version skew warning, `pricing.warnings` list, `pricing.hints` list, pricing catalog detail (when enabled), and per-1k token prices (input/output, baseline → candidate) when all four rates are present and pricing changed.
+5. **`DiffDecisionCard`** — summarizes the gate outcome in plain English and, when policy
+   passes and the candidate release ID is known, shows a **Continue to promote** link to
+   `#/actions` with `release_id`, `environment`, and `window` pre-filled.
+6. **Raw diff JSON** panel (`JsonPanel`, collapsed by default).
 
 The **Compute diff** button is disabled while the request is in flight (`busy` state).
 Errors from the API are shown as an inline `fd-alert--error` element.
 
 Note: `POST /v1/diff` is a **read-only computation** and does not require a mutation
 token. See [http-api.md](http-api.md) for the full response schema.
+
+### Diff component subtree
+
+```
+DiffPage
+├── DiffVerdictStack          (full-width verdict/block strip)
+├── DiffReleaseTwin           (baseline vs candidate identity, env, pricing line)
+├── DiffPolicyPanel           (policy badge + reasons)
+├── DiffChangeImpact          (samples, metric rollups, expandable pricing)
+│   └── DiffPricingExpand     (collapsed; shows per-1k prices, warnings, catalog)
+├── DiffDecisionCard          (verdict copy + "Continue to promote" link)
+└── JsonPanel                 (raw diff JSON, collapsed by default)
+```
+
+Shared data extraction: `web/src/components/diff/diffPayload.tsx` exports typed helpers
+(`pickPolicy`, `pickPricing`, `pricingLine`, `DiffMetric`) that isolate JSON traversal from
+rendering.
 
 ---
 
@@ -273,6 +336,27 @@ After a successful **promote** or **rollback** (or **confirm**):
 **Auth:** `VITE_FLIGHTDECK_LOCAL_API_TOKEN` is sent on every `fetchJson` call, including **`POST /v1/promote/request`** and **`POST /v1/promote/confirm`**. It must **match** `FLIGHTDECK_LOCAL_API_TOKEN` on the server when the server enforces Bearer (see [http-api.md § Authentication](http-api.md#authentication-and-access-control)). FlightDeck does **not** mint this value: the operator chooses a shared secret for **HTTP API** access. It is baked in at **build time** for the committed static bundle; local Bearer testing normally uses **`web/.env.local`** + **`npm run dev`**. It is **not** OAuth or end-user SSO — see [SECURITY.md](../SECURITY.md) (**Local HTTP API**).
 
 **HTTP errors:** `fetchJson` formats FastAPI **`detail`** strings, validation arrays, and `{ message: … }` objects into a single `Error` message for the alert line.
+
+---
+
+## `urlSearch.ts` (`web/src/urlSearch.ts`)
+
+Helpers for hash-router deep-linking. Both `DiffPage`, `OverviewPage`, `RunsPage`, and
+`ActionsPage` use these to read from and write to `URLSearchParams`:
+
+| Export | Description |
+|--------|-------------|
+| `pickTrimmedSearch(searchParams, key)` | Returns `searchParams.get(key)?.trim() ?? ""`. Never returns `null`. |
+| `searchParamsFromRecord(rec)` | Builds a `?key=value` string from a `Record<string, string>`, omitting entries with empty values. Returns `""` when all values are empty. |
+
+**Deep-link examples:**
+
+| Page | URL | Effect |
+|------|-----|--------|
+| Overview | `#/?release=rel_abc123` | Activates focused release hero |
+| Diff | `#/diff?baseline=rel_a&candidate=rel_b&window=7d&environment=production` | Pre-fills the diff form |
+| Runs | `#/runs?release_id=rel_abc&window=24h&environment=staging` | Pre-fills release and filters |
+| Actions | `#/actions?release_id=rel_abc&environment=production&window=7d` | Pre-fills promote/rollback form |
 
 ---
 
@@ -371,6 +455,29 @@ Calls `GET /v1/promotion-requests` with optional query parameters. Used by `Acti
 
 ## Shared components
 
+### `CopyTextButton` (`web/src/components/CopyTextButton.tsx`)
+
+Inline button that copies a string to the clipboard. Uses `navigator.clipboard.writeText`
+with an `execCommand` fallback for headless or insecure contexts (so Playwright E2E tests
+also work). Status cycles through `idle → "Copied" → idle` (2 s) or `idle → "Failed" →
+idle` (2.5 s). Props:
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `label` | string | — | Accessible label prefix (e.g. `"Release ID"`) |
+| `value` | string | — | String to copy |
+| `buttonText` | string | `"Copy"` | Visible button text when idle |
+| `className` | string | `"fd-btn fd-btn--ghost fd-copy-btn"` | CSS class |
+| `testId` | string | — | Optional `data-testid` for E2E |
+
+### `ReleaseLifecycleStrip` (`web/src/components/ReleaseLifecycleStrip.tsx`)
+
+Horizontal `<nav>` rendered at the top of `OverviewPage`. Shows four workflow steps:
+**Register** → **Ingest** → **Diff & policy** → **Promote & rollback**, each linking to
+the relevant page. In read-only builds the **Promote & rollback** step becomes a static
+`<span>` with a "not available in read-only UI" title. The strip includes a short note
+that deep links prefill forms on target pages but do not auto-submit them.
+
 ### `Badge` (`web/src/components/Badge.tsx`)
 
 ```tsx
@@ -452,6 +559,25 @@ All tokens are CSS custom properties on `:root`:
 | `fd-inline` | Inline flex row used for label + badge pairs inside card headers |
 | `fd-samples` | Muted paragraph for sample/confidence metadata in diff and action outcome cards |
 | `fd-reasons` | Small bulleted list of policy failure reasons; used in `DiffPage` and `ActionsPage` outcome cards |
+| `fd-lifecycle-strip` | `ReleaseLifecycleStrip` nav container |
+| `fd-lifecycle-strip__step` | Individual step `<li>`; includes `__arrow`, `__link`, `__label`, `__hint` children |
+| `fd-release-hero` | Focused release hero section on `OverviewPage` (activated by `?release=`) |
+| `fd-release-hero__title` | Agent + version heading inside the hero |
+| `fd-release-hero__meta` | Abbreviated IDs, checksum, and baseline pointer line |
+| `fd-release-hero__actions` | Row of quick-action buttons (Diff, Runs, Promote, Clear focus) |
+| `fd-diff-block-strip` | Full-width error strip for the first policy block reason (above the verdict) |
+| `fd-diff-verdict-strip` | Full-width verdict strip; `--pass` (green) / `--fail` (red) modifiers |
+| `fd-diff-twin` | `DiffReleaseTwin` container; `__grid`, `__col`, `__label`, `__id`, `__detail` children |
+| `fd-policy-panel` | `DiffPolicyPanel` card |
+| `fd-decision-card` | `DiffDecisionCard` card |
+| `fd-diff-stack` | Stack container inside `DiffChangeImpact` |
+| `fd-diff-section` | Sub-section inside `DiffChangeImpact`; `--collapse-wrap` for the expandable pricing row |
+| `fd-diff-section__title` | Section heading inside `fd-diff-stack` |
+| `fd-diff-section__body` | Section body text |
+| `fd-diff-pricing-inline` | Inline row for pricing summary + expand toggle |
+| `fd-copy-btn` | Default class on `CopyTextButton` (ghost button with icon affordance) |
+| `fd-table--hover` | Adds row hover accent to `fd-table` |
+| `fd-table-toolbar` | Filter row above a table inside `fd-card` |
 
 ---
 

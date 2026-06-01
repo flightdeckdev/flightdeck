@@ -33,7 +33,23 @@ export function resolveEffectiveTheme(pref: ThemePreference): "light" | "dark" {
   return pref;
 }
 
+function syncThemeColorMeta(effective: "light" | "dark"): void {
+  const content = effective === "dark" ? "#0c0f14" : "#f3f4f6";
+  const nodes = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
+  if (nodes.length === 0) {
+    const el = document.createElement("meta");
+    el.name = "theme-color";
+    el.content = content;
+    document.head.appendChild(el);
+    return;
+  }
+  for (const el of nodes) {
+    el.content = content;
+  }
+}
+
 export function applyDocumentTheme(effective: "light" | "dark"): void {
   document.documentElement.dataset.theme = effective;
   document.documentElement.style.colorScheme = effective;
+  syncThemeColorMeta(effective);
 }

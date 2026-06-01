@@ -50,6 +50,33 @@ When **`FLIGHTDECK_LOCAL_API_TOKEN`** is set, **read-only `GET /v1/*`** routes (
 
 **`POST /v1/diff`** is intentionally unauthenticated (read-only computation on stored evidence). When `flightdeck serve` binds to `127.0.0.1` (the default), callers are constrained by network topology; if you use **`--host 0.0.0.0`**, treat **`POST /v1/diff`** exposure explicitly.
 
+### Identity passthrough headers — when to trust them
+
+Mutating routes accept two HTTP headers — **`X-FlightDeck-Actor`** and **`X-Forwarded-User`** — and prefer them over the body `actor` field when stamping the audit ledger (precedence and exact semantics: **[docs/http-api.md](docs/http-api.md#identity-passthrough-audit-actor)**). This unlocks SSO-stamped audit rows behind an existing auth layer (oauth2-proxy, Pomerium, Authelia, Cloudflare Access, nginx `auth_request`) **without** FlightDeck owning identity.
+
+**Threat model:** both headers are **trivially forgeable** by any client that can reach the FlightDeck process directly. They are safe to trust **only** when:
+
+1. **All inbound traffic flows through a trusted reverse proxy** (no path that bypasses it — no `--host 0.0.0.0` shortcut, no port-forward, no co-located client).
+2. **That proxy strips any incoming `X-Forwarded-User` and `X-FlightDeck-Actor` headers from client requests** before injecting its own authenticated value. Stripping is the single most important step; without it, a client can spoof the identity by setting the header themselves. Examples:
+   - **nginx:** `proxy_set_header X-Forwarded-User $remote_user;` after upstream auth.
+   - **Caddy:** `header_up X-Forwarded-User {http.auth.user.id}` with the relevant `forward_auth` handler.
+   - **oauth2-proxy:** sets `X-Forwarded-User` after a successful OIDC handshake; ensure the upstream is bound to loopback so direct ingress is impossible.
+3. **The Bearer token (`FLIGHTDECK_LOCAL_API_TOKEN`) is also set** so a leaked / mis-routed request cannot reach mutating routes without it.
+
+Without those three controls, treat the headers as advisory only and rely on the body `actor` plus the Bearer-gate for audit attribution. A future release will add scoped tokens with an embedded identity claim so callers can self-attest without depending on a proxy layer.
+
+### Outbound webhooks — SSRF defence
+
+`POST /v1/webhooks` registers a URL that receives every promote / rollback / policy-blocked payload. The server validates the URL on create and **rejects**:
+
+- schemes other than **`http`** or **`https`** (no `file://`, `gopher://`, `ftp://`, `javascript:`, `data:`)
+- link-local IP literals (covers AWS IMDS `169.254.169.254`, ECS `169.254.170.2`, and IPv6 `fe80::/10`)
+- known cloud-metadata hostnames (`metadata.google.internal`, `metadata`, `instance-data`, `instance-data.ec2.internal`)
+
+Loopback and RFC1918 private addresses are intentionally **allowed** — FlightDeck is local-first, and self-hosted Slack / Discord receivers commonly live on private networks. Use HTTPS in production; HTTP is permitted for local relays and testing.
+
+Webhook payloads carry **promote / rollback metadata** including the actor, reason, environment, and release id. Treat any registered webhook URL as receiving the same audit-grade information the ledger holds.
+
 **SQLite:** one hot writer per workspace file is the safe default; parallel servers on the same path risk **`database is locked`**. The server retries for a bounded time (see **`flightdeck serve --help`** and **`docs/http-api.md`**). Prefer **separate workspace directories** per concurrent process in CI, or **`database_url`** (PostgreSQL) for multi-writer deployments.
 
 For **Compose healthchecks**, **SQLite backup** scheduling, and an **operator checklist** (logs, restarts, one writer per workspace file), see **[examples/deploy/README.md](examples/deploy/README.md)**.

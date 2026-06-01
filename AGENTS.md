@@ -119,3 +119,28 @@ If it does not, it waits.
 
 Public docs explain implemented behavior and near-term roadmap. Internal product strategy, legal
 notes, and fundraising/customer discovery material do not belong in this repo.
+
+## Cursor Cloud specific instructions
+
+### Services
+
+| Service | How to run | Notes |
+|---------|-----------|-------|
+| Python CLI + tests | `uv run python -m pytest`, `uv run flightdeck --help` | All tests use in-process SQLite; no external DB needed |
+| HTTP server | `uv run flightdeck serve` (from a dir with `flightdeck.yaml`) | Serves REST API on `:8765` + committed static web UI |
+| Web UI dev server | `cd web && npm run dev` | Proxies `/v1` to `flightdeck serve` on `127.0.0.1:8765` |
+
+### Running commands
+
+- **Lint:** `uv run python -m ruff check src tests`
+- **Tests:** `uv run python -m pytest --cov=flightdeck --cov-fail-under=80`
+- **Smoke:** `uv run flightdeck-quickstart-verify`
+- **Web build:** `cd web && npm run build` (then `git diff --exit-code src/flightdeck/server/static/` from repo root)
+- **Playwright e2e:** `cd web && FLIGHTDECK_E2E_PYTHON=/workspace/.venv/bin/python npm run test:e2e`
+
+### Non-obvious caveats
+
+- Playwright e2e tests require `FLIGHTDECK_E2E_PYTHON=/workspace/.venv/bin/python` because the `e2e-server.mjs` script defaults to system `python3` which doesn't have `flightdeck` installed. The CI path uses `uv run` (triggered by `GITHUB_ACTIONS` env var).
+- `flightdeck serve` requires a workspace directory containing `flightdeck.yaml` (created by `flightdeck init`). Create a temporary workspace before starting the server.
+- PostgreSQL tests are auto-skipped unless `FLIGHTDECK_TEST_POSTGRES_URL` is set and `psycopg` is installed.
+- The web UI static bundle is **committed** to `src/flightdeck/server/static/`. After any `web/` source change, rebuild and commit the output.

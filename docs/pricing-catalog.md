@@ -24,7 +24,7 @@ your own YAML (and optionally **`--replace`** with **`--reason`**).
 
 Bundled table YAML in the wheel includes **comment links** to each provider’s official list-pricing page so you can spot-check rates between FlightDeck releases.
 
-**Staleness guardrails:** list prices change often. Run **`flightdeck pricing check`** to see whether any **`flightdeck-bundled-*`** table in the ledger is older than **`--max-age-days`** (default **90**); pass **`--fail`** for CI. **`flightdeck release diff`** and **`POST /v1/diff`** add **`pricing.warnings`** when baseline or candidate **`pricing_version`** is a stale bundled snapshot so economics do not look authoritative after the snapshot has aged out.
+**Staleness guardrails:** list prices change often. Run **`flightdeck pricing check`** to see whether any **`flightdeck-bundled-*`** table in the ledger is older than **`--max-age-days`** (default **90**); pass **`--fail`** for CI. **`flightdeck release diff`** and **`POST /v1/diff`** add entries to **`pricing.warnings`** when baseline or candidate **`pricing_version`** is a stale bundled snapshot so economics do not look authoritative after the snapshot has aged out. See [cli.md § flightdeck pricing check](cli.md#flightdeck-pricing-check) for the full option reference.
 
 **Maintainer cadence:** the bundled snapshot is **updated on each minor release** when vendor public list pricing changes materially (see **[ROADMAP.md](../ROADMAP.md)**). Operators in production should still treat **`flightdeck pricing import`** as the source of truth.
 

@@ -50,6 +50,35 @@ class PromotionConfirmRequest(BaseModel):
     actor: str = "http"
 
 
+# Header names checked, in order, before falling back to the request body.
+# - X-FlightDeck-Actor: explicit, intended for callers that want to set the
+#   audit actor without owning the request body shape (e.g. GitHub Actions
+#   wrappers, CI gates with environment-derived identity).
+# - X-Forwarded-User: the de-facto convention used by oauth2-proxy /
+#   Pomerium / Authelia / Cloudflare Access / nginx auth_request and most
+#   reverse proxies in front of a private service. This is the same shape
+#   enterprise SSO setups already emit.
+# The first non-empty header wins. The body actor is the final fallback,
+# and the "http" default in the Pydantic models is a last-resort sentinel
+# so the audit row is never blank.
+_ACTOR_HEADERS = ("X-FlightDeck-Actor", "X-Forwarded-User")
+
+
+def resolve_actor(request: Request, body_actor: str) -> str:
+    """Return the effective audit actor for a mutation request.
+
+    Header precedence allows a reverse-proxy / SSO layer to authoritatively
+    set the identity that lands in the audit ledger without trusting the
+    caller-controlled request body. Caller-side identity (CLI scripts,
+    bots, automation) still flows through the body.
+    """
+    for header in _ACTOR_HEADERS:
+        value = request.headers.get(header)
+        if value and value.strip():
+            return value.strip()
+    return body_actor
+
+
 def _raise_bad_request(exc: OperationError) -> HTTPException:
     return HTTPException(status_code=400, detail=str(exc))
 
@@ -109,7 +138,7 @@ def post_promote(request: Request, req: ActionRequest) -> dict[str, object]:
             environment=req.environment,
             window=req.window,
             reason=req.reason,
-            actor=req.actor,
+            actor=resolve_actor(request, req.actor),
         )
     except OperationError as exc:
         raise _raise_bad_request(exc) from exc
@@ -132,7 +161,7 @@ def post_promote_request(request: Request, req: PromotionRequestCreate) -> dict[
             environment=req.environment,
             window=req.window,
             reason=req.reason,
-            actor=req.actor,
+            actor=resolve_actor(request, req.actor),
         )
     except OperationError as exc:
         msg = str(exc)
@@ -166,7 +195,7 @@ def post_promote_confirm(request: Request, req: PromotionConfirmRequest) -> dict
             storage=storage,
             request_id=req.request_id,
             approval_reason=req.approval_reason,
-            actor=req.actor,
+            actor=resolve_actor(request, req.actor),
         )
     except OperationError as exc:
         raise _raise_bad_request(exc) from exc
@@ -189,7 +218,7 @@ def post_rollback(request: Request, req: ActionRequest) -> dict[str, object]:
             environment=req.environment,
             window=req.window,
             reason=req.reason,
-            actor=req.actor,
+            actor=resolve_actor(request, req.actor),
         )
     except OperationError as exc:
         raise _raise_bad_request(exc) from exc

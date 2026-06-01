@@ -9,6 +9,7 @@ import { JsonPanel } from "../components/JsonPanel";
 import { ReleaseLifecycleStrip } from "../components/ReleaseLifecycleStrip";
 import { UI_READ_ONLY } from "../uiConfig";
 import { searchParamsFromRecord } from "../urlSearch";
+import { useDocumentTitle } from "../useDocumentTitle";
 
 const OVERVIEW_POLL_MS = 30_000;
 
@@ -38,12 +39,13 @@ function TableShell({
         {description ? <p className="fd-card__desc">{description}</p> : null}
       </div>
       {toolbar ? <div className="fd-table-toolbar">{toolbar}</div> : null}
-      <div className="fd-table-wrap">{children}</div>
+      <div className="fd-table-wrap fd-table-wrap--sticky">{children}</div>
     </section>
   );
 }
 
 export function OverviewPage() {
+  useDocumentTitle("Overview");
   const [searchParams, setSearchParams] = useSearchParams();
   const focusReleaseId = (searchParams.get("release") ?? "").trim();
 
@@ -267,11 +269,20 @@ export function OverviewPage() {
 
       {data ? (
         <>
+          {data.promoted.length === 0 && data.releases.length === 0 && data.actions.length === 0 ? (
+            <section className="fd-card fd-card--hint" aria-label="Get started">
+              <h3 className="fd-card__subtitle">No releases yet — register your first one</h3>
+              <p className="fd-empty fd-m-0">
+                Run <code className="fd-mono fd-mono--sm">flightdeck release register --agent my-agent --env local --version 0.1.0 --artifact ./build</code>
+                {" "}then refresh. See <a className="fd-link" href="https://github.com/flightdeckdev/flightdeck#quickstart" target="_blank" rel="noreferrer">Quickstart docs</a>.
+              </p>
+            </section>
+          ) : null}
           <TableShell
             title="Promoted releases"
             description="Current promoted release ID per agent and environment — compare with newer registrations below."
           >
-            <table className="fd-table fd-table--hover">
+            <table className="fd-table fd-table--hover fd-table--striped">
               <thead>
                 <tr>
                   <th scope="col">Agent</th>
@@ -299,6 +310,7 @@ export function OverviewPage() {
                         <td>{p.environment}</td>
                         <td>
                           <Link
+                            className="fd-link"
                             to={{ pathname: "/", search: searchParamsFromRecord({ release: p.release_id }) }}
                             title="Focus this release"
                           >
@@ -345,7 +357,7 @@ export function OverviewPage() {
                 <label className="fd-field fd-field--compact">
                   <span className="fd-field__label">Promotion</span>
                   <select
-                    className="fd-input"
+                    className="fd-select"
                     value={filterPromoted}
                     onChange={(e) => setFilterPromoted(e.target.value as "" | "live" | "not-live")}
                   >
@@ -354,10 +366,21 @@ export function OverviewPage() {
                     <option value="not-live">Not promoted</option>
                   </select>
                 </label>
+                <div className="fd-inline fd-mt-md fd-grow-soft">
+                  <span className="fd-muted fd-samples">
+                    Showing {filteredReleases.length} of {data.releases.length}
+                  </span>
+                  {(filterAgent || filterEnv || filterPromoted) ? (
+                    <button type="button" className="fd-btn fd-btn--ghost fd-btn--sm"
+                      onClick={() => { setFilterAgent(""); setFilterEnv(""); setFilterPromoted(""); }}>
+                      Clear filters
+                    </button>
+                  ) : null}
+                </div>
               </div>
             }
           >
-            <table className="fd-table fd-table--hover">
+            <table className="fd-table fd-table--hover fd-table--striped">
               <thead>
                 <tr>
                   <th scope="col">Primary</th>
@@ -468,7 +491,7 @@ export function OverviewPage() {
           </TableShell>
 
           <TableShell title="Recent actions" description="Promotion and rollback attempts from the audit log.">
-            <table className="fd-table fd-table--hover">
+            <table className="fd-table fd-table--hover fd-table--striped">
               <thead>
                 <tr>
                   <th scope="col">When</th>

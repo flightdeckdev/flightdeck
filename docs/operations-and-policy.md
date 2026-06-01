@@ -521,7 +521,7 @@ endpoints (`GET /v1/releases`, `GET /v1/promoted`, `GET /v1/actions`) and intern
 
 ## SQLite storage schema
 
-The operations layer reads and writes seven tables (via `src/flightdeck/storage.py`):
+The operations layer reads and writes eight tables (via `src/flightdeck/storage.py`):
 
 | Table | Purpose |
 |-------|---------|
@@ -532,6 +532,7 @@ The operations layer reads and writes seven tables (via `src/flightdeck/storage.
 | `active_policy` | Single-row table holding the active `Policy` JSON |
 | `promoted_releases` | Current promoted pointer per `(agent_id, environment)` |
 | `release_actions` | Append-only audit ledger; `audit_seq` is monotonically increasing |
+| `promotion_requests` | Pending / completed / cancelled approval requests (added in migration v4); used when `promotion_requires_approval: true` |
 
 `Storage.migrate()` runs forward-only numbered migrations. `flightdeck doctor` verifies
 that migrations are applied through `LATEST_SCHEMA_MIGRATION_VERSION` and that
@@ -593,6 +594,7 @@ Migrations are numbered and forward-only; they are never reversed.
 | 1 | Initial schema (all base tables via `CREATE TABLE IF NOT EXISTS`) |
 | 2 | `CREATE INDEX … ON run_events(release_id, timestamp)` — speeds up diff/query |
 | 3 | `ALTER TABLE release_actions ADD COLUMN audit_seq INTEGER`; backfill existing rows; add unique index |
+| 4 | `CREATE TABLE IF NOT EXISTS promotion_requests` — adds the approval request/confirm workflow (columns: `request_id`, `status`, `release_id`, `agent_id`, `environment`, `window`, `reason`, `actor`, `baseline_release_id`, `policy_result_json`, `created_at`, `resolved_at`, `completed_action_id`) |
 
 New migrations must increment `LATEST_SCHEMA_MIGRATION_VERSION` in `storage.py` and add a
 corresponding check in `test_schemas.py` (or `test_doctor.py`).

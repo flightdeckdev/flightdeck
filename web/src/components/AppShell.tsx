@@ -11,9 +11,9 @@ import {
   IconOverview,
   IconPromote,
   IconRuns,
-  IconSettings,
 } from "./sidebarIcons";
 import { SidebarNavLink } from "./SidebarNavLink";
+import { SidebarSettingsMenu } from "./SidebarSettingsMenu";
 import { UI_READ_ONLY } from "../uiConfig";
 
 function skipToMain() {
@@ -39,7 +39,7 @@ export function AppShell() {
         </button>
         <aside
           className={`fd-sidebar${sidebarCollapsed ? " fd-sidebar--collapsed" : ""}`}
-          aria-label="Application"
+          aria-label="FlightDeck main navigation"
         >
           <div className="fd-sidebar__head">
             <div className="fd-sidebar__brand">
@@ -63,22 +63,26 @@ export function AppShell() {
               className="fd-sidebar__collapse"
               onClick={toggleSidebar}
               aria-expanded={!sidebarCollapsed}
-              aria-controls="sidebar-primary-nav sidebar-footer-nav"
+              aria-controls="sidebar-nav-stack"
               title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {sidebarCollapsed ? <IconChevronRight size={18} /> : <IconChevronLeft size={18} />}
               <span className="fd-sr-only">{sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}</span>
             </button>
           </div>
-          <div className="fd-sidebar__nav-stack">
+          <div id="sidebar-nav-stack" className="fd-sidebar__nav-stack">
             <nav id="sidebar-primary-nav" className="fd-sidebar__nav fd-sidebar__nav--primary" aria-label="Primary">
               <SidebarNavLink to="/" end label="Overview" icon={<IconOverview />} />
               <SidebarNavLink to="/diff" label="Diff" icon={<IconDiff />} />
               <SidebarNavLink to="/runs" label="Runs" icon={<IconRuns />} />
               {UI_READ_ONLY ? null : <SidebarNavLink to="/actions" label="Promote" icon={<IconPromote />} />}
             </nav>
-            <nav id="sidebar-footer-nav" className="fd-sidebar__nav fd-sidebar__nav--footer" aria-label="Settings">
-              <SidebarNavLink to="/settings" label="Settings" icon={<IconSettings />} />
+            <nav
+              id="sidebar-footer-nav"
+              className="fd-sidebar__nav fd-sidebar__nav--footer"
+              aria-label="Settings and theme"
+            >
+              <SidebarSettingsMenu sidebarCollapsed={sidebarCollapsed} />
             </nav>
           </div>
         </aside>
