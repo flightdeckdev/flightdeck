@@ -8,6 +8,15 @@ For the on-disk formats these operations consume — `release.yaml`, bundle layo
 algorithm, workspace config, and pricing table YAML — see
 [release-artifact.md](release-artifact.md).
 
+## Storage backends
+
+| Backend | When to use | How to configure |
+|---|---|---|
+| SQLite (default) | Local dev, single user, CI | `db_path` in `flightdeck.yaml` — no extra packages |
+| PostgreSQL | Teams, production, multi-writer | `database_url: postgresql://...` + `pip install "flightdeck-ai[postgres]"` |
+
+See [SQLite concurrency and PostgreSQL](#sqlite-concurrency-and-postgresql) below for migration notes and concurrency caveats.
+
 ## Architecture: single operations layer
 
 ```

@@ -38,6 +38,7 @@ The same contract works from the CLI, the HTTP API (`POST /v1/promote`), and the
 | Use the HTTP API | [HTTP API](http-api.md) |
 | Understand policy gates | [Operations & policy](operations-and-policy.md) |
 | Self-host `flightdeck serve` | [HTTP API — starting the server](http-api.md#starting-the-server) |
+| Deploy for a team in production | [Getting started → Production checklist](getting-started.md#production-checklist) |
 | Something broke | [Troubleshooting](troubleshooting.md) |
 
 ---

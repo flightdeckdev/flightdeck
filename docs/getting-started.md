@@ -328,3 +328,59 @@ The `#/diff` page accepts `baseline`, `candidate`, `window`, and `environment` a
 parameters so you can share a specific comparison as a link.
 
 See [Web UI](web-ui.md) for the full page and component reference.
+
+---
+
+## Production checklist
+
+Before running `flightdeck serve` with real team traffic:
+
+### Switch to PostgreSQL (recommended for teams)
+
+SQLite works great for a single developer or CI. For multi-user teams or
+anything you'd call production, switch to PostgreSQL:
+
+```bash
+# Install the PostgreSQL extra
+pip install "flightdeck-ai[postgres]"
+
+# Set your connection URL in flightdeck.yaml
+# (or via environment variable FLIGHTDECK_DATABASE_URL)
+```
+
+Add to `flightdeck.yaml`:
+
+```yaml
+database_url: postgresql://user:password@localhost:5432/flightdeck
+```
+
+Or set the environment variable and omit `database_url` from the YAML:
+
+```bash
+export FLIGHTDECK_DATABASE_URL=postgresql://user:password@host:5432/flightdeck
+flightdeck serve
+```
+
+Schema migrations run automatically on startup — same as SQLite.
+
+> **Backup:** use `pg_dump` for PostgreSQL. `flightdeck doctor --backup`
+> only works for SQLite. Add `pg_dump` to your cron / systemd schedule.
+
+### Set a Bearer token for remote access
+
+When `flightdeck serve` is exposed beyond localhost, set a secret:
+
+```bash
+export FLIGHTDECK_LOCAL_API_TOKEN="$(openssl rand -hex 32)"
+flightdeck serve --host 0.0.0.0
+```
+
+The Python SDK and HTTP clients must then pass `Authorization: Bearer <token>`.
+CLI commands running on the same machine still work without it
+(loopback bypass stays active).
+
+### Use a process supervisor
+
+Run `flightdeck serve` under systemd, supervisor, or as a Docker container
+(see `examples/deploy/` for Docker Compose and Fly.io recipes). Configure
+a health check against `GET /health` for restart-on-failure.
