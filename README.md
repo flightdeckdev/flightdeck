@@ -4,63 +4,106 @@
 
 **Ship AI agents safely with release diffs, runtime evidence, and policy gates.**
 
-Local-first **CLI + SQLite**. Optional **`flightdeck serve`** exposes a small web UI and **`/v1`** JSON API—data stays on your machine unless you change that.
+Local-first **CLI + SQLite**. Optional **`flightdeck serve`** exposes a web UI and **`/v1`** HTTP API — data stays on your machine unless you change that.
 
-> **Try it now — runs in 30 seconds, no account needed:**
+> **Try it in 30 seconds:**
 > ```bash
 > pip install flightdeck-ai
-> flightdeck demo  # end-to-end release diff in a temp workspace
+> flightdeck demo
 > ```
 
-**How it works:** you tag an agent build as a release, collect run evidence (cost, latency, errors), diff a baseline against a candidate, and then promote or rollback only when a policy gate says the numbers are acceptable — with an optional human approval step before the ledger moves.
+---
 
-## Product snapshot
+## What it does
 
-![FlightDeck — AI release governance (illustrative)](docs/images/flightdeck-overview.png)
+You tag an agent build as a **release**, collect runtime evidence (cost, latency, errors), **diff** a baseline against a candidate, and **promote** only when policy says the numbers are acceptable.
 
-*Marketing composite. See the [demo video](#demo) and [actual screenshots](artifacts/flightdeck-demo-share/) for the shipped UI.* Policy is threshold-based on rollups from ingested runs—not built-in PII scanners. [Theming notes](docs/web-ui.md#theming-and-brand-alignment)
+| | FlightDeck | Tracing SaaS (LangSmith, Langfuse) | Git / CI alone |
+|--|---|---|---|
+| **Focus** | Release + promote governance | Session traces + evals | Source + pipelines |
+| Versioned release artifact | ✅ | ✗ | DIY |
+| Cost / latency / error diff | ✅ | Different lens | DIY |
+| Policy gate blocks promote | ✅ | ✗ | DIY |
+| Audit ledger (who promoted what) | ✅ | ✗ | ✗ |
+| Local-first, no SaaS required | ✅ | ✗ | ✅ |
 
-| | FlightDeck | Tracing SaaS | Git/CI alone |
-|--|--------------|----------------|--------------|
-| Focus | Release + promote governance | Sessions / traces / evals | Source + pipelines |
-| Versioned release artifact | Yes | No | DIY |
-| Cost/latency diff + policy gate | Yes | Different lens | DIY |
+FlightDeck is not a replacement for tracing — it sits **after** traces and evals, at the **release boundary**.
+
+---
 
 ## Demo
 
-<a href="docs/screenshots/flightdeck-demo.webm">
-  <img src="docs/screenshots/overview.png"
-       alt="FlightDeck UI demo — click to play"
-       width="800" />
-</a>
+[![FlightDeck UI — Overview, Diff, and Promote flow](docs/screenshots/diff-result.png)](docs/screenshots/flightdeck-demo.webm)
 
-*Click the image to play the demo video · [Download WebM](docs/screenshots/flightdeck-demo.webm)*
+*Policy PASS verdict after a baseline vs candidate diff. [Watch the full walkthrough](docs/screenshots/flightdeck-demo.webm)*
 
-## In ~20 seconds
+---
 
-1. **Register** immutable agent releases (`release.yaml` + bundle checksum).
-2. **Ingest** run evidence (`RunEvent` JSONL or **`POST /v1/events`**).
-3. **Diff** baseline vs candidate: cost, latency, errors, and confidence (optional **pricing catalog** lines on top).
-4. **Promote** only when policy passes; optional **human approval** (request → confirm) before the ledger moves.
+## Quick start
 
-## Why it exists
+```bash
+pip install flightdeck-ai   # or: uv tool install flightdeck-ai
+flightdeck demo             # end-to-end: register → ingest → diff → promote
+```
 
-Small prompt or model changes can move **cost**, **latency**, and **error rate** in ways that are easy to miss. FlightDeck turns those into **explicit promote decisions** backed by ingested runs—before production pointers advance.
+`flightdeck demo` runs entirely in a disposable temp workspace — no account, no setup.
+
+**Web UI** (optional — adds a local HTTP server + React dashboard):
+
+```bash
+flightdeck init
+flightdeck serve            # opens http://127.0.0.1:8765/
+```
+
+---
+
+## Integrate with your agent
+
+Drop this into your existing OpenAI agent to start sending evidence:
+
+```python
+from flightdeck.integrations.openai_chat import FlightDeckOpenAIIntegration
+
+fd = FlightDeckOpenAIIntegration(
+    server_url="http://127.0.0.1:8765",
+    release_id="rel_<your-release-id>",  # from: flightdeck release register ./build
+)
+
+# wrap your existing OpenAI call — FlightDeck records cost, latency, success
+response = fd.chat_completions_create(client, model="gpt-4o-mini", messages=[...])
+```
+
+Works with **Anthropic, LangChain, OpenAI Agents SDK, Temporal, and OpenTelemetry** — see [docs/sdk-integrations.md](docs/sdk-integrations.md).
+
+---
+
+## Outbound webhooks
+
+Get notified in Slack, Discord, or PagerDuty when a release is promoted, rolled back, or blocked:
+
+```bash
+flightdeck webhook add \
+  --url https://hooks.slack.com/services/T000/B000/XXXX \
+  --event promote.succeeded --event rollback.succeeded \
+  --description "prod release alerts"
+
+flightdeck webhook list
+flightdeck webhook test wh_<id>
+```
+
+Payloads are signed with `HMAC-SHA256` (`X-FlightDeck-Signature: sha256=<hex>`). Full guide including Discord / PagerDuty / Linear adapters: [docs/sdk-integrations.md#outbound-webhooks](docs/sdk-integrations.md#outbound-webhooks--slack-discord-pagerduty-linear-).
+
+---
 
 ## Who should use this?
 
-- **Platform or ML engineering** teams shipping **multiple LLM agents** to production—especially after a **cost** or **regression** tied to a **prompt** or **model** change—who want a **governed promote** path without treating a tracing SaaS as their release gate.
-- **Regulated or compliance-sensitive** teams (healthcare, fintech, and similar) where **data residency**, **audit trails**, and **control over evidence and pricing data** matter; **local-first** defaults and optional self-hosted **`flightdeck serve`** fit that posture.
-- Teams that **version agent builds** (prompts, tools, model pins) and need a **durable audit trail** for what shipped and what ran.
-- Engineers who want a **straightforward workflow** to answer “is this candidate safe to roll forward?” with **numbers and policy**, not only gut feel or spreadsheet checklists.
+- **Platform / ML engineering teams** shipping LLM agents to production who want a governed promote path — not just a trace dashboard.
+- **Regulated teams** (fintech, healthcare) where data residency, audit trails, and local-first defaults matter. Self-host `flightdeck serve` to keep data on-prem.
+- Engineers who want to answer **"is this candidate safe to ship?"** with numbers and policy, not gut feel.
 
-## Example outcome
-
-You ship a candidate whose **prompt or model** shifts slightly; under your tariffs the diff shows **cost per run** rising while policy caps spend. **`flightdeck release promote`** (or the HTTP promote path) **stays blocked** until you change the model, adjust policy with intent, or gather more evidence — not because CI is slow, but because the **ledger** says no. The [examples/quickstart/](examples/quickstart/) scenario uses **two custom pricing YAMLs** (baseline and candidate tariffs) to show a concrete cost delta across releases; **`flightdeck init`** alone seeds a **bundled** snapshot so your first cost-aware diff is not empty.
+---
 
 ## How it fits your stack
-
-FlightDeck sits **next to** your agent runtime (not in the inference hot path): emit evidence, run **`flightdeck`** from a laptop or CI, gate **promote** with policy.
 
 ```mermaid
 flowchart LR
@@ -85,56 +128,7 @@ flowchart LR
 
 ---
 
-## Fast start
-
-After **`pip install flightdeck-ai`** (or **`uv tool install flightdeck-ai`**):
-
-```bash
-flightdeck demo
-```
-
-**`flightdeck demo`** runs the full quickstart ledger flow in a disposable temp workspace—no **`sed`**, no fixture paths—using **`examples/quickstart`** from your checkout or packaged **`flightdeck/_bundled_quickstart`** from PyPI.
-
-**Web UI** (needs a workspace in the current directory):
-
-```bash
-flightdeck init
-flightdeck serve
-```
-
-Open **http://127.0.0.1:8765/**. Same end-to-end checks CI uses: **`flightdeck-quickstart-verify`** (contributors: **`uv run flightdeck-quickstart-verify`**).
-
----
-
-## Install and smoke-test
-
-**User install (recommended):**
-
-```bash
-pip install flightdeck-ai
-flightdeck demo
-```
-
-**Contributor / development install (uv):**
-
-```bash
-uv sync --extra dev
-uv run flightdeck --help
-uv run flightdeck demo
-uv run flightdeck-quickstart-verify
-```
-
-**pip, Windows, CI:** [DEVELOPMENT.md](DEVELOPMENT.md)
-
-**Web UI:** `uv run flightdeck serve` → **http://127.0.0.1:8765/** · [docs/web-ui.md](docs/web-ui.md)
-
-The UI may show a **loopback / no Bearer** status line—that is **what the server is doing**, not something you execute. Bearer mode = you set a **shared secret** on the server (`FLIGHTDECK_LOCAL_API_TOKEN`) and the same value for the UI (`VITE_FLIGHTDECK_LOCAL_API_TOKEN` or `web/.env.local` with `npm run dev`). [SECURITY.md](SECURITY.md) · [docs/http-api.md](docs/http-api.md)
-
----
-
-## Example workflow (policy + two tariffs)
-
-Substitute release IDs in the JSONL or rely on `flightdeck-quickstart-verify` for the same checks CI runs.
+## CLI example (policy + pricing)
 
 ```bash
 flightdeck init
@@ -145,92 +139,58 @@ flightdeck policy set examples/quickstart/policy.yaml
 BASELINE=$(flightdeck release register examples/quickstart/baseline-release)
 CANDIDATE=$(flightdeck release register examples/quickstart/candidate-release)
 
-sed "s/__BASELINE_RELEASE_ID__/${BASELINE}/g" examples/quickstart/baseline-events.jsonl > baseline-events.jsonl
-sed "s/__CANDIDATE_RELEASE_ID__/${CANDIDATE}/g" examples/quickstart/candidate-events.jsonl > candidate-events.jsonl
-
 flightdeck runs ingest baseline-events.jsonl
 flightdeck runs ingest candidate-events.jsonl
 
 flightdeck release diff "$BASELINE" "$CANDIDATE" --window 7d
-flightdeck release promote "$BASELINE" --env local --window 7d --reason "initial baseline"
+flightdeck release promote "$BASELINE" --env local --window 7d --reason "baseline"
 flightdeck release history --agent agent_support --env local
 ```
 
-Bundled pricing from `init` is a **convenience snapshot**—`flightdeck pricing import` for production. [docs/release-artifact.md](docs/release-artifact.md) · [RELEASE_NOTES.md](RELEASE_NOTES.md)
-
-**More examples:** [examples/quickstart/](examples/quickstart/) · [examples/ci/](examples/ci/) · [examples/deploy/](examples/deploy/) · [examples/integration/](examples/integration/)
+More: [examples/quickstart/](examples/quickstart/) · [examples/ci/](examples/ci/) · [examples/deploy/](examples/deploy/)
 
 ---
 
 ## Documentation
 
-**Published site (GitHub Pages):** [flightdeckdev.github.io/flightdeck](https://flightdeckdev.github.io/flightdeck/) — built from `docs/` on each push to `main` (`.github/workflows/pages.yml`). Enable **Pages → GitHub Actions** in the repository settings if the site is not live yet.
+**[flightdeckdev.github.io/flightdeck](https://flightdeckdev.github.io/flightdeck/)** — full reference, auto-updated on every push to `main`.
 
-| Area | Links |
-|------|--------|
-| CLI | [docs/cli.md](docs/cli.md) |
-| HTTP API (routes, auth) | [docs/http-api.md](docs/http-api.md) |
+| Area | Link |
+|------|------|
+| CLI reference | [docs/cli.md](docs/cli.md) |
+| HTTP API | [docs/http-api.md](docs/http-api.md) |
 | Security / trust model | [SECURITY.md](SECURITY.md) |
 | Python SDK | [docs/sdk.md](docs/sdk.md) |
 | Policy, diff, promote | [docs/operations-and-policy.md](docs/operations-and-policy.md) |
-| `release.yaml`, pricing, checksums | [docs/release-artifact.md](docs/release-artifact.md) |
+| Release artifact schema | [docs/release-artifact.md](docs/release-artifact.md) |
 | Pricing catalog | [docs/pricing-catalog.md](docs/pricing-catalog.md) |
-| Integrations (experimental) | [docs/sdk-integrations.md](docs/sdk-integrations.md) |
-| Wire schemas | [schemas/v1/](schemas/v1/) |
-| Changelog · roadmap · contributing | [CHANGELOG.md](CHANGELOG.md) · [ROADMAP.md](ROADMAP.md) · [CONTRIBUTING.md](CONTRIBUTING.md) |
-| Maintainer / agent rules | [AGENTS.md](AGENTS.md) · [CLAUDE.md](CLAUDE.md) |
-| Support | [SUPPORT.md](SUPPORT.md) |
+| SDK integrations | [docs/sdk-integrations.md](docs/sdk-integrations.md) |
+| Web UI | [docs/web-ui.md](docs/web-ui.md) |
 
 ---
 
-## Webhooks
+## Screenshots
 
-FlightDeck ships **HMAC-signed outbound webhooks** for `promote.succeeded`,
-`rollback.succeeded`, and `promote.blocked`. Point them at any HTTPS endpoint
-(Slack incoming webhook, Discord, PagerDuty Events v2, Linear inbound webhook, your
-own relay) — FlightDeck owns the signing, not the integrations.
+| Overview — ledger at a glance | Diff — policy verdict + cost delta |
+|---|---|
+| ![Overview](docs/screenshots/overview.png) | ![Diff result](docs/screenshots/diff-result.png) |
 
-```bash
-flightdeck webhook add \
-  --url https://hooks.slack.com/services/T000/B000/XXXX \
-  --event promote.succeeded --event rollback.succeeded \
-  --description "prod release alerts"
-# Save the printed secret — it will not be shown again.
-
-flightdeck webhook list
-flightdeck webhook test wh_<id>
-```
-
-Receivers verify each delivery by recomputing `HMAC-SHA256(secret, raw_body)` and
-comparing against `X-FlightDeck-Signature: sha256=<hex>` (GitHub convention). Full
-details: **[docs/cli.md](docs/cli.md)** · **[docs/http-api.md](docs/http-api.md)**.
+| Runs — forensic filter with datalist | Dark mode |
+|---|---|
+| ![Runs](docs/screenshots/runs.png) | ![Dark mode](docs/screenshots/dark-mode.png) |
 
 ---
 
-## Contributing (quick CI match)
+## Contributing
 
 ```bash
 uv sync --frozen --extra dev
 uv run python -m ruff check src tests
 uv run python -m pytest
 uv run flightdeck demo
-uv run flightdeck-quickstart-verify
-uv run flightdeck --help
 ```
 
-Full gates (web static, schemas, e2e): [DEVELOPMENT.md](DEVELOPMENT.md)
-
----
-
-## Screenshots
-
-| Overview — releases + promotion ledger | Diff — policy PASS verdict |
-|---|---|
-| ![Overview](docs/screenshots/overview.png) | ![Diff result](docs/screenshots/diff-result.png) |
-
-| Runs — forensics with datalist search | Dark mode |
-|---|---|
-| ![Runs](docs/screenshots/runs.png) | ![Dark mode](docs/screenshots/dark-mode.png) |
+Full CI gates (web bundle, schema drift, Playwright e2e): [DEVELOPMENT.md](DEVELOPMENT.md)
 
 ---
 
