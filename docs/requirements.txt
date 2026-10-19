@@ -3,4 +3,4 @@
 # failing on a silent transitive bump (reviewer MAJOR-6).
 mkdocs==1.6.1
 mkdocs-material==9.6.14
-pymdown-extensions==10.21.3
+pymdown-extensions==12.3
